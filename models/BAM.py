@@ -188,9 +188,9 @@ class BAM_base:
             
             # FIRMS
             # DEBUGGING BZGL. hbyf etc. => erstmal als ones machen => dann füllen ??
-            NWa = np.mean(Y0) # # ratio of HH and firms -> only needed for t == 0 respecting labour demand: labour demand Ld same for each firm in t = 0
-            hbyf = self.Nh // self.Nf # ratio of HH and firms -> only needed for t == 0 respecting labour demand  NO VECTOR ! (household by firm)
-            aa = np.ones(self.Nf) * (NWa *0.6) # minimum (required) wage -> given exogneous - same for each firm ??
+            NWa = np.mean(Y0) # initial net worth is mean of initial HH's income
+            hbyf = self.Nh // self.Nf # ratio of HH and firms: initial labour demand in t == 0 (household by firm)
+            aa = np.ones(self.Nf) * (NWa *0.6) # minimum (required) wage is 60% of initial mean income of the HH's 
             # NW = np.ones(self.Nf) * (NWa*200) # Net-Worth of a firm -> do I need seperat NWa for each firm ??
             # NW = NWa*200   # initial Net worth per firm !!!
             # NW = np.ones(self.Nf) * (NWa*200)  # WARUMS SCALING ???
@@ -304,20 +304,18 @@ class BAM_base:
                 ????Firm pays wage bills to start."""
                 
                 print("Labor Market opens")
-                # hired = 0 # for each firm ?  
-                hired = np.zeros(self.Nf)
+                hired = 0
                 # c_ids = np.array(range(self.Nh))  # c_d[:,0]  - e.g. H = 5 => array([1, 2, 3, 4, 5])
                 c_ids = c_data[t,:,0].astype(int) # slice the consumer id's
                 f_empl = [] # List of Firms who are going to post vacancies (id of firm that will post v)
 
+                """Firms determine Vacancies and set Wages"""
                 for i in range(self.Nf):
-                    """Firms determine Vacancies and set Wages"""
-                    # getTotalEmployees 
-                    n = 0 # counter for the number of expired contracts of each firm i 
-                    if L[i] >= 0: # if firm i has actual Labor Employed > 0 (not newly entered the market)
-                        c_f = w_emp[i] # getEmployedHousehold - slice the list with worker id's (all workers) for firm i  : 
-                        # getVacancies
-                        rv_array = np.random.binomial(1,0.5,size=len(c_f)) # firm firing worker or not, 0.5 chance 
+                    """Firms updating vacancies in the following by keeping or firing workers: when 0 labor employed, then open vacancies will be 5"""
+                    if L[i] >= 0: 
+                        c_f = w_emp[i] # getEmployedHousehold - slice the list with worker id's (all workers) for firm i 
+                        n = 0 # counter for the number of expired contracts of each firm i 
+                        rv_array = np.random.binomial(1,0.5,size=len(c_f)) # firm firing hired workers or not, 0.5 chance 
                         # 1x "coin-flip" (1x bernoulli RV) , size determines length of output
                         # e.g. s = np.random.binomial(1, 0.5, 10) yields array([0, 1, 0, 0, 1, 1, 0, 1, 1, 0])
                         for j in (c_f): # j takes on HH id employed within current firm i 
@@ -332,23 +330,23 @@ class BAM_base:
                                     w[j] = 0 # setWage -> no wage now
                                     d_employed[j] = 0 # 0 days employed from now on
                                     n = n + 1 # add expired contract
-                    Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts (add n if L[i] >= 0)
-                    L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id = number of wokers signed at firm i (!!!not at t-1????)
-                    # calcVacancies -> of firm i
-                    vac[i] = int((Ld[i] - L[i] + Lhat[i])*1) # labour demanded (depending on price) - labour employed + Labor whose contracts are expiring
-                    if vac[i] > 0: 
-                        f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
-                    # setWage
-                    zeta = np.random.uniform(low=0,high=self.h_zeta) # compute zeta for each firm
-                    if f_data[t-1,i,3] == 0: # if firm did not produce last round ?????
-                        zeta = 2*zeta # use 2*zeta   ????
-                        w_min = aa[i] # minimum (required) wage of firm i  (INITIAL!!??) 
+                        Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts (add n if L[i] >= 0)
+                        L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id = number of wokers signed at firm i (!!!not at t-1????)
+                        """calcVacancies of firm i"""
+                        vac[i] = int((Ld[i] - L[i] + Lhat[i])*1) # labour demanded (depending on price) - labour employed + Labor whose contracts are expiring
+                        if vac[i] > 0: 
+                            f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
+                    """setWage"""
+                    zeta = np.random.uniform(low=0,high=self.h_zeta) # compute zeta (random number) for firm i
+                    if f_data[t-1,i,3] == 0: # if firm has no quantitiy remaining (from last round, i.e. did not sell all products)
+                        zeta = 2*zeta # use 2*zeta, since firm wants to offer wage and increase chance for match later if no more products (or just entered)
+                        w_min = aa[i] # minimum (required) wage of firm i (60% of mean income of HH's)
                         if vac[i] > 0: # if firm i has currently open vacancies:
                             Wp[i] = np.around(max(w_min, min(w_min*(np.random.uniform(low=1.01,high=1.10)),Wp[i]*(1+zeta/2))),decimals=2) # wage
                             is_hiring[i] = True 
                         Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage if firm i currently no open vacancies
                         is_hiring[i] = False  
-                    # firm i uses zeta (not 2*zeta), if it had employees in previous round:  f_data[t-1,i,3] >= 0
+                    # firm i uses zeta (not 2*zeta), if quantitiy remaining (no need to increase chances of getting workers by using higher weight)
                     w_min = aa[i] # minimum (required) wage of firm i (INITIAL!!??) 
                     if vac[i] > 0: # if firm has currently open vacancies:
                         Wp[i] = np.around(max(w_min, min(w_min*(np.random.uniform(low=1.01,high=1.10)),Wp[i]*(1+zeta/2))),decimals=2) # wage
@@ -358,7 +356,7 @@ class BAM_base:
                     """Finished: Firms posted Vacancies and Wage offers"""
                 
                 """SearchandMatch: 
-                There must be at least 1 entry in the list with firm id's that have open vacancies: otherwise no searchandmatch """ 
+                There must be at least 1 entry in the list with firm id's that have open vacancies: otherwise no searchandmatch.""" 
                 if len(f_empl) > 0: # if there are firms that offer labour: open vacancies (i.e. any firm id's in f_empl list), i.e. L^d > L 
                     
                     # A: Unemployed Households applying for the vacancies
@@ -418,12 +416,11 @@ class BAM_base:
                             for ii in f_applied_ids: 
                                 f_e[ind] = Wp[ii-1] # extract the wages of the firms where HH applied (where HH applied)
                                 ind += 1 # increase index
-                                # HIER WEITER !!!!
                             for of in f_job_offers: # extract the wages the offering firm set before, for each firm that is searching
                                 offer_wage.append(np.around(Wp[of-1] ,decimals=2))
                             w_max = max(f_e) # max. wage of firm the HH l applied to 
                             if w_max in offer_wage: 
-                                # HIRED <- if maximum wage of firm HH applied to is in list of wages the searching firm pays => HH l is hired 
+                                # HIRED: if maximum wage of firm HH applied to is in list of wages the searching firm pays => HH l is hired 
                                 # update report variables
                                 f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured 
                                 is_employed[l] = True
@@ -527,7 +524,7 @@ class BAM_base:
 
             """Plot main aggregate report variables and save them in FOLDER"""
             if self.plots and self.MC <= 2:
-                "plot"
+                "plotting"
                 
 
 
