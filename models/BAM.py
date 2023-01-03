@@ -99,8 +99,10 @@ class BAM_base:
             firm_id = np.zeros(self.Nh) # firm_id where HH is employed
             prev_firm_id = np.zeros(self.Nh) # each HH only emplyed at 1 firm => 1d array reicht ..  
             firms_applied =  [[] for _ in range(self.Nh)] # list of firm ids HH applied to for each j?
-            job_offers = [[] for _ in range(self.Nh)] # list for each HH that gets an offered job from firm i
+            job_offered_from_firm = [[] for _ in range(self.Nh)] # list for each HH that gets an offered job from firm i
             prev_F = np.zeros(self.Nh)
+
+            firm_went_bankrupt = np.zeros(self.Nh)
 
             # FIRMS
             id_F = np.zeros(self.Nf, int) # Firm id -> nur id in CFirm.py
@@ -123,7 +125,7 @@ class BAM_base:
             vac = np.zeros(self.Nf, int) # Vacancy
             W_pay = np.zeros(self.Nf) # Wage updated when paying
             job_applicants = [[] for _ in range(self.Nf)] # Ids of Job applicants (HH that applied for job) -> Liste für each firm => array with [] entries for each i
-            job_offered = [[] for _ in range(self.Nf)] # Ids of selected candidates (HH that applied for job and which may be picked by firm i)
+            job_offered_to_HH = [[] for _ in range(self.Nf)] # Ids of selected candidates (HH that applied for job and which may be picked by firm i)
             ast_wage_t = np.zeros(self.Nf) # Previous wage offered
             w_emp = [[] for _ in range(self.Nf)] # Ids of workers/household employed - each firm has a list with worker ids
             is_hiring = np.zeros(self.Nf, bool) # Flag to be activated when firm enters labor market to hire 
@@ -313,6 +315,7 @@ class BAM_base:
                 for i in range(self.Nf):
                     """Firms updating vacancies in the following by keeping or firing workers: when 0 labor employed, then open vacancies will be 5"""
                     if L[i] >= 0: 
+                        # CHECKEN WHEN t = 0 DURCH !!!!
                         c_f = w_emp[i] # getEmployedHousehold - slice the list with worker id's (all workers) for firm i 
                         n = 0 # counter for the number of expired contracts of each firm i 
                         rv_array = np.random.binomial(1,0.5,size=len(c_f)) # firm firing hired workers or not, 0.5 chance 
@@ -322,7 +325,8 @@ class BAM_base:
                             j = int(j-1) # python starts slicing with 1
                             if d_employed[j] > self.theta: # if contract expired (i.e. greater 8)
                                 rv = rv_array[c_f.index(j)] # check if current worker j is fired or not (0 or 1 entry)
-                                if rv == 1: # if worker is fired
+                                # if rv = 0, then worker is not fired and gets new contract instead, hence not searching in the following for new employment 
+                                if rv == 1: # if worker is fired: later M - 1 since implied that HH already tried to regain job (50% chance)
                                     w_emp[i].remove(j) # removeHousehold  -> delete the current HH id in the current firm array 
                                     prev_firm_id[j] = i # updatePrevEmployer -> since HH is fired from firm i 
                                     is_employed[j] = False # updateEmploymentStatus
@@ -331,7 +335,7 @@ class BAM_base:
                                     d_employed[j] = 0 # 0 days employed from now on
                                     n = n + 1 # add expired contract
                         Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts (add n if L[i] >= 0)
-                        L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id = number of wokers signed at firm i (!!!not at t-1????)
+                        L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id = number of wokers signed at firm i
                         """calcVacancies of firm i"""
                         vac[i] = int((Ld[i] - L[i] + Lhat[i])*1) # labour demanded (depending on price) - labour employed + Labor whose contracts are expiring
                         if vac[i] > 0: 
@@ -357,99 +361,112 @@ class BAM_base:
                 
                 """SearchandMatch: 
                 There must be at least 1 entry in the list with firm id's that have open vacancies: otherwise no searchandmatch.""" 
-                if len(f_empl) > 0: # if there are firms that offer labour: open vacancies (i.e. any firm id's in f_empl list), i.e. L^d > L 
-                    
+                if len(f_empl) > 0: # if there are firms that offer labour / have open vacancies (i.e. if any firm id's in f_empl list), i.e. L^d > L 
                     # A: Unemployed Households applying for the vacancies
                     c_ids =  [j for j in c_ids if is_employed[int(j-1)] == False]  # get Household id who are unemployed (i.e. is_employed is False)
                     print("%d Households are participating in the labor market (A:)" %len(c_ids))
+                    #  FOR COMPARISON
+                    np.random.seed(1)
                     np.random.shuffle(c_ids) # randomly selected household starts to apply (sequentially)
                     for j in c_ids:
-                        j = int(j-1)
-                        appl = None # To store firms (id) applied by this household
-                        prev_emp = int(prev_firm_id[j]) #getPrevEmployer <- id of firm 
-                        # Households always apply to previous employer FIRST (if) where the contract has expired
+                        j = int(j)
+                        appl_firm = None # store firm id's applied to by HH j
+                        prev_emp = int(prev_firm_id[j-1]) #getPrevEmployer, i.e. the id of firm HH j were employed before 
                         f_empl_c = [x for x in f_empl if x != prev_emp] # gather firm ids that have open vacancies (neglect firm if HH was just fired)
-                        if len(f_empl) > self.M - 1: # if there are more than M-1 (3) firms with open vacancies
-                            appl = list(np.random.choice(f_empl_c, self.M-1, replace = False)) # choose some random firm ids to apply to 
-                            np.append(appl, prev_emp) # append also firm that just fired HH (last entry)
+                        M = self.M if t == 0 or firm_went_bankrupt[j-1] == 1 else self.M - 1 # number of firms HH applies to
+                        # in t = 0 or if firm HH worked before went bankrput: HH cannot apply to firms where they worked before: in this case M = 4
+                        # otherwise HH already tried to apply to firm be worked before: either rv = 0 or rv = 1
+                        if len(f_empl_c) > M: # if there are more than M-1 (3) firms with open vacancies
+                            appl_firm = np.random.choice(f_empl_c, self.M-1, replace = False) # choose some random firm ids to apply to 
                         else: # otherwise: HH applies to the only firms hiring (with open vacancies)
-                            appl = f_empl_c # save H-1 firm id's HH applies to
-                            np.append(appl, prev_emp)
-                        firms_applied[j].append(appl) # attach list with firm id's HH j will apply to (attach to its entry in list)
+                            appl_firm = f_empl_c # save firm id's HH applies to
+                        firms_applied[j-1].append(appl_firm) # attach list with firm id's HH j will apply to (attach to its entry in list)
+                        print("firms applied:", firms_applied[j-1], "by HH", j-1)
                         # Houshold j applies for the vacancies
-                        for a in appl: # a takes on the firm id that HH applies to 
-                            a = a - 1  # range of job_applicants starts with 0, but f_empl_c goes from 1 to 10 
-                            job_applicants[a].append(j) # add HH id to the list of firm id's the HH applies to 
+                        for a in appl_firm: # a takes on the firm id that HH applies to 
+                            job_applicants[a-1].append(j) # add firm id to the list of firm id's the HH applies to 
+                            print("Job applicants:", job_applicants[a-1])
                                    
                     # B: Firms offer Jobs to randomly selected applicants (HH who applied)
-                    for i in f_empl:
-                        i = int(i - 1) 
-                        # use the cacluated vacancies from before: vac   
-                        applicants = job_applicants[i]# getJobApplicants (list of all HH's (id) applying to current firm i that employes)
+                    for f in f_empl:
+                        vac_firm = vac[f-1] # calculated vacancies of firm f computed before
+                        applicants = job_applicants[f-1]# getJobApplicants (list of all HH's (id) applying to current firm i that employes)
                         n_applicants = len(applicants) # number of applicants
-                        if vac[i] >= n_applicants:
+                        if vac_firm >= n_applicants:
                             # job shortage: if more vacancies than number of applicants => firm i accepts all applicants
-                            job_offered[i] = applicants # HH's that offered job to firm i
+                            job_offered_to_HH[f-1] = applicants # HH's that offered job to firm i
                             # updateHouseholdJobOffers (offered jobs by firm (id) to HH)
                             for a in applicants:
-                                # job_offers starts at 0 => use a - 1
-                                job_offers[a-1].append(i) # save the firm id that offers job to HH which is currently applying 
+                                job_offered_from_firm[a-1].append(f) # save the firm id that offers job to HH which is currently applying 
                         else:
-                            # more HH applying for jobs than firms offer vacancies => shuffle random number of applicants (HH id), according to vacancies of firm i
-                            applicants = np.random.choice(applicants, int(vac[i]), replace=False) 
-                            job_offered[i] = applicants # HH's id that offered job to firm i (HH -> firm)
+                            # more HH applying for jobs than firms offer vacancies => shuffle random number of applicants (HH id's), according to #vacancies of firm f
+                            applicants = np.random.choice(applicants, vac_firm, replace=False) 
+                            job_offered_to_HH[f-1] = list(applicants) # HH's id to which a job is offered by firm f (firm -> HH)
                             # updateHouseholdJobOffers (offered jobs by firm (id) to HH)
                             for a in applicants:
-                                job_offers[a-1].append(i) # save the firm id that offers job to HH which is currently applying 
-
+                                job_offered_from_firm[a-1].append(f) # save the firm id that offers job to HH which is currently applying (firm -> HH)
+                        print("job offered to HH:", job_offered_to_HH[f-1], "by firm", f)
+                    
                     # C: Household accepts if job offered is of highest wage
                     for l in c_ids:
-                        l = int(l-1) # individual report variables start at 0 => reduce running index by 1, s.t. not going out of bounds
-                        # getFirmsApplied: extract ids of firms HH j applied to (numpy array inside list)
-                        # e.g. have [[9,17,7]] => need to slice with [0] to get the actual list in the following, avoid error if list is empty with [0]
-                        f_applied_ids = firms_applied[l][0] if len(firms_applied[j]) > 0 else firms_applied[l]
-                        f_job_offers = job_offers[l]  # getJobOffers:extract firm ids (or id) that offered job to HH j
-                        f_e = np.empty(len(f_applied_ids)) # initialize vector of wages of the firms where HH l applied (use length of array entries inside list)
+                        # l = int(l-1) # individual report variables start at 0 => reduce running index by 1, s.t. not going out of bounds
+                        # getFirmsApplied: extract ids of firms HH j applied to (numpy arrays inside list)
+                        # e.g. have [array[9,17,7]] => need to slice with [0] to get the actual list in the following, avoid error when slicing with [0] if entry is empty
+                        f_applied_ids = firms_applied[l-1][0] if len(firms_applied[l-1]) > 0 else firms_applied[l-1]
+                        f_applied_ids = [x-1 for x in f_applied_ids] # slice firm id out of numpy array (x-1, since python starts counting at 0)
+                        f_job_offers = job_offered_from_firm[l-1]  # getJobOffers: extract firm ids (or id) that offered job to HH j
+                        f_job_offers = [x-1 for x in f_job_offers]
+                        f_e = np.zeros(len(f_applied_ids)) # initialize vector of wages of the firms where HH l applied (use length of array entries inside list)
                         offer_wage = [] # initialize wage of offering firm that is searching
+                        print(l,f_applied_ids, f_job_offers)  # WARUM MATCHEN DIE NIEEEEEEE -> nur wenn f_job_offers leer darf kein match occurren!!!
                         if len(f_applied_ids) != 0: # if HH applied to some firms (id's) (i.e. if there is array inside f_applied_ids)
                             ind = 0 # counter
                             for ii in f_applied_ids: 
-                                f_e[ind] = Wp[ii-1] # extract the wages of the firms where HH applied (where HH applied)
+                                f_e[ind] = Wp[ii] # extract the wages of the firms where HH applied (where HH applied)
                                 ind += 1 # increase index
-                            for of in f_job_offers: # extract the wages the offering firm set before, for each firm that is searching
-                                offer_wage.append(np.around(Wp[of-1] ,decimals=2))
-                            w_max = max(f_e) # max. wage of firm the HH l applied to 
+                            for of in f_job_offers: # extract the wages of the offering firm 
+                                offer_wage.append(np.around(Wp[of] ,decimals=2)) 
+                            # w_max = max(f_e) # max. wage of firm the HH l applied to  -> if firm with max. wage not emplyoing, then HH remains unemployed!!
+                            w_max = max(offer_wage) if t == 0 and len(offer_wage) > 0 else 0 
+                            # maximum wage of the firms offering jobs, if no jobs offered: wage is 0
+                            # otherwise for w_max = max(f_e): if firms_applied has highest wage but is not offering a job 
+                            # => she remains unemployed and does not take any job at all!
+                            # Therefore: HH gets employed by firm offering highest wage, also if "preffered firm with highest wage" not employing  
                             if w_max in offer_wage: 
-                                # HIRED: if maximum wage of firm HH applied to is in list of wages the searching firm pays => HH l is hired 
+                                # Settlement only in t = 0 (if t > 0: w_max always 0) if HH were offered a job
                                 # update report variables
-                                f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured 
-                                is_employed[l] = True
-                                firm_id[l] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
-                                w[l] = np.around(w_max,decimals=2)
-                                hired = hired + 1
-                                w_emp[f_max_id].append(l) # save HH to list of firm that is employing
-                                L[f_max_id] = len(w_emp[f_max_id])
+                                f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured (i.e. firm that offered highest wage)
+                                is_employed[l-1] = True # updateEmploymentStatus
+                                firm_id[l-1] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
+                                w[l-1] = np.around(w_max,decimals=2) # save wage HH l is earning
+                                hired = hired + 1 # counter for #HH increases by 1
+                                w_emp[f_max_id].append(l) # employHousehold: save HH id to list of firm that is employing
+                                L[f_max_id] = len(w_emp[f_max_id]) # updateTotalEmployees: update number of HH employed 
                                 # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, w_max))
-                            elif t > 0 and len(offer_wage) > 0: # not in first round and if wage_offer list of offering firm not empty
+                            elif t > 0 and len(offer_wage) > 0: # Settlement if not in first round and if wlist of job offering firms is not empty
                                 mm = max(np.array(offer_wage)) # extract max. offered wage
-                                if mm > self.wage_lvl[t-1][mc]: 
+                                # Settlememt: HH applied to firms and extracts max. wage of the firms she has job offer 
+                                # hence if there are job offers to HH => she accepts job with highest wage
+                                if mm > self.wage_lvl[t-1][mc]: # e.g.  * 0.4 => smaller minimum wage ??!! 
                                     # if maximum offered wage is larger than (average) wage_level of before => HH l accepts the job
                                     # (otherwise HH reamins unemployed)    
                                     # Update report variables
-                                    f_max_id = f_job_offers[offer_wage.index(mm)] # save firm id for which match occured (i.e. that paid highest wage)
-                                    is_employed[l] = True # change employment status
-                                    firm_id[l] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
-                                    w[l] = np.around(w_max,decimals=2)
-                                    hired = hired + 1
-                                    w_emp[f_max_id].append(l) # save HH to list of firm that is employing
-                                    L[f_max_id] = len(w_emp[f_max_id])
+                                    f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured (i.e. firm that offered highest wage)
+                                    is_employed[l-1] = True # updateEmploymentStatus
+                                    firm_id[l-1] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
+                                    w[l-1] = np.around(w_max,decimals=2) # save wage HH l is earning
+                                    hired = hired + 1 # counter for #HH increases by 1
+                                    w_emp[f_max_id].append(l) # employHousehold: save HH id to list of firm that is employing
+                                    L[f_max_id] = len(w_emp[f_max_id]) # updateTotalEmployees: update number of HH employed 
+                                    firm_went_bankrupt[l-1] = 0 # reset flag for unemployed worker in case he became unemployed because his previous firm went bankrupt
                                 # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, w_max))
                 else:
                     print("No Firm with open vacancies")
                 print("")   
-                print("Labor Market CLOSED!!!! with %d household hired!!"%(hired))
+                print("Labor Market CLOSED!!!! with %d household hired!!" %(hired))
                 print("")
 
+                # WAGE BILL ?? -> firms have to pay wage before production ?? 
 
 
 
