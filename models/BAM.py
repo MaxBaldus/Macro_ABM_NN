@@ -31,16 +31,17 @@ class BAM_base:
         self.H_eta = parameters['H_eta'] # Maximum growth rate of prices (max value of price update parameter) - h_eta in main_ase
         self.H_rho = parameters['H_rho'] # Maximum growth rate of quantities (Wage increase parameter)
         self.H_phi = parameters['H_phi'] # Maximum amount of banks’ costs
-        self.h_zeta = parameters['h_zeta'] # Maximum growth rate of wages (Wage increase parameter)
+        self.h_xi = parameters['h_xi'] # Maximum growth rate of wages (Wage increase parameter)
         
-        """!!Noch nicht mit drin!!"""
+        """These two parameters are actually not needed, since MPC is computed in each round for each HH, always depending on the current savings respectively"""
         self.c_P = parameters['c_P'] # Propensity to consume of poorest people
         self.c_R = parameters['c_R'] # Propensity to consume of richest people
 
         "Parameters set by modeller"
         self.beta = 4 # ???
         self.theta = 8 # Duration of individual contract
-        self.r_bar = 0.4 # Base interest rate set by central bank (absent in this model)
+        self.r_bar = 0.4 # Base interest rate set by central bank (exogenous in this model)
+        self.capital_requirement_coef = 0.11 # capital requirement coefficients uniform across banks 
 
         #################################################################################################
         # AGGREGATE REPORT VARIABLES
@@ -119,8 +120,8 @@ class BAM_base:
             Ld = np.zeros(self.Nf) # Desired Labor to be employed
             Lhat = np.zeros(self.Nf) # Labor whose contracts are expiring
             L = np.zeros(self.Nf)  # actual Labor Employed
-            Wb_d = np.zeros(self.Nf) # Desired Wage bills
-            Wb_a = np.zeros(self.Nf) # Actual Wage bills
+            Wb_d = np.zeros(self.Nf) # desired Wage bills
+            Wb_a = np.zeros(self.Nf) # actual Wage bills
             Wp = np.zeros(self.Nf) # Wage level
             vac = np.zeros(self.Nf, int) # Vacancy
             W_pay = np.zeros(self.Nf) # Wage updated when paying
@@ -148,14 +149,15 @@ class BAM_base:
             loan_to_be_paid = np.zeros(self.Nf) 
 
             Qty = [] # Quantity ?? - ???????????
+            w_min_slice = np.repeat(np.arange(3,self.T,4), 4) # array with values from 2 up to 998 appearing 4 times for slicing the minimum wage
 
             # BANKS
             id_B = np.zeros(self.Nb, int) # (own) Bank id -> nur id in Bank.py
             E = np.zeros(self.Nb) # equity base 
             phi = np.zeros(self.Nb)
-            tCr = np.zeros(self.Nb) # ???
+            tCr = np.zeros(self.Nb) # initial amount of Credit of all banks, filled with random numbers for t = 0
             Cr = np.zeros(self.Nb) # amount of credit supplied / "Credit vacancies"
-            Cr_a = np.zeros(self.Nb) # actual amount of credit supplied?
+            Cr_a = np.zeros(self.Nb) # actual amount of credit supplied (after..)
             Cr_rem = np.zeros(self.Nb) # credit remaining 
             Cr_d = [[] for _ in range(self.Nb)]
             r_d = [[] for _ in range(self.Nb)]
@@ -190,13 +192,14 @@ class BAM_base:
             
             # FIRMS
             # DEBUGGING BZGL. hbyf etc. => erstmal als ones machen => dann füllen ??
-            NWa = np.mean(Y0) # initial net worth is mean of initial HH's income
-            hbyf = self.Nh // self.Nf # ratio of HH and firms: initial labour demand in t == 0 (household by firm)
-            aa = np.ones(self.Nf) * (NWa *0.6) # minimum (required) wage is 60% of initial mean income of the HH's 
+            NWa = np.mean(Y0) # actual initial net worth is mean of initial HH's income
+            hbyf = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
+            aa = (NWa *0.6) # minimum (required) wage is 60% of initial mean income of the HH's 
             # NW = np.ones(self.Nf) * (NWa*200) # Net-Worth of a firm -> do I need seperat NWa for each firm ??
             # NW = NWa*200   # initial Net worth per firm !!!
-            # NW = np.ones(self.Nf) * (NWa*200)  # WARUMS SCALING ???
-            NW = np.ones(self.Nf) * (NWa)  # WARUMS SCALING ???
+            # NW = np.ones(self.Nf) * (NWa*200)  # WARUMS SCALING mit 200 !! ???
+            # wenn * 200 => Wb_a >> NW in t = 0 => credit market never opens
+            NW = np.ones(self.Nf) * (NWa)  # initial net worth of each firm 
             for f in range(self.Nf):
                 id_F[f] = f + 1 # set id 
                 f_data[:,f,0] = f+1 # start with 1 for id
@@ -205,10 +208,12 @@ class BAM_base:
             # BANKS
             NB0 = np.random.uniform(low = 3000, high = 6000, size = self.Nb)
             aNB0 = np.mean(NB0)
-            factor = self.Nb*9
-            tCr = (NB0 / aNB0)*10*factor # ???
+            factor = self.Nh*9
+            tCr = (NB0 / aNB0)*10*factor # amount of credit to be supplied if equity is 0 -> KANN ICH SELBER MACHEN über initial equity ???!!
+            # WOHER KOMMEN DIE ZAHLEN?
             for b in range(self.Nb):
                 b_data[:,b,0] = b + 1
+            # E = tCr*0.11 # OWN: initial equitiy of each bank -> sample für E s.t. in range 
 
 
             """ List of data matrices:
@@ -239,9 +244,9 @@ class BAM_base:
             column 7 = labor demanded/required Ld 
             column 8 = number of expired contracts 
             column 9 = number of employees L 
-            column 10 = wage paid W_pay 
+            column 10 = wage paid W_pay: wage firm offered each worker
             column 11 = desired wage bill Wb_d
-            column 12 = actual wage bill Wb_a 
+            column 12 = actual wage bill Wb_a: entire wage (wage*workers) firm had to pay
             column 13 = revenues Rev 
             column 14 = loan firm has to pay to bank(s) loan_to_be_paid
             column 15 = Profits P 
@@ -268,6 +273,8 @@ class BAM_base:
                 Firms decide on how much output to be produced and thus how much labor required (desired) for the production amount.
                 Accordingly price or quantity is updated along with firms expected demand (adaptively based on firm's past experience)."""
 
+                # HOW TO BREAK: t = 0 durchlaufen lassen und ab t = 1 dann break rein !!! 
+
                 for i in range(self.Nf):
                     # range starts with 0
                     id_F[i] = i + 1 # OWN: set id_F (eig gar nicht nötig, da running index dafür läuft) ; start with 1, 
@@ -276,6 +283,7 @@ class BAM_base:
                         Ld[i] = hbyf # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period 
                     # otherwise: each firm decides output and price => s.t. it can determine labour demanded
                     else: # t > 0 -> need price to set Qd <=> RequiredLabor
+                        """CHECKEN IN t = 1"""
                         prev_avg_p = self.P_lvl[t-1][mc] # extract (current) average previous price 
                         # decideProduction 
                         p_d = f_data[t-1, i, 5] - prev_avg_p  # demanded price = prev_FPrice - prev_APrice
@@ -313,13 +321,13 @@ class BAM_base:
 
                 """Firms determine Vacancies and set Wages"""
                 for i in range(self.Nf):
-                    """Firms updating vacancies in the following by keeping or firing workers: when 0 labor employed, then open vacancies will be 5"""
-                    if L[i] >= 0: 
-                        # CHECKEN WHEN t = 0 DURCH !!!!
-                        c_f = w_emp[i] # getEmployedHousehold - slice the list with worker id's (all workers) for firm i 
+                    """Firms updating vacancies in the following by keeping or firing workers in case contract expired:
+                    i.e. rounds of employment is greater than 8"""
+                    if L[i] >= 0: # L kann nicht negativ sein => immer aktiviert!!
+                        c_f = w_emp[i] # getEmployedHousehold: slice the list with worker id's (all workers) for firm i 
                         n = 0 # counter for the number of expired contracts of each firm i 
-                        rv_array = np.random.binomial(1,0.5,size=len(c_f)) # firm firing hired workers or not, 0.5 chance 
-                        # 1x "coin-flip" (1x bernoulli RV) , size determines length of output
+                        rv_array = np.random.binomial(1,0.5,size=len(c_f)) # firm firing hired workers or not: 0.5 chance 
+                        # 1x a "coin-flip" (1x bernoulli RV) for each worker emplyoed (i.e. size determines length of output)
                         # e.g. s = np.random.binomial(1, 0.5, 10) yields array([0, 1, 0, 0, 1, 1, 0, 1, 1, 0])
                         for j in (c_f): # j takes on HH id employed within current firm i 
                             j = int(j-1) # python starts slicing with 1
@@ -334,30 +342,40 @@ class BAM_base:
                                     w[j] = 0 # setWage -> no wage now
                                     d_employed[j] = 0 # 0 days employed from now on
                                     n = n + 1 # add expired contract
-                        Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts (add n if L[i] >= 0)
-                        L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id = number of wokers signed at firm i
+                        Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts: add number of fired workers n 
+                        L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id, i.e. the number of wokers signed at firm i
                         """calcVacancies of firm i"""
                         vac[i] = int((Ld[i] - L[i] + Lhat[i])*1) # labour demanded (depending on price) - labour employed + Labor whose contracts are expiring
                         if vac[i] > 0: 
                             f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
                     """setWage"""
-                    zeta = np.random.uniform(low=0,high=self.h_zeta) # compute zeta (random number) for firm i
-                    if f_data[t-1,i,3] == 0: # if firm has no quantitiy remaining (from last round, i.e. did not sell all products)
-                        zeta = 2*zeta # use 2*zeta, since firm wants to offer wage and increase chance for match later if no more products (or just entered)
-                        w_min = aa[i] # minimum (required) wage of firm i (60% of mean income of HH's)
+                    xi = np.random.uniform(low=0,high=self.h_xi) # compute xi (uniformly distributed random wage shock) for firm i
+                    # OWN: set the minimum wage: w_min is periodically revised upward every four time steps (quarters) in order to catch up with inflation
+                    # in the first 4 rounds (up to t=4): initial value aa is used as min. wage
+                    # then the wage_lvl of the period before is used respectively for every four periods
+                    # e.g. if t = 3 (fourth period): then the wage level of t = 2 (third period) is used for 4 consective periods: if t = 7, then the wage level of t=6, and so on
+                    w_min = aa if t in range(3) else self.wage_lvl[w_min_slice[t-3]][mc] # minimum wage
+                    # LATER: USE *0.4 instead the average wage_lvl (minimum wage too high ??) ?????
+                    """if f_data[t-1,i,3] == 0: # if firm has no quantitiy remaining (from last round, i.e. did not sell all products)
+                        xi = 2*xi # use 2*xi, since firm wants to offer higher wage and increase chance for match later if no more products (or just entered)
+                        # w_min = aa[i] # minimum (required) wage of firm i (60% of mean income of HH's): BEI IHM, da sich sein min_wage immer increased via np.random.uniform(low=1.01,high=1.10
                         if vac[i] > 0: # if firm i has currently open vacancies:
-                            Wp[i] = np.around(max(w_min, min(w_min*(np.random.uniform(low=1.01,high=1.10)),Wp[i]*(1+zeta/2))),decimals=2) # wage
+                            Wp[i] = np.around(max(w_min, min(w_min*(np.random.uniform(low=1.01,high=1.10)),Wp[i]*(1+xi/2))), decimals=2) # wage
+                            # since he always uses same wage (i.e. aa) => he increases the wage every time randomly by a little bit s.t. wage spiral is fullfilled
                             is_hiring[i] = True 
                         Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage if firm i currently no open vacancies
                         is_hiring[i] = False  
-                    # firm i uses zeta (not 2*zeta), if quantitiy remaining (no need to increase chances of getting workers by using higher weight)
-                    w_min = aa[i] # minimum (required) wage of firm i (INITIAL!!??) 
+                    # firm i uses xi (not 2*xi), if firm had quantitiy remaining (no need to increase chances of getting workers by using higher weight)
+                    # DAS IST VON IHM !!"""
+                    # w_min = aa[i] # minimum (required) wage of firm i (INITIAL!!??): Bei ihm 
                     if vac[i] > 0: # if firm has currently open vacancies:
-                        Wp[i] = np.around(max(w_min, min(w_min*(np.random.uniform(low=1.01,high=1.10)),Wp[i]*(1+zeta/2))),decimals=2) # wage
+                        Wp[i] = np.around(max(w_min, Wp[i]*(1+xi)),decimals=2) # wage if firm i has currently open vacancies 
                         is_hiring[i] = True 
-                    Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage if firm i currently no open vacancies
-                    is_hiring[i] = False  
-                    """Finished: Firms posted Vacancies and Wage offers"""
+                    else:
+                        Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage if firm i currently no open vacancies
+                        is_hiring[i] = False  
+                    """Finished: Firms posted Vacancies and Wage offers. I
+                    n t = 0 wage is the same for each firm (i.e. initial wage aa), because max(aa, 0) (Wp[i] = 0) """
                 
                 """SearchandMatch: 
                 There must be at least 1 entry in the list with firm id's that have open vacancies: otherwise no searchandmatch.""" 
@@ -374,18 +392,18 @@ class BAM_base:
                         prev_emp = int(prev_firm_id[j-1]) #getPrevEmployer, i.e. the id of firm HH j were employed before 
                         f_empl_c = [x for x in f_empl if x != prev_emp] # gather firm ids that have open vacancies (neglect firm if HH was just fired)
                         M = self.M if t == 0 or firm_went_bankrupt[j-1] == 1 else self.M - 1 # number of firms HH applies to
-                        # in t = 0 or if firm HH worked before went bankrput: HH cannot apply to firms where they worked before: in this case M = 4
+                        # in t = 0 or if firm the HH worked before went bankrput: HH cannot apply to firms where they worked before: in this case M = 4
                         # otherwise HH already tried to apply to firm be worked before: either rv = 0 or rv = 1
                         if len(f_empl_c) > M: # if there are more than M-1 (3) firms with open vacancies
                             appl_firm = np.random.choice(f_empl_c, self.M-1, replace = False) # choose some random firm ids to apply to 
                         else: # otherwise: HH applies to the only firms hiring (with open vacancies)
                             appl_firm = f_empl_c # save firm id's HH applies to
                         firms_applied[j-1].append(appl_firm) # attach list with firm id's HH j will apply to (attach to its entry in list)
-                        print("firms applied:", firms_applied[j-1], "by HH", j-1)
+                        #print("firms applied:", firms_applied[j-1], "by HH", j-1)
                         # Houshold j applies for the vacancies
                         for a in appl_firm: # a takes on the firm id that HH applies to 
                             job_applicants[a-1].append(j) # add firm id to the list of firm id's the HH applies to 
-                            print("Job applicants:", job_applicants[a-1])
+                        #    print("Job applicants:", job_applicants[a-1])
                                    
                     # B: Firms offer Jobs to randomly selected applicants (HH who applied)
                     for f in f_empl:
@@ -405,7 +423,7 @@ class BAM_base:
                             # updateHouseholdJobOffers (offered jobs by firm (id) to HH)
                             for a in applicants:
                                 job_offered_from_firm[a-1].append(f) # save the firm id that offers job to HH which is currently applying (firm -> HH)
-                        print("job offered to HH:", job_offered_to_HH[f-1], "by firm", f)
+                        #print("job offered to HH:", job_offered_to_HH[f-1], "by firm", f)
                     
                     # C: Household accepts if job offered is of highest wage
                     for l in c_ids:
@@ -418,23 +436,22 @@ class BAM_base:
                         f_job_offers = [x-1 for x in f_job_offers]
                         f_e = np.zeros(len(f_applied_ids)) # initialize vector of wages of the firms where HH l applied (use length of array entries inside list)
                         offer_wage = [] # initialize wage of offering firm that is searching
-                        print(l,f_applied_ids, f_job_offers)  # WARUM MATCHEN DIE NIEEEEEEE -> nur wenn f_job_offers leer darf kein match occurren!!!
+                        print(l,f_applied_ids, f_job_offers)  
                         if len(f_applied_ids) != 0: # if HH applied to some firms (id's) (i.e. if there is array inside f_applied_ids)
                             ind = 0 # counter
                             for ii in f_applied_ids: 
-                                f_e[ind] = Wp[ii] # extract the wages of the firms where HH applied (where HH applied)
+                                f_e[ind] = Wp[ii] # extract the wages of the firms where HH applied 
                                 ind += 1 # increase index
-                            for of in f_job_offers: # extract the wages of the offering firm 
+                            for of in f_job_offers: # extract the wages of the offering firms
                                 offer_wage.append(np.around(Wp[of] ,decimals=2)) 
-                            # w_max = max(f_e) # max. wage of firm the HH l applied to  -> if firm with max. wage not emplyoing, then HH remains unemployed!!
-                            w_max = max(offer_wage) if t == 0 and len(offer_wage) > 0 else 0 
-                            # maximum wage of the firms offering jobs, if no jobs offered: wage is 0
-                            # otherwise for w_max = max(f_e): if firms_applied has highest wage but is not offering a job 
-                            # => she remains unemployed and does not take any job at all!
-                            # Therefore: HH gets employed by firm offering highest wage, also if "preffered firm with highest wage" not employing  
+                            w_max = max(f_e) # max. wage of firms the HH l applied to 
+                            # w_max = max(offer_wage) if t == 0 and len(offer_wage) > 0 else max(f_e) 
+                            # HH extracts the max. wage of the firm she applied to: If this wage matches the wages the HH was offered, it is the highest
+                            # wage and the HH directly accepts the job (w_max in offer_wage).
+                            # Otherwise the HH chooses the the firm offering highest wage, also if "preffered firm with highest wage HH applied to" is not employing her (no match)  
                             if w_max in offer_wage: 
-                                # Settlement only in t = 0 (if t > 0: w_max always 0) if HH were offered a job
-                                # update report variables
+                                # Settlement if firm with highest wage HH applied to also offered job to HH. Always the case in t = 0, since all firms offer equal weight
+                                # update report variables:
                                 f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured (i.e. firm that offered highest wage)
                                 is_employed[l-1] = True # updateEmploymentStatus
                                 firm_id[l-1] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
@@ -442,31 +459,277 @@ class BAM_base:
                                 hired = hired + 1 # counter for #HH increases by 1
                                 w_emp[f_max_id].append(l) # employHousehold: save HH id to list of firm that is employing
                                 L[f_max_id] = len(w_emp[f_max_id]) # updateTotalEmployees: update number of HH employed 
+                                firm_went_bankrupt[l-1] = 0 # reset flag for employed worker in case he became unemployed because his previous firm went bankrupt
                                 # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, w_max))
-                            elif t > 0 and len(offer_wage) > 0: # Settlement if not in first round and if wlist of job offering firms is not empty
+                            # elif t > 0 and len(offer_wage) > 0: # Settlement if not in first round and if list of job offering firms is not empty
+                            elif len(offer_wage) > 0: # Settlement if firm with max. wage HH applied to not offering a job, but other firm(s) do
                                 mm = max(np.array(offer_wage)) # extract max. offered wage
                                 # Settlememt: HH applied to firms and extracts max. wage of the firms she has job offer 
                                 # hence if there are job offers to HH => she accepts job with highest wage
-                                if mm > self.wage_lvl[t-1][mc]: # e.g.  * 0.4 => smaller minimum wage ??!! 
-                                    # if maximum offered wage is larger than (average) wage_level of before => HH l accepts the job
-                                    # (otherwise HH reamins unemployed)    
-                                    # Update report variables
-                                    f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured (i.e. firm that offered highest wage)
+                                # if mm > self.wage_lvl[t-1][mc]: # e.g.  * 0.4 => smaller minimum wage ??!! -> wenn davor bei w_min = ...
+                                if mm > w_min: # check again whether max. offered wage above current minimum wage (eigentlich not needed) 
+                                    # if maximum offered wage is larger than (average) wage_level of before => HH l accepts the job, otherwise HH remains unemployed    
+                                    # Update report variables:
+                                    f_max_id = f_job_offers[offer_wage.index(mm)] # save firm id for which match occured (i.e. firm that offered highest wage)
                                     is_employed[l-1] = True # updateEmploymentStatus
                                     firm_id[l-1] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
-                                    w[l-1] = np.around(w_max,decimals=2) # save wage HH l is earning
+                                    w[l-1] = np.around(mm,decimals=2) # save wage HH l is earning
                                     hired = hired + 1 # counter for #HH increases by 1
                                     w_emp[f_max_id].append(l) # employHousehold: save HH id to list of firm that is employing
                                     L[f_max_id] = len(w_emp[f_max_id]) # updateTotalEmployees: update number of HH employed 
-                                    firm_went_bankrupt[l-1] = 0 # reset flag for unemployed worker in case he became unemployed because his previous firm went bankrupt
-                                # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, w_max))
+                                    firm_went_bankrupt[l-1] = 0 # reset flag for employed worker in case she became unemployed because her previous firm went bankrupt
+                                # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, mm))
                 else:
                     print("No Firm with open vacancies")
                 print("")   
                 print("Labor Market CLOSED!!!! with %d household hired!!" %(hired))
                 print("")
 
-                # WAGE BILL ?? -> firms have to pay wage before production ?? 
+                """Firms set the wage bills AND HAVE TO PAY WAGES ???!!"""
+                for f in range(self.Nf):
+                    Wb_a[f] = Wp[f] * L[f]  # (actual) wage bills = wages * labour employed
+                print("Firms calculated Wage bills!!")
+                print("")
+
+                """3)
+                Credit market: If there is a financing gap, firms go to credit market, i.e. after firms payed loans and net-worth is negative. 
+                They go to random chosen banks (depending on parameter H) to get loans, starting to apply to the bank having lowest interest rate. 
+                Banks sort borrowers application according to financial conditions and satisfy credit demand until exhaustion of credit supply.
+                Interest rate is calc acc. to markup on an baseline rate (set exogenous by "CB"). 
+                After credit market closed, if firms are still short in net worth, they fire workers or dont accept them."""
+            
+                
+                # parameter H (number of banks a firm asks for credit, here H = 2)
+                b_ids = np.array(range(self.Nb)) + 1 # bank identities (+1 since range starts with 0)
+                f_ids = np.array(range(self.Nf)) + 1 # firm identities
+                f_cr = [] # initialize list with id's of firms which need credit in the following
+                np.random.shuffle(f_ids) # 
+                print("")
+                print("Credit Market OPENS!!!!") # Firms apply for Credit (randomly, hence shuffled)
+                print("")
+
+                """Firms check if they need credit & randomly pick banks they apply for credit if so"""
+                for f in f_ids:
+                    f = int(f)
+                    # loanRequired: firm f determines whether it needs credit or not
+                    if Wb_a[f-1] > NW[f-1]: # if wage bills f has to pay > NW = 200*NWa = 200*np.mean(Y0) (larger than Net worth)
+                        # firm will apply for credit
+                        B[f-1] = Wb_a[f-1] - NW[f-1] # amount of credit needed
+                        f_cr.append(f) # save firm id which needs credit
+                        b_apply = np.random.choice(b_ids, self.H, replace=False) # choose random bank id firm f will apply for credit
+                        credit_appl[f-1].append(b_apply) # setCreditAppl: save bank ids in list firm f (f-1) choose to apply to 
+                        for bb in b_apply:
+                            firms_applied_b[bb-1].append(f) # updateFirmsAppl: save firm id in list that applied to a bank 
+                
+                """searchAndMatchCredit"""
+                # A: Banks decides on the interest rates, if there are some firms that need credit / loan
+                if len(f_cr) > 0:
+                    print("Some firms need Credit: Banks set their interest rate:")
+                    np.random.shuffle(b_ids)
+                    for b in b_ids:
+                        b = int(b-1)
+                        # setCreditSupply - BRAUCHE ich nicht wenn ich equitiy initialise ??!!
+                        if E[b] == 0: # if bank has no equity
+                            Cr[b] = tCr[b] # then credit supplied is tCr
+                        else:
+                            Cr[b] = E[b] / self.capital_requirement_coef # amount of credit that can be supplied is an multiple of the equity base: E
+                            # v is the capital requirement coefficient  => 1/v = maximum allowable leverage  
+                        # Cr_a[b] = Cr_a[b] + 0 # setActualCreditSupplied  ???? 
+                        Cr_rem[b] = Cr[b] - Cr_a[b] # setRemainingCredit - remaining credit does not change ?!
+                        print("Bank %d has a credit supply of %f" %(b+1, Cr[b]))
+                        f_appl = firms_applied_b[b] # getFirmsAppl: slice out firms applied to current bank b (b-1)
+                        for f_a in f_appl:
+                            if f_a is not None:
+                                # getLeverageRatio: compute leverage of the firms applying for a loan 
+                                if NW[f_a -1] <= 0: # in case firm has negative net worth: lv is random number 
+                                    lv = np.random.uniform(low=1.5,high=2.0)
+                                else:
+                                    lv = B[f_a -1] / NW[f_a -1] # FK / EK 
+                                # calcIntRate
+                                phi[b] = np.random.uniform(low=0,high=self.H_phi) # calcPhi    
+                                rt = self.r_bar*(1 + phi[b]*np.sqrt(lv)) # current interest rate
+                                r[b].append(rt) # updateIntRates (append interest rates charged by bank b (list in list) to firm f_a)
+
+                    # B: Firms choose the bank having lowest int. rate and going to next bank(s) if their credit req are not satisfied
+                    for f_c in f_cr:
+                        f_c = int(f_c) # current firm id 
+                        r_fc = [] # initialize list to store interest rates of the banks firm f_c applied to (r bei ihm, da oob)
+                        b_a_np = credit_appl[f_c-1][0] if len(credit_appl) > 0 else [] # getCreditAppl: bank ids that firm f_c applied to
+                        # arrays inside list entry => slice out array if firm f_c applied for credit, otherwise empty list []; if list is empty: loop is not activated
+                        for b in b_a_np:
+                            b =int(b)
+                            f_b = firms_applied_b[b-1] # getFirmsAppl (list of firms that applied to bank b_a)
+                            r_b = r[b-1] # getIntRates (list of interest rates bank_b charges to all firms applied to bank b)
+                            r_fc.append(r_b[f_b.index(f_c)]) # append interest rate offered to firm f_c by bank b 
+                        r_fc_np = np.array(r_fc) # convert charged interest rates to numpy array
+                        """Actual payment process in the following:"""
+                        Cr_req = B[f_c-1] # getLoanAmount: credit demanded by firm f_c (f_c - 1 when slicing)
+                        cr = 0 # initialize actual obtained credit / credit loaned by bank   
+                        rem = Cr_req - cr # initialize remaining required credit of firm 
+                        for bk in b_a_np:
+                            i = np.argmin(r_fc_np) # extract place of the bank in the list with the lowest interest rate 
+                            C_s = 0 # initialze credit supplied by the bank
+                            C_r = Cr_rem[int(b_a_np[i])-1] # get ramining credit ampunt of bank (id) that supplied the lowest interest rate
+                            if C_r >= rem: # if remaining amount of credit >= remaining required credit by firm f_c
+                                C_s = C_s + rem # supplied credit by bank with lowest interest rate 
+                                cr = cr + rem # actually obtainend credit amount (loaned amount) for firm f_c by bank with lowest interest rate
+                                rem = Cr_req - cr # new remaining required credit by firm f_c is required credit amount - cr supplied by bank 
+                                C_r = C_r - C_s  # new remaining credit amount by bank after subtracting the supplied credit amount
+                                # addBanksAndRates: save the computations on the firm side
+                                banks[f_c-1].append(int(b_a_np[i])) # append bank id that supplied lowest credit 
+                                Bi[f_c-1].append(cr) # append updated received credit
+                                r_f[f_c-1].append(r_fc_np[i]) # interest rate charged (r_np bei ihm) 
+                                # addFirmsRatesCredits:  save the computations on the bank side
+                                firms_loaned[int(b_a_np[i])-1].append(f_c) # save firm id the bank with lowest interest loaned money to 
+                                Cr_d[int(b_a_np[i])-1].append(cr) # save credit amount given out to firm by bank (id) with lowest interest rate 
+                                r_d[int(b_a_np[i])-1].append(r_fc_np[i]) # save interest rate charged to firm by bank with lowest interest rate
+                            else: # if credit amount not sufficient: i.e. smaller than required amount by firm 
+                                cr  = cr + C_r
+                                rem = Cr_req - cr
+                                C_s = C_s + C_r 
+                                C_r = 0
+                                # addBanksAndRates: save the computations on the firm side
+                                banks[f_c-1].append(int(b_a_np[i])) 
+                                Bi[f_c-1].append(cr) 
+                                r_f[f_c-1].append(r_fc_np[i]) 
+                                # addFirmsRatesCredits:  save the computations on the bank side
+                                firms_loaned[int(b_a_np[i])-1].append(f_c) 
+                                Cr_d[int(b_a_np[i])-1].append(cr) 
+                                r_d[int(b_a_np[i])-1].append(r_fc_np[i]) 
+                            #setActualCreditSupplied
+                            Cr_a_current = Cr_a[int(b_a_np[i])-1] # extract the amount current bank has given out so far
+                            Cr_a[int(b_a_np[i])-1] = Cr_a_current + C_s # increase amount by the credit supplied above 
+                            # setRemainingCredit
+                            Cr_rem[int(b_a_np[i])-1] = Cr[int(b_a_np[i])-1] - Cr_a[int(b_a_np[i])-1] 
+                            # reset list with bank id firm applied to and list with sliced lowest interest rates
+                            b_a_np = np.delete(b_a_np, i)
+                            r_fc_np = np.delete(r_fc_np, i)
+                            if rem == 0: # break loop if no more credit left to supply 
+                                break
+                            if len(b_a_np) == 0: # or break loop if no more banks left to get credit from 
+                                break
+                        # setLoanToBePaid: total amount of loan(s) (hence sum, if multiple banks lend out money): 
+                        # loan = amount of credit payment(s) received + interest(s) firm has to pay
+                        loan_to_be_paid[f_c-1] = np.around(np.sum( (np.array(Bi[f_c-1]))*(1 + np.array(r_f[f_c-1])) ),decimals=2)
+                        print('loan_to_be_paid', loan_to_be_paid[f_c-1])
+                else: 
+                    print("No credit requirement in the economy")
+                print("")            
+                print("Credit Market CLOSED!!!!")
+                print("")
+
+                """If internal and external finances are not enough to pay for wage bills of HH: some random HH are fired
+                before production starts"""
+                # A: updateProductionDecisions
+                hh_layed_off = [39] # initialize list to store HH id's that will be fired in the follwing
+                print("")
+                print("Firms updating hiring decision.....")
+                for f in range(self.Nf): # go through through all firms
+                    if B[f] > 0:# if 
+                        unsatisfied_cr =  B[f] - sum(Bi[f]) # amount of credit needed minus total amount (sum) of credit received by bank(s) 
+                        # number of worker(s) that have to be fired is integer Lb s.t. Lb <= ratio of unsatisfied credit and wage payments
+                        # hence one worker is fired if unsatisfied credit amount is a multiple of wage payments that have to be made before production can start
+                        Lb = int(np.floor(unsatisfied_cr / Wp[f])) 
+                        if Lb > 0:
+                            h = w_emp[f]  # getEmployedHousehold: get employed HH's working at firm f
+                            if len(h) >= Lb: # if firm has more employees than number of worker(s) firm has to fire
+                                h_lo = np.random.choice(h, Lb, replace = False) # choose random worker(s) which are fired
+                                h = [x for x in h if x not in h_lo] # update employed HH's (drop fired HH)
+                            else: # if firm has as many workers as it has to fire
+                                h_lo = h # worker(s) (HH id) that are fired
+                                h = [] # firm has no more employed HH's
+                            # updateEmployedHousehold
+                            w_emp[f] = h # save new list of employed HH's at firm f
+                            L[f] = len(w_emp[f]) # update labour emplopyed
+                            # save HH ids that got fired
+                            for i in h_lo:
+                                hh_layed_off.append(i)
+                print("Firms succesfully updated hiring decisions")
+                print("")
+                # B: updateHouseholdEmpStatus
+                for h in hh_layed_off: # set the new employment status of all fired HH's
+                    prev_firm_id[h-1] = firm_id[h-1] # updatePrevEmployer: save firm id which fired HH and is now firm HH worked previously
+                    firm_id[h-1] = 0   # setEmployedFirmId: HH not employed anymore, therefore id is 0
+                    is_employed[h-1] = False # set employment status to false
+
+                """4)
+                Production takes one unit of time regardless of the scale of prod/firms.
+                But before production can start wage payments of the firms have to be made to the HH's"""
+
+                print("Firms pay wages")
+                print("")
+                # wagePayments
+                # min_w = self.wage_lvl[t-1][mc] # wage level of period before is minimum wage (0 in t = 0)
+                # brauche ich nicht: da bereits w_min oben bestimmt: min_w = w_min
+                min_w = w_min # extract the current minimum wage each simulation round 
+                mw = 0 # initialize overall maximum wage that was paid in this round
+                for f in range(self.Nf):
+                    emp = w_emp[f] # employed HH's (list) at firm f
+                    for e in emp:
+                        w_flag[e-1] = 1 # setWageFlag: if HH has job (is in list) gets entry one
+                        mw = max(mw, w[e-1]) # maximum wage paid   
+                    # wagePaid
+                    W_pay[f] = Wp[f] # save wage payments firm has to make to each HH employed
+                for c in range(self.Nh):
+                    # getEmploymentStatus
+                    if is_employed[c] == True:
+                        # setUnempBenefits
+                        unemp_benefit[c] = 0 # if HH c is employed, then she receives no unemployment benefits
+                    else:
+                        # if HH not employed: receives unemployment payment unequal to 0
+                        if t == 0:
+                            min_w = 0.5 * mw # minimum wage is half of maximum wage paid in the first round t = 0
+                        unemp_benefit[c] = np.around(0.5 * min_w, decimals=2) # unemployment benefits are half of the current min. wage
+                    # Sine HH's are either paid or receive unemployment payment before the goods market opens, they update their income accordingly 
+                    Y[c] = np.around(Y[c] + w[c] + unemp_benefit[c], decimals = 2) # if wage = 0, then unemployment benefits are added or vice versa
+                
+                # WAGE PAYMENTS FROM NET WORTH ABZIEHEN bei FIRMEN?! - > macht er in 7) und 8.. 
+
+                # HIER WEITER
+
+                print("")
+                print("Firms producing....!")
+                # doProduction
+                for f in range(self.Nf):
+                    Qd[f] = np.around(Qd[f],decimals=2) #setDesiredQty  - needed???
+                    Qs[f] = 0 # resetQtySold
+                    # setActualQty
+                    alpha[f] =  np.around(np.random.uniform(low=5,high=6),decimals=2) # setProductivity (labor prductivity of each firm)
+                    qp = alpha[f] * L[f] # productivity * labor employed = quantity produced 
+                    Qp[f] = np.around(qp, decimals=2) # quantity produced rounded
+                    # setQtyRemaining
+                    Qr[f] = Qp[f] - Qs[f]
+                    if t == 0 and Qp[f] != 0:
+                        p[f] = 1.5 * Wb_a[f] / Qp[f] # some initial prices remain 0, if no production! => hence in CMarket => some firm
+                print("Wage payments and Production done!!!")
+                print("")
+                
+                
+
+                
+                
+                
+                
+                
+                
+            
+                
+                
+                # im goods market: Propensity to consume of poorest people and richest people mit einbauen.. (ab t = 1?.
+                # ABER: im Buch werden ändert sich die MPC in jeder Periode.. (c_jt)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -477,7 +740,7 @@ class BAM_base:
                 Here all individual report variables gathered through the simulation are saved in an numpy 3-D array, i.e.
                 indivdual data of each round is saved in a T+2x"DatatoStore" matrix for each simulation round.
                 This can be switched off in case not needed (e.g. for calibration) to save memory space, which is done in the 'estimate' method below. 
-                There memory is saved by not saving indidivudal data, but only aggregate report variables. """
+                There overall memory is saved by not saving indidivudal data, but only data on aggregate report variables. """
 
                 n_data = 0 # initialize running index
                 # 1) HH
@@ -519,11 +782,11 @@ class BAM_base:
                     f_data[t, f, 18] = NW[f] # getNetWorth
                     f_data[t, f, 19] = vac[f] # getVacRate
                     f_data[t, f, 14] = loan_to_be_paid[f] # getLoanToBePaid           
-                    f_data[t, f, 11] = Wb_d[f] # getDesiredWageBill()
-                    f_data[t, f, 12] = Wb_a[f] # getActualWageBill()     
-                    f_data[t, f, 15] = P[f] # getProfits()
-                    f_data[t, f, 16] = divs[f] # getDividends()
-                    f_data[t, f, 17] = RE[f] # getRetainedEarnings()
+                    f_data[t, f, 11] = Wb_d[f] # getDesiredWageBill
+                    f_data[t, f, 12] = Wb_a[f] # getActualWageBill   
+                    f_data[t, f, 15] = P[f] # getProfits
+                    f_data[t, f, 16] = divs[f] # getDividends
+                    f_data[t, f, 17] = RE[f] # getRetainedEarnings
 
                 # 3) Banks
                 for b in range(self.Nb):
