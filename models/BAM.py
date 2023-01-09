@@ -38,7 +38,7 @@ class BAM_base:
         self.c_R = parameters['c_R'] # Propensity to consume of richest people
 
         "Parameters set by modeller"
-        self.beta = 4 # ???
+        self.beta = 4 # MPC parameter that determines shape of decline of consumption propensity when consumption increases 
         self.theta = 8 # Duration of individual contract
         self.r_bar = 0.4 # Base interest rate set by central bank (exogenous in this model)
         self.capital_requirement_coef = 0.11 # capital requirement coefficients uniform across banks 
@@ -182,7 +182,6 @@ class BAM_base:
                     MPC[h] = np.random.uniform(low=0.6,high=0.9) # initial MPC for each HH (then recomputed in each loop)
                     id_H[h] = h + 1 # each HH gets number which is the id
                     Y[h] = Y0[h]  # fill initial income of each HH
-                    C_d[h] = MPC[h]*Y[h]  # inital consumption demand of each HH (marginal product of consumption * income)
                     # update Data
                     c_data[:,h,0] = h+1 # in all matrices id in first column
                     c_data[0,h,1] = Y[h] # initial income in t = 0
@@ -374,8 +373,8 @@ class BAM_base:
                     else:
                         Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage if firm i currently no open vacancies
                         is_hiring[i] = False  
-                    """Finished: Firms posted Vacancies and Wage offers. I
-                    n t = 0 wage is the same for each firm (i.e. initial wage aa), because max(aa, 0) (Wp[i] = 0) """
+                    """Finished: Firms posted Vacancies and Wage offers. 
+                    In t = 0 wage is the same for each firm (i.e. initial wage aa), because max(aa, 0) (Wp[i] = 0) """
                 
                 """SearchandMatch: 
                 There must be at least 1 entry in the list with firm id's that have open vacancies: otherwise no searchandmatch.""" 
@@ -485,7 +484,7 @@ class BAM_base:
                 print("Labor Market CLOSED!!!! with %d household hired!!" %(hired))
                 print("")
 
-                """Firms set the wage bills AND HAVE TO PAY WAGES ???!!"""
+                """Firms set the wage bills"""
                 for f in range(self.Nf):
                     Wb_a[f] = Wp[f] * L[f]  # (actual) wage bills = wages * labour employed
                 print("Firms calculated Wage bills!!")
@@ -524,7 +523,7 @@ class BAM_base:
                 """searchAndMatchCredit"""
                 # A: Banks decides on the interest rates, if there are some firms that need credit / loan
                 if len(f_cr) > 0:
-                    print("Some firms need Credit: Banks set their interest rate:")
+                    print("%d Firms need Credit: Banks set their interest rate:" %len(f_cr))
                     np.random.shuffle(b_ids)
                     for b in b_ids:
                         b = int(b-1)
@@ -657,7 +656,6 @@ class BAM_base:
                 But before production can start wage payments of the firms have to be made to the HH's"""
 
                 print("Firms pay wages")
-                print("")
                 # wagePayments
                 # min_w = self.wage_lvl[t-1][mc] # wage level of period before is minimum wage (0 in t = 0)
                 # brauche ich nicht: da bereits w_min oben bestimmt: min_w = w_min
@@ -667,7 +665,7 @@ class BAM_base:
                     emp = w_emp[f] # employed HH's (list) at firm f
                     for e in emp:
                         w_flag[e-1] = 1 # setWageFlag: if HH has job (is in list) gets entry one
-                        mw = max(mw, w[e-1]) # maximum wage paid   
+                        mw = max(mw, w[e-1]) # maximum wage paid updated in case wage payments to current worker e higher 
                     # wagePaid
                     W_pay[f] = Wp[f] # save wage payments firm has to make to each HH employed
                 for c in range(self.Nh):
@@ -682,34 +680,241 @@ class BAM_base:
                         unemp_benefit[c] = np.around(0.5 * min_w, decimals=2) # unemployment benefits are half of the current min. wage
                     # Sine HH's are either paid or receive unemployment payment before the goods market opens, they update their income accordingly 
                     Y[c] = np.around(Y[c] + w[c] + unemp_benefit[c], decimals = 2) # if wage = 0, then unemployment benefits are added or vice versa
-                
-                # WAGE PAYMENTS FROM NET WORTH ABZIEHEN bei FIRMEN?! - > macht er in 7) und 8.. 
 
-                # HIER WEITER
-
-                print("")
                 print("Firms producing....!")
                 # doProduction
                 for f in range(self.Nf):
-                    Qd[f] = np.around(Qd[f],decimals=2) #setDesiredQty  - needed???
+                    # Qd[f] = np.around(Qd[f],decimals=2) #setDesiredQty  - needed??? : NO
                     Qs[f] = 0 # resetQtySold
-                    # setActualQty
-                    alpha[f] =  np.around(np.random.uniform(low=5,high=6),decimals=2) # setProductivity (labor prductivity of each firm)
+                    # setActualQty: Firm compute 
+                    alpha[f] =  np.around(np.random.uniform(low=5,high=6),decimals=2) # setProductivity: labor prductivity of each firm
+                    # productivity is btw. 5 and 6 for each firm and remains around this level throughout the entire simulation (hence no aggregate Output growth) 
                     qp = alpha[f] * L[f] # productivity * labor employed = quantity produced 
-                    Qp[f] = np.around(qp, decimals=2) # quantity produced rounded
-                    # setQtyRemaining
-                    Qr[f] = Qp[f] - Qs[f]
+                    Qp[f] = np.around(qp, decimals=2) # save the quantity produced rounded
+                    Qr[f] = Qp[f] - Qs[f] # # setQtyRemaining: Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
+                    # Setting initial prices in t = 0, otherwise set before in 1) 
                     if t == 0 and Qp[f] != 0:
-                        p[f] = 1.5 * Wb_a[f] / Qp[f] # some initial prices remain 0, if no production! => hence in CMarket => some firm
+                        p[f] = 1.5 * Wb_a[f] / Qp[f] # intial price are aggregated wage payments relative to quantity produced, times 1.5
                 print("Wage payments and Production done!!!")
                 print("")
                 
+                """5) 
+                After production is completed, the goods market opens. Again, as in the labour- and credit market, search and match algorithm applies:
+                Firm post their offer price. Consumers contact subset of randomly chosen firm acc to price and satisfy their demand.
+                Goods with excess supply can't be stored in an inventory and they are disposed with no cost (no warehouse). """ 
                 
+                c_ids = np.array(range(self.Nh)) + 1 # consumer ids starting with 1 (not 0)
+                f_ids = np.array(range(self.Nf)) + 1 # firm ids starting with 1 (not 0)
+                savg = self.S_avg[t-1,mc] # slice average saving of last round (0 in t = 0)
+                f_id = list(f_ids) # convert ids to list
+                for f in f_ids:
+                    if f is not None:
+                        if Qp[f-1] <= 0: # remove firm id from list if quantity produced = 0
+                            f_id.remove(f)
+                print("")
+                print("Consumption Goods market OPENS!!!")
+                print("")
+                np.random.shuffle(c_ids) # match and search: starts with first HH randomly
+                f_out_of_stock = [] # initialize list for saving firm id's if out of stock (i.e. everything sold at certain point)
+                
+                """SearchandMatch on the goods market"""
+                # A: Each consumer enters market sequentially and determines its demand and random number of firms she constacts in this round
+                for ck in c_ids:
+                    c = int(ck - 1) # current selected HH 
+                    C_d_c = 0 # initialize desired demand of the current selected HH c (set to 0 again for each new consumer entering the market)
+                    # Determine the desired consumption in this round
+                    if t == 0:
+                        C_d[c] = MPC[c]*Y[c]  # inital consumption demand of each HH = initial marginal product of consumption * weight updated intial income
+                        C_d_c = C_d[c] # save initial desired consumption of current HH if t = 0
+                    else:
+                        MPC[c] = np.around(1/(1 + (np.tanh(S[c]/savg))**self.beta),decimals=2) # marginal propensity to consume
+                        C_d[c] = np.around((Y[c])*MPC[c], decimals=2) # setDesiredCons
+                        C_d_c = C_d[c] # getDesiredConsn
+                        # ABER: im Buch ändert sich die MPC in jeder Periode.. NICHT?? (c_jt) - geben Parameter an
+                    
+                    # HH c chooses random firm to (potentially) buy products from
+                    if len(f_id) > 0: # if there are any firms producing
+                        if len(f_id) >= self.Z: # & if there are enough firms to be matched
+                            select_f = np.random.choice(f_id, self.Z, replace = False) # select random list of firms to go to and buy products from 
+                        else:
+                            select_f = f_id # no random firms to choose because number of firms which produced = Z
+                    else:
+                        print("There was no production in the economy, hence HH cannot choose firms to buy consumption goods!!!")
 
+                    # B: HH checks the prices of chosen firms & purchases if stock of chosen firms still greater 0
+                    cs = 0 # initialize amount of consumption / purchased amount later from firm with lowest price 
+                    c_rem = C_d_c - cs  # initializing current remaining consumption demand of HH c
+                    # prev_cs =  0 # initialize ??? - not needed ??
+                    # update selected firm list (delete choosen firm id) in case firm is out of stock (because preceeding HH's bought too much before)
+                    select_f = [x for x in select_f if x not in f_out_of_stock] # updated selected firms (if previous selected firms out of stock by chance)
+                    
+                    # Get prices of choosen firm(s):
+                    if len(select_f) > 0:
+                        prices = [] 
+                        for f in select_f: 
+                            prices.append(p[f-1])
+                        select_f_np = np.array(select_f) # numpy array of selected firms
+                        prices = np.array(prices) # numpy array
+                    
+                        # HH purchases from selected firms, going through all firms and beginning with firm that offers smallest price, until either demand satisfied or all firms in list out of stock
+                        for i in range(len(select_f_np)):
+                            i = np.argmin(prices) # index position of prices of the firm that offers minimum price
+                            pmin = np.min(prices) # minimum price
+                            fi = select_f[i] # get firm id of selected firms (Z) that offers the minimum (lowest) price
+                            Qrf = Qr[fi-1] # extract quantity remaining of firm that offers lowest price
+                            print("firm %s"%fi, "current supply (nominal) %s ;"%Qrf, "HH %s"%ck, "rem cons %s"%c_rem)
+                            if Qrf > 0.001: # if remaining quantity of firm with minimum price is slightly positive: 
+                                # Supply of current firm: 
+                                Qr_f = Qrf*pmin # real supply of firm fi is the current supply / stock * price of current firm
+                                Qs_f = 0 # initialize amount of supplied quantity of firm fi to consumer c (after purchase)
+                                # Purchase:
+                                # Firms fi remaining quantity can satisfy remaining demand of HH c (c_rem): Fi satifies entire demand of consumer c
+                                if Qr_f >= c_rem:
+                                    cs = cs + c_rem # demanded amount / purchase / consumption of HH c
+                                    Qs_f = c_rem # update quantity supplied by firm fi to HH c # Qs_f = Qs_f + c_rem
+                                    c_rem = C_d_c - cs # remaining demand of HH = 0: desired Consumption of HH equals actual purchase / consumption 
+                                    Qr_f = Qr_f - Qs_f  # subtract supplied quantity from remaining quantity to update remaining qunatity of firm fi
+                                # Firm fi cannot fullfill entire demand of HH c:
+                                else:
+                                    cs = cs + Qr_f # consumption/ purchased amount by HH c is the left of the stock of firm fi 
+                                    c_rem = C_d_c - cs # remaining demand
+                                    Qs_f = Qr_f # supplied amount of firm fi # Qs_f = Qs_f + Qr_f
+                                    Qr_f = 0 # no more remaining quantity of firm i
+                                # prev_cs = cs - prev_cs # demanded amount of previous HH (c to c-1) when c takes on next random HH id NOT NEEDED??
+                                # Update report variables:
+                                Qs[fi-1] = Qs[fi-1] + np.around(Qs_f / pmin ,decimals=2) # setQtySold (real): add overall supplied quantity of firm fi
+                                # subtract produced quantity by supplied (sold to c) qunatity and update remaining quantity
+                                Qr[fi-1] = Qp[fi-1] - Qs[fi-1]  # setQtyRemaining
+                                prices = np.delete(prices, i) # delete the price of the firm that sold to c out of price list, since either Firm sold everything or demand is satisfied
+                                select_f = np.delete(select_f, i) # delete firm that sold to c form list of chosen firms (Z)
+                            # append current firm id (fi) to list of firms without stock if stock went to 0
+                            if Qr[fi-1] < 0.001:
+                                f_out_of_stock.append(fi)
+                                print("Firm %d out of stock!!!!!!" %(fi))
+                                print("")
+                            # c continues to purchase from (2nd and 3rd) firm until remaining demand = 0
+                            if c_rem == 0:
+                                break
+                    
+                    # setActualCons & updateSavings
+                    C[c] = np.around(cs, decimals=2) # save the overall consumption of HH c
+                    S[c] = np.around(Y[c] - C[c], decimals=2) # new savings are Income - Consumption of HH c
+                print("Consumption Goods market CLOSED!!!")           
+                print("")
+                # Some HH don't consume at all => hence they have large amounts of savings in the following
+                # checking MPC: S[c] / average => what range are values in (s.t. beta = 4 makes sense )
+                # np.mean(S) = 60.04 in t = 0 => S[0]=22.53 / np.mean(S) = 0.37 => alpha = 0.98 
+                # S[1] =  120.51 / np.mean(S) = 2.0070148090413094 => 0.54
+        
+
+                """6) 
+                Firms collect revenue and calc gross profits. 
+                If gross profits are high enough, they pay principal and interest to bank. 
+                If net profits is positive, they pay dividends to owner of the firm (here no investments to increase productivity in next round). """
+
+                # HIER WEITER ...
+                # computeRevenues
+                print("Firms calculating Revenues......")
+                for f in range(self.Nf):
+                    Rev[f] = np.around(Qs[f]*p[f], decimals = 2)
+                    # calcTotalRevenues
+                    Total_Rev[f] = Total_Rev[f] + Rev[f] # add revenue of this round from firm f to total revenue (of firm f)
+                print("")
+                print("Revenues Calculated!!!")
+                print("")
+
+                # settleDebts: Firms paying back principal and interest from the revenue of this round, if possible.
+                # ??? If not enough revenue (gross Profit), rest of the oustanding amount will be subtracted from the net worth in 7) 
+                # bei ihm unter 7   
+                # ??? - SET FLAG FOR A NON PERFORMING LOAN if not enough Rev ??!!
+                print("Firms settling DEBTS......")
+                for f in range(Fc):
+                    # if no credit requirement in the economy => then no loans (principal) to be paid back, etc. => lists are empty or entries remain 0
+                    loan_paid[f] = np.around(loan_to_be_paid[f], decimals=2) #payLoan - loan to be paid by firm f
+                    banks_f = banks[f]# getBanks (auch banks bei ihm) - id of bank(s) that supplied credit to firm f
+                    credit = Bi[f] # getCredits - amount of credit firm f took from each bank 
+                    rates = r_f[f] # getRates - interest rate(s) charged to firm i  (r bei ihm -> changed to r_f when initializing under firms!!!!)
+                    for i in range(len(banks_f)):
+                        Cr_p[i] = Cr_p[i] + (credit[i]*(rates[i]+1))  # setLoanPaid - Credit paid before (from e.g. other firm) + principal and interest 
+                print("DEBTS settled!!!!!!!")
+                print("")
+
+                # payDividends: Firms compute net Profit by subtracting wage payments and bank payments (if any ) from their revenue (gross Profit) in this round 
+                # If net profit is positive, firms determine their dividend payments (no investment here)
+                # bei ihm unter 7
+                n_div = 0 # initialize counter for no dividends paid 
+                for f in range(Fc):
+                    divs_f = 0 # initialize current dividend of firm f (bei ihm auch divs)
+                    # calcProfits
+                    P[f] = np.around( Total_Rev[f] - Wb_a[f] - np.sum( (np.array(Bi[f]))*(np.array(r_f[f])) ) ,decimals=2) # r bei ihm!
+                    # profits are Total_Rev of this round - wage bill of this round - interest on credit(s) taken by firm f
+                    Total_Rev[f] = 0 # resetTotalRevenue    
+                    if P[f] > 0:
+                        # setDividends
+                        divs[f] = np.around(P[f]*delta , decimals = 2) # dividends are profits * 0.5, if firm f has positive profits
+                        divs_f = divs[f]
+                    else:
+                        nn_div = n_div + 1
+                        # dividends paid remain zero if firm f no positive profit: divs[f] = 0
+                    # HH receive dividend
+                    if divs_f > 0:
+                        for c in range(Nh):
+                            div[c] = div[c] + np.around(divs_f/Nh ,decimals=2)
+                            # each HH gets share of profits (implied assumption that each HH has same share in each firm.. ???)
+                            div_flag[c] = 1 # ?? if one firms has positive profits => then each HH automatically receives payment()
+                print("Out of %d Firms, %d reported profits this period"%(Fc,Fc-n_div))
+
+                """7) 
+                Firms compute Retained Earnings, i.e. their Earnings after interest payments and dividend payments (zero investment here).
+                They are added to the current net worth of each firm which are carried forward to next period. 
+                HH's update their income after the dividend payments and Banks update their equity after principal and interest payments.
                 
+                ?? IST DAS MIT DRIN: If net worth (equity) is negative, firm (bank) exits the market in 8). 
+                For a bankrupt firm a non performing loan have to be registered????
+                ?? If firm could not pay back entire loan => then now subtracting from Net worth ??!!
                 
+                # -> hier: def calcRetainedEarnings(self) ; def getRetainedEarnings(self): ; getNetWorth(self) etc.
+                # -> bei Ihm ALLES mit in 8 unter updateData in stats!!
+                # hier: ERST COMPUTATIONS, Dann SAVING ("mein updateData")"""
+
+               
+                # WAGE PAYMENTS FROM NET WORTH ABZIEHEN bei FIRMEN?! - > macht er in 7) und 8.. 
+                # Dividend payments after profits are realized
                 
+                # 1) Firms
+                for f in range(Fc):
+                    # updateNetWorth
+                    RE[f] = np.around( P[f] - div[f] ) # calcRetainedEarnings - Earnings are profits - dividends paid to HH's 
+                    # - BANK PAYMENTS???!!!!!
+                    NW[f] = NW[f] + RE[f] 
+
+                    # setMinPrice -> remains 0 so far !!!
+                    if Qs[f] != 0: # if firm f sold products
+                        p_low[f] = 0 # loan_to_be_paid[f] / Qs[f] 
+                    else:
+                        p_low[f] = 0 
+
+                    # calcVacRate
+                    vac[f] = vac[f] - L[f] # update vacancies (subtract labour employed at firm f)
                 
+                # 2) HH
+                # (last) "computations"
+                for c in range(Nh):
+                    # update employment count
+                    if is_employed[c] == True: # getEmploymentStatus
+                        d_employed[c] = d_employed[c] + 1 # incrementEdays
+                    else:
+                        d_unemployed[c] = d_unemployed[c] + 1
+                    # update income
+                    Y[c] = np.around(S[c] + w[c] + unemp_benefit[c] + div[c] ) # Income is sum of savings, wage, unemplyoment benefits (if no wage) and dividends
+                    # wenn wage schon paid before goods market: w[c] + unemp_benefit[c] hier RAUS !!!
+                
+                # 3) Banks
+                # (last) "computations"
+                for b in range(Nb):
+                    # updateEquity
+                    E[b] = E[b] + Cr_p[b]  # equity before + total amount of loans paid back 
+
                 
                 
             
@@ -717,23 +922,6 @@ class BAM_base:
                 
                 # im goods market: Propensity to consume of poorest people and richest people mit einbauen.. (ab t = 1?.
                 # ABER: im Buch werden ändert sich die MPC in jeder Periode.. (c_jt)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
                 """Store individual data of all agents:
@@ -799,6 +987,55 @@ class BAM_base:
                     # sum of credit disbursed (ausgezahlt) * rates disbused (getRatesDisbursed) / sum of disbursecd credit (only if greater 0, else 0 )
                     b_data[t, b, 7] = Cr_p[b] # getLoanPaid()
                     b_data[t, b, 6] = b_data[t, b, 5] - b_data[t, b, 7] # disbursed credit - loan paid ??
+                
+
+                """ Compute aggregate report variables (calcStatistics)
+                # calcStatistics ist FILLING AGGREGATE VARIABLES
+                # bei ihm unter 8
+                # always include [][mc] beim slicen!! => get value for each timepoint t (and each mc run)
+                
+                # price level
+                plvl = 0  # price * quantity sold 
+                for f in range(Fc):
+                    plvl = plvl + np.mean(f_data[:t+1, f, 5])*np.sum(f_data[:t+1,f, 3]) # mean of all prices of each firm * Qs of all firms (averaged over t) and then accumulated for each firm
+                    # t+1 s.t. all vectors for each firm of all periods before are also used 
+                plvl = plvl / np.sum(f_data[:t+1, :, 3]) # divide by overall quantity sold 
+                P_lvl[t][mc] = plvl
+
+                S_avg[t][mc] = np.mean(c_data[t, :, 3]) # average savings (mean of savings of all consumers in t)
+                unemp_rate[t][mc] = 1 - (np.sum(c_data[t, :, 10])/Nh) # unemployment rate ( 1 - employment rate: sum of 1 if HH has job / number of HH)
+                print("total produced:", np.sum(f_data[t, :,2]*f_data[t,:,5]), "total consumed:", np.sum(c_data[t, :,2]))
+                avg_prod[t][mc] = np.sum(f_data[t,:,6]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # sum of productivity * #empployees relative to # employees (for each t)
+
+                inflation[t][mc] = P_lvl[t][mc]-P_lvl[t-1][mc] if t!=0 else 0 # / P_lvl[t-1][mc] missing ?? 
+                inflation[t][mc] = inflation[t][mc]*100 
+
+                wage_lvl[t][mc] = np.sum(f_data[t,:,10]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # sum of wage paid * number of employees relative to number of employees
+                wage_inflation[t][mc] = (wage_lvl[t][mc]-wage_lvl[t-1][mc])/np.sum(wage_lvl[t-1][mc]) if t!=0 else 0
+                wage_inflation[t][mc] = wage_inflation[t][mc]*100 
+
+                production[t][mc] = np.sum(f_data[t, :,2]) # sum of quantity produced of firms
+                production_by_value[t][mc] = np.sum(f_data[t, :,2]*f_data[t, :,5]) # quantity produced * price (sum)
+                consumption[t][mc] = np.sum(c_data[:,2]) # sum of consumption
+                demand[t][mc] = np.sum(c_data[t, :,5]) # sum of desired consumption (total demand)
+                hh_income[t][mc] = np.sum(c_data[t, :,1]) # sum of individual income
+                hh_savings[t][mc] = np.sum(c_data[t, :3]) #  sum of invididual savings 
+                hh_consumption[t][mc] = np.sum(c_data[t, :,2]) # hh_consumption = consumption ??
+
+                print("total demand:", demand[t][mc], "avg Price and Wage lvl:", P_lvl[t][mc], wage_lvl[t][mc])
+
+                # own
+                consumption_rate[t][mc] = np.sum(c_data[t, :,2]) / Nh """
+
+
+
+
+                """8) 
+                Firms with positive net worth/equity survive, but otherwise firms/banks go bankrupt.
+                New firms/banks enter the market of size smaller than average size of those who got bankrupt
+                # checkForBankrupcy
+                # ??? WHAT ABOUT FAILED BANKS ??"""
+                
 
 
 
