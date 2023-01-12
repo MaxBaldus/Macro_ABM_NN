@@ -41,7 +41,7 @@ class BAM_base:
         "Parameters set by modeller"
         self.beta = 4 # MPC parameter that determines shape of decline of consumption propensity when consumption increases 
         self.theta = 8 # Duration of individual contract
-        self.r_bar = 0.4 # Base interest rate set by central bank (exogenous in this model)
+        self.r_bar = 0.04 # Base interest rate set by central bank (exogenous in this model)
         self.capital_requirement_coef = 0.11 # capital requirement coefficients uniform across banks 
         self.delta = 0.5 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
 
@@ -123,7 +123,7 @@ class BAM_base:
             Lhat = np.zeros(self.Nf) # Labor whose contracts are expiring
             L = np.zeros(self.Nf)  # actual Labor Employed
             Wb_d = np.zeros(self.Nf) # desired Wage bills
-            Wb_a = np.zeros(self.Nf) # actual Wage bills
+            Wb_a = np.zeros(self.Nf) # aggregated Wage bills (wage payments to each Worker * employed workers)
             Wp = np.zeros(self.Nf) # Wage level
             vac = np.zeros(self.Nf, int) # Vacancy
             W_pay = np.zeros(self.Nf) # Wage updated when paying
@@ -151,10 +151,13 @@ class BAM_base:
             loan_to_be_paid = np.zeros(self.Nf) 
 
             Qty = [] # Quantity ?? - ???????????
+            
             # OWN
             w_min_slice = np.repeat(np.arange(3,self.T,4), 4) # array with values from 2 up to 998 appearing 4 times for slicing the minimum wage
-            outstanding = np.zeros(self.Nf) # under 6) if firm cannot pay back entire loan(s), amount outstanding (not paid back) is saved here
+
+            outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
             outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
+            outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
 
             # BANKS
             id_B = np.zeros(self.Nb, int) # (own) Bank id -> nur id in Bank.py
@@ -170,6 +173,9 @@ class BAM_base:
             firms_applied_b = [[] for _ in range(self.Nb)] # ACHTUNG: firm_appl in bank class
             firms_loaned = [[] for _ in range(self.Nb)] 
             Cr_p = np.zeros(self.Nb)
+
+            # OWN
+            Bad_debt = np.zeros(self.Nb)
 
 
             """3-D Tensors to store individual data after a simulation: 
@@ -210,7 +216,7 @@ class BAM_base:
                 Qty.append(Qd[f])
 
             # BANKS
-            NB0 = np.random.uniform(low = 3000, high = 6000, size = self.Nb)
+            NB0 = np.random.uniform(low = 3000, high = 6000, size = self.Nb) # 
             aNB0 = np.mean(NB0)
             factor = self.Nh*9
             tCr = (NB0 / aNB0)*10*factor # amount of credit to be supplied if equity is 0 -> KANN ICH SELBER MACHEN über initial equity ???!!
@@ -659,13 +665,17 @@ class BAM_base:
                 """4)
                 Production takes one unit of time regardless of the scale of prod/firms.
                 But before production can start wage payments of the firms have to be made to the HH's.
-                Wage payments are directly subtracted from Net worth ???"""
+                Wage payments are directly subtracted from Net worth: 
+                Since Firms either received enough credit or layed some HH's off if credit received was not enough, wage payments can all be paid
+                although Net worth of firm becomes negative for the moment (in case firm went to a bank because NW not high enough). 
+                Firm has to make enough revenue (gross profit) in the following goods market s.t. it can pay back bank (and dividends) and also has
+                enough income to cover the wage payments (i.e. having positive net worth again). """
 
                 print("Firms pay wages")
                 # wagePayments
                 # min_w = self.wage_lvl[t-1][mc] # wage level of period before is minimum wage (0 in t = 0)
                 # brauche ich nicht: da bereits w_min oben bestimmt: min_w = w_min
-                min_w = w_min # extract the current minimum wage each simulation round 
+                min_w = w_min # extract the current minimum wage of each simulation round 
                 mw = 0 # initialize overall maximum wage that was paid in this round
                 for f in range(self.Nf):
                     emp = w_emp[f] # employed HH's (list) at firm f
@@ -673,8 +683,7 @@ class BAM_base:
                         w_flag[e-1] = 1 # setWageFlag: if HH has job (is in list) gets entry one
                         mw = max(mw, w[e-1]) # maximum wage paid updated in case wage payments to current worker e higher 
                     # wagePaid
-                    W_pay[f] = Wp[f] # save wage payments firm has to make to each HH employed
-
+                    W_pay[f] = Wp[f] # save wage payments firm has to make to each HH employed (wage payment per worker)
                     # WAGES FROM NW Abziehen: aber, nicht genug NW, deshalb auch Credit?? ??!!
                     # => erstmal negatives NW => dann mit revenue wieder NUR wieder positive: muss hoch genug sein, damit credit&zins zurückgezahlt werden kann
                     # & dividenden & dann noch plus.. 
@@ -832,9 +841,10 @@ class BAM_base:
                 for f in range(self.Nf):
                     Rev[f] = np.around(Qs[f]*p[f], decimals = 2)
                     Total_Rev[f] = Total_Rev[f] + Rev[f] # calcTotalRevenues: add revenue of this round from firm f to total revenue (of firm f)
-                    Total_Rev[f] = Total_Rev[f] - Wb_a[f]
+                    Total_Rev[f] = Total_Rev[f] - Wb_a[f] # DAS DANN RAUS: schon vom net worth abgezogen in 4)
                     # subtract wage payments from revenue (since wage payments already happened to do production)
-                    # FALSCH: Wage payments from NET worth abgezogen
+                    # FALSCH: Wage payments from NET worth abgezogen: mit oben einbauen !!!
+                    # AUCH FALSCH: wage payments 
                 print("Revenues Calculated!!!")
                 print("")
 
@@ -845,7 +855,6 @@ class BAM_base:
                 print("Firms settling Debts by paying back banks and determine their net profit")
                 print("")
                 for f in range(self.Nf):
-                    # if no credit requirement in the economy => then no loans (principal) to be paid back, etc. => lists are empty or entries remain 0 ???
                     banks_f = banks[f]# getBanks: id of bank(s) that supplied credit to firm f
                     credit = Bi[f] # getCredits: amount of credit firm f took from each bank 
                     rates = r_f[f] # getRates: interest rate(s) charged to firm i  (r bei ihm -> changed to r_f when initializing under firms!!!!)
@@ -857,24 +866,32 @@ class BAM_base:
                         # calcProfits: compute net profits by subtracting loan payments (credit and interest), wages already subtracted
                         P[f] = np.around(Total_Rev[f] - np.sum( (np.array(Bi[f]))*(np.array(r_f[f])) ) ,decimals=2) # net profits
                     else:
-                        # if firm cannot pay back all loans, i.e. gross revenue smaller than amount of loans firm has to pay back:
+                        # if firm cannot pay back all loans, i.e. gross revenue smaller than total amount of loans firm has to pay back:
                         print("Firm %s cannot pay back all loans"%f)
                         loan_paid[f] = Total_Rev[f] # firm uses its entire revenue of this round to pay back as many loans as possible
-                        amount_left = loan_paid[f]
+                        amount_left = loan_paid[f] # save the amount firm has to pay back loans
                         for i in range(len(banks_f)):
-                            # firm starts to pay back loans, starting with first bank: If amount left to pay back loans > than loan & interest: firm pays entire amount to first bank
-                            payback = (credit[i]*(rates[i]+1)) # amount firm has to pay back to each firm
-                            if amount_left >= payback: 
+                            # firm starts to pay back loans, starting with first bank: 
+                            payback = (credit[i]*(rates[i]+1)) # amount firm has to pay back to current bank i
+                            if amount_left >= payback: # If amount left to pay back loans > than loan & interest: firm pays back entire amount to current bank i
                                 Cr_p[int(banks_f[i])-1] = Cr_p[int(banks_f[i])-1] + payback  # setLoanPaid
-                                amount_left = amount_left - payback 
+                                amount_left = amount_left - payback # update new amount left and check whether next bank can be paid back 
                             else:
                                 # if amount left not enough to pay back entire credit to current bank, then the payment is just the amount left and payment loop stops
-                                Cr_p[int(banks_f[i])-1] = Cr_p[int(banks_f[i])-1] + amount_left
-                                outstanding[f] = payback - amount_left # compute outstanding amount firm f could no pay back
-                                outstanding_flag[f] = 1 
+                                Cr_p[int(banks_f[i])-1] = Cr_p[int(banks_f[i])-1] + amount_left # setLoanPaid
+                                outstanding[f].append(payback - amount_left) # compute outstanding amount firm f could no pay back to current bank i
+                                outstanding_flag[f] = 1 # set a flag if firm has outstanding credit
+                                outstanding_to_bank[f].append(banks_f[i])
+                                while i < (len(banks_f)-1):
+                                    # append the outstanding amounts of the other banks firm f could not pay back at all (in case firm borrowed from more than 1 firm)
+                                    i = i + 1
+                                    payback = (credit[i]*(rates[i]+1)) # amount firm has to pay back to each bank
+                                    outstanding[f].append(payback)
+                                    outstanding_to_bank[f].append(banks_f[i])
                                 P[f] = 0 # net profits are zero, since entire revenue of this round is used to pay back the bank 
-                                # The outstanding amount will be subtracted from Net worth in 7) 
+                                # The outstanding amount(s) will be subtracted from Net worth in 7), if firm has enough NW 
                                 break
+                # if no credit requirement in the economy, then no loans (principal) to be paid back, etc.: Hence lists are empty or entries remain 0
                 print("Debts settled")
                 print("")
 
@@ -891,18 +908,21 @@ class BAM_base:
                     else:
                         n_div = n_div + 1
                         # dividends paid remain zero if firm f no positive profit: divs[f] = 0
-                    # H'sH receive the dividends
+                    # HH's receive the dividends
                     if divs_f > 0:
                         for c in range(self.Nh):
                             div[c] = div[c] + np.around(divs_f/self.Nh ,decimals=2)
                             # each HH gets share of profits (implied assumption that each HH has same share in each firm)
                             div_flag[c] = 1 # ?? if one firms has positive profits => then each HH automatically receives payment()
-                print("Out of %d Firms, %d reported profits this period"%(Fc,Fc-n_div))
+                print("Out of %d Firms, %d reported profits this period"%(self.Nf,self.Nf-n_div))
 
                 """7) 
                 Firms compute Retained Earnings, i.e. their Earnings after interest payments and dividend payments (zero investment here).
                 They are added to the current net worth of each firm which are carried forward to next period. 
                 HH's update their income after the dividend payments and Banks update their equity after principal and interest payments.
+
+                If a firm could not pay back entire credit with its revenue, 
+                FIRMs receive PAYMENTS sequentially !!
                 
                 ?? IST DAS MIT DRIN: If net worth (equity) is negative, firm (bank) exits the market in 8). 
                 For a bankrupt firm a non performing loan have to be registered????
@@ -913,19 +933,50 @@ class BAM_base:
                 # hier: ERST COMPUTATIONS, Dann SAVING ("mein updateData")"""
 
                
-                # WAGE PAYMENTS FROM NET WORTH ABZIEHEN bei FIRMEN?! - > macht er in 7) und 8.. 
+                # WAGE PAYMENTS FROM NET WORTH ABZIEHEN bei FIRMEN?! - > macht er in 7) und 8.. : bei mir direkt oben !!
                 # CHECK the OUTSTANDING FLAG => subtract missing payments from Net worth in case outstanding_flag = true .. 
                 # if outstanding_flag == 1:
                     # subtract outstanding amount from Net worth .. 
                 # Dividend payments after profits are realized
                 
                 # 1) Firms
-                for f in range(Fc):
-                    # updateNetWorth
-                    RE[f] = np.around( P[f] - div[f] ) # calcRetainedEarnings - Earnings are profits - dividends paid to HH's 
-                    # - BANK PAYMENTS???!!!!!
-                    NW[f] = NW[f] + RE[f] 
+                for f in range(self.Nf):
+                    # if firm did not make enough profit to pay back entire amount of credit, NW becomes even more negative (since firm already paid workers)
+                    if outstanding_flag[f] == 1:
+                        credit = Bi[f] # getCredits: amount of credit firm f took from each bank 
+                        outstanding_banks = outstanding_to_bank[f] # slice the bank id which firm could not pay back entirely (or only amounts)
+                        outstanding_amounts = outstanding[f] # slice the outstanding amounts firm has 
+                        for i in range(len(outstanding_banks)):
+                            # again banks are paid back entirely 
+                            current_outstanding = outstanding_amounts[i] # get the outstanding amount of the first firm
+                            if NW[f] - Wb_a[f] > current_outstanding: 
+                                # if firm has enough NW remaining such that it can pay back the rest of oustanding credit using net worth, firm does so
+                                NW[f] = NW[f]- Wb_a[f] - current_outstanding
+                                Cr_p[int(outstanding_banks[i])-1] = Cr_p[int(outstanding_banks[i])-1] + current_outstanding
+                            else:
+                                # if firm cannot pay back banks anymore using its net worth (wage payments subtracted): 
+                                # Firm pays back everything she can with remaining Net worth 
+                                Cr_p[int(outstanding_banks[i])-1] = Cr_p[int(outstanding_banks[i])-1] + NW[f]
+                                # Bank computes bad debt: amount of net worth * share of externally financed net worth
+                                share =  NW[f] / credit[i] 
+                                Bad_debt[int(outstanding_banks[i])-1] = share * NW[f]
+                                while i < (len(outstanding_banks)-1):
+                                    # compute bad debt of other banks that also did not get any last payment from firm's net worth
+                                    i = i + 1
+                                    current_outstanding = outstanding_amounts[i] # get oustanding amount of the next bank
+                                    share =  NW[f] / credit[i]  # compute the share that will be recorded as bad debt
+                                    Bad_debt[int(outstanding_banks[i])-1] = share * NW[f]
+                                    break
+                            NW[f] = NW[f] - sum(outstanding[f]) # compute new net worth: since it is negative, firm will go bankrupt and exit in 8) 
+                    # WANN SinD DIE WAGE PAYMENTS ???
+                    # Eigentlich haben HH schon lohn bekommen => muss vom Net worth schon abgezogen sein .. ??!!
+                    else:
+                        # updateNetWorth
+                        RE[f] = np.around(P[f] - div[f]) # calcRetainedEarnings - Earnings are profits - dividends paid to HH's 
+                        # - BANK PAYMENTS???!!!!!
+                        NW[f] = NW[f] + RE[f] 
 
+                    # ???? 
                     # setMinPrice -> remains 0 so far !!!
                     if Qs[f] != 0: # if firm f sold products
                         p_low[f] = 0 # loan_to_be_paid[f] / Qs[f] 
@@ -933,25 +984,27 @@ class BAM_base:
                         p_low[f] = 0 
 
                     # calcVacRate
-                    vac[f] = vac[f] - L[f] # update vacancies (subtract labour employed at firm f)
+                    vac[f] = vac[f] - L[f] # update vacancies (subtract current amount of labour employed at firm f)
                 
                 # 2) HH
                 # (last) "computations"
-                for c in range(Nh):
+                for c in range(self.Nh):
                     # update employment count
                     if is_employed[c] == True: # getEmploymentStatus
                         d_employed[c] = d_employed[c] + 1 # incrementEdays
                     else:
                         d_unemployed[c] = d_unemployed[c] + 1
                     # update income
-                    Y[c] = np.around(S[c] + w[c] + unemp_benefit[c] + div[c] ) # Income is sum of savings, wage, unemplyoment benefits (if no wage) and dividends
+                    Y[c] = np.around(S[c] + div[c] ) # Income is sum of savings, wage, unemplyoment benefits (if no wage) and dividends
                     # wenn wage schon paid before goods market: w[c] + unemp_benefit[c] hier RAUS !!!
+                    # ODER SIND DIE WAGE PAYMENTS DOCH HIER ??!! + WB_a[c] + unemp_benefit[c]  ?? 
                 
                 # 3) Banks
                 # (last) "computations"
-                for b in range(Nb):
+                for b in range(self.Nb):
                     # updateEquity
-                    E[b] = E[b] + Cr_p[b]  # equity before + total amount of loans paid back 
+                    E[b] = E[b] + Cr_p[b] - Bad_debt[b] # equity before + total amount of loans paid back 
+                    # MINUS BAD DEBT fehlt / muss mit rein !! !!
 
                 
                 
@@ -1013,6 +1066,7 @@ class BAM_base:
                     f_data[t, f, 15] = P[f] # getProfits
                     f_data[t, f, 16] = divs[f] # getDividends
                     f_data[t, f, 17] = RE[f] # getRetainedEarnings
+                    #f_data[t, f, 20] = sum(amount_outstanding[f]) # getRetainedEarnings
 
                 # 3) Banks
                 for b in range(self.Nb):
@@ -1025,6 +1079,7 @@ class BAM_base:
                     # sum of credit disbursed (ausgezahlt) * rates disbused (getRatesDisbursed) / sum of disbursecd credit (only if greater 0, else 0 )
                     b_data[t, b, 7] = Cr_p[b] # getLoanPaid()
                     b_data[t, b, 6] = b_data[t, b, 5] - b_data[t, b, 7] # disbursed credit - loan paid ??
+                    # b_data[t, b, 8] = Bad_debt[b]
                 
 
                 """ Compute aggregate report variables (calcStatistics)
@@ -1072,8 +1127,81 @@ class BAM_base:
                 Firms with positive net worth/equity survive, but otherwise firms/banks go bankrupt.
                 New firms/banks enter the market of size smaller than average size of those who got bankrupt
                 # checkForBankrupcy
-                # ??? WHAT ABOUT FAILED BANKS ??"""
+                # ??? WHAT ABOUT FAILED BANKS ?? & does '4 times in a row' mean.. probability of failing
+                # or does firm fail directly as soon as negative NW ?? !!"""
+                # 8) New firms/banks enter the market of size smaller than average size ofthose who got bankrupt
+                # checkForBankrupcy
+                for f in range(Fc):
+                    if NW[f] < 0:
+                        # updateBankrupcyPeriod
+                        bankrupcy_period[f] = bankrupcy_period[f] + 1
+                    else:
+                        bankrupcy_period[f] = 0 # resetBankrupcyPeriod - not needed because not updated ???
+                        # if net worth is positive once, then period set to 0 again
+                    # if firm had negative net worth 4 consecutive times
+                    if bankrupcy_period[f] > 4: 
+                        fid = f_data[t,f,0] # id of current firm
+                        h_emp = w_emp[f]# getEmployedHousehold : HH's working at firm f
+                        print("Firm %d has gone BANKRUPT!!!"%(fid))
+                        # HH (ids in list) working at current firm need to update
+                        for i in h_emp:
+                            prev_firm_id[i-1] = fid # updatePrevEmployer
+                            is_employed[i-1] = False # updateEmploymentStatus
+                            firm_id[i-1] = 0 # setEmployedFirmId (HH no contract anymore => hence firm number that employed him set to 0)
+                            # setUnempBenefits
+                            unemp_benefit[i-1] = np.around(0.8 * w[i-1] ,decimals=2) # 80% of wage is the unemployment payment HH receives now (not 0.5, since HH worked in period before)
+                            w[i-1] = 0 # HH receives no more wage
+                            d_employed[i-1] = 0
+                            firm_went_bankrupt[i-1] = 1 # OWN: set flag s.t. worker uses M instead of M - 1 when searching for job again 
+                        # reset all individual report variables for firm f 
+                        f_data[t+1,fid-1,:] = np.zeros((1,1,20)) 
+                        # initialize new values of firm f
+                        f_data[t+1, fid-1, 0] = fid # id
+
+                #################################################################################################
+                # Reset some variables 
+                # WHICH VARIABLES TO RESET IN EACH t?? -> check the classes
+                # resetTotalRevenue -> total revenue resetted in 7) div payments
                 
+                # 1) HH
+                firms_applied = [[] for _ in range(Nh)]
+                job_offers = [[] for _ in range(Nh)]
+                w_flag = np.zeros(Nh)
+                div_flag = np.zeros(Nh)
+                div = np.zeros(Nh)
+
+                # 2) Firms
+                job_applicants = [[] for _ in range(Fc)]
+                job_offered_to_HH = [[] for _ in range(Fc)]
+                credit_appl = [[] for _ in range(Fc)]
+                Lhat = np.zeros(Fc)
+                loan_paid = np.zeros(Fc)
+                Ld = np.zeros(Fc)
+                banks = [[] for _ in range(Fc)]
+                Bi = [[] for _ in range(Fc)]
+                r = [[] for _ in range(Fc)]
+                Rev = np.zeros(Fc)
+                divs = np.zeros(Fc)
+                loan_to_be_paid = np.zeros(Fc)
+                P = np.zeros(Fc)
+                RE = np.zeros(Fc)
+                B = np.zeros(Fc)
+                Wb_d = np.zeros(Fc)
+                Wb_a = np.zeros(Fc)
+                vac = np.zeros(Fc)
+
+                outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
+                outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
+                outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
+
+                # 3) Banks
+                Cr_p = np.zeros(Nb)
+                firms_appl = [[] for _ in range(Nb)]
+                firms_loaned = [[] for _ in range(Nb)]
+                Cr_a = np.zeros(Nb)
+                Cr_rem = np.zeros(Nb)
+
+                Bad_debt = np.zeros(self.Nb)
 
 
 
