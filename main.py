@@ -1,4 +1,5 @@
-from random import seed
+import numpy as np
+from scipy import stats
 from models.toymodel import Toymodel # importing toy model (benchmark?)
 from models.BAM import BAM_base # BAM base model
 

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 
 """# main.py rein kopieren und aufbereiten ...
     #	erst initializieren => dann füllen (jeweils für HH, Firms und Banks) => checken mit NWA .. 
@@ -54,17 +55,18 @@ class BAM_base:
         self.avg_prod = np.zeros((self.T,self.MC)) # average production level
         self.inflation = np.zeros((self.T,self.MC)) # price inflation
         self.wage_lvl = np.zeros((self.T,self.MC)) # wage level
-        self.wage_inflation = np.zeros((self.T,self.MC)) # wage inflation
+        self.wage_inflation = np.zeros((self.T,self.MC)) # wage inflation (not in %)
         self.production = np.zeros((self.T,self.MC)) # YY
         self.production_by_value = np.zeros((self.T,self.MC)) # YY ??
-        self.consumption = np.zeros((self.T,self.MC)) # HH extra consumption ??
-        self.demand = np.zeros((self.T,self.MC)) # Demand
-        self.h_income = np.zeros((self.T,self.MC)) # HH income
-        self.hh_savings = np.zeros((self.T,self.MC)) # HH savings
-        self.hh_consumption = np.zeros((self.T,self.MC)) # HH consumption ??
+        self.hh_consumption = np.zeros((self.T,self.MC)) # aggregated HH consumption
+        self.demand = np.zeros((self.T,self.MC)) # aggregated HH Demand
+        self.hh_income = np.zeros((self.T,self.MC)) # aggregated HH income
+        self.hh_savings = np.zeros((self.T,self.MC)) # aggregated HH savings
 
         # own
-        self.consumption_rate = np.zeros((self.T,self.MC))
+        self.consumption_rate = np.zeros((self.T,self.MC)) # ???
+        self.real_wage = np.zeros((self.T,self.MC)) # real wage
+        self.prduct_to_real_wage = np.zeros((self.T,self.MC)) # productivity/real wage ratio
 
     def simulation(self):
 
@@ -150,10 +152,11 @@ class BAM_base:
             credit_appl = [[] for _ in range(self.Nf)] # list with bank ids each frim chooses randomly to apply for credit
             loan_to_be_paid = np.zeros(self.Nf) 
 
-            Qty = [] # Quantity ?? - ???????????
+            Qty = [] # Quantity ?? - ??????????? - wird nicht gebraucht
             
             # OWN
-            w_min_slice = np.repeat(np.arange(3,self.T,4), 4) # array with values from 2 up to 998 appearing 4 times for slicing the minimum wage
+            w_min_slice = np.repeat(np.arange(3,self.T,4), 4) # array with values from 2 up to 998 appearing 4 times in a row for slicing the minimum wage each time 
+            # s.t. min. wage is revised only every 4 periods
 
             outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
             outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
@@ -178,11 +181,12 @@ class BAM_base:
             Bad_debt = np.zeros(self.Nb)
 
 
-            """3-D Tensors to store individual data after a simulation: 
+            """3-D Tensors are used to store individual data after a simulation: 
             i.e. one matrix for each round t with dimensions #agents x #variables (each agent is a row with entry on variable)"""
-            c_data = np.zeros((self.T+2, self.Nh, 14))  # T+2 Hx14 matrices
-            f_data = np.zeros((self.T+2, self.Nf, 19))  # saving individual data of each firm 
-            b_data = np.zeros((self.T+2, self.Nb, 20))  # saving individual bank data    
+            c_data = np.zeros((self.T+2, self.Nh, 16))  # T+2 Hx14 matrices
+            f_data = np.zeros((self.T+2, self.Nf, 21))  # saving individual data of each firm 
+            b_data = np.zeros((self.T+2, self.Nb, 9))  # saving individual bank data    
+            # USE T instad of T + 2 ???
             
 
             """Fill some individual report variables with random number when t = 0: """
@@ -193,11 +197,11 @@ class BAM_base:
                     MPC[h] = np.random.uniform(low=0.6,high=0.9) # initial MPC for each HH (then recomputed in each loop)
                     id_H[h] = h + 1 # each HH gets number which is the id
                     Y[h] = Y0[h]  # fill initial income of each HH
-                    # update Data
+                    # update Data : BRAUCHE ICH GARNICHT ??!! - eher für adaptive expectations bla??!!
                     c_data[:,h,0] = h+1 # in all matrices id in first column
                     c_data[0,h,1] = Y[h] # initial income in t = 0
                     c_data[0,h,2] = MPC[h]*Y[h] # initial (actual) consumption in t = 0
-                    c_data[0,h,4] = MPC[h] # 
+                    c_data[0,h,4] = MPC[h] # save initial marginal propensity to consume
                     c_data[0,h,5] = MPC[h]*Y[h] # initial desired consumption (same as C in t = 0)
             
             # FIRMS
@@ -222,7 +226,7 @@ class BAM_base:
             tCr = (NB0 / aNB0)*10*factor # amount of credit to be supplied if equity is 0 -> KANN ICH SELBER MACHEN über initial equity ???!!
             # WOHER KOMMEN DIE ZAHLEN? - really large (around 5000): ensuring each bank can pay credits in first round 
             for b in range(self.Nb):
-                b_data[:,b,0] = b + 1
+                b_data[:,b,0] = b + 1 # id in all matrices as first column
             # E = tCr*0.11 # OWN: initial equitiy of each bank -> sample für E s.t. in range 
             # in first round, i.e. if equity is zero => Cr (credit supplied) around 5000
             # after E computed first time (E = E + Cr_p - Bad_debt): range from 600 to 1500
@@ -267,6 +271,7 @@ class BAM_base:
             column 17 = retainend Earnings RE
             column 18 = net worth NW
             column 19 = vancies vac  
+            column 20 = outstanding amount: amount of credit and interest firm could not pay back using gross profits
 
             3) Banks
             column 1 = Equity E   
@@ -296,7 +301,7 @@ class BAM_base:
                         Ld[i] = hbyf # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period 
                     # otherwise: each firm decides output and price => s.t. it can determine labour demanded
                     else: # t > 0 -> need price to set Qd <=> RequiredLabor
-                        """CHECKEN IN t = 1"""
+                        """CHECKEN IN t = 1 + text !!"""
                         prev_avg_p = self.P_lvl[t-1][mc] # extract (current) average previous price 
                         # decideProduction 
                         p_d = f_data[t-1, i, 5] - prev_avg_p  # demanded price = prev_FPrice - prev_APrice
@@ -388,6 +393,7 @@ class BAM_base:
                     else:
                         Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage if firm i currently no open vacancies
                         is_hiring[i] = False  
+                    Wb_d[i]  = Wp[i] * Ld[i] # setDesiredWageBill
                     """Finished: Firms posted Vacancies and Wage offers. 
                     In t = 0 wage is the same for each firm (i.e. initial wage aa), because max(aa, 0) (Wp[i] = 0) """
                 
@@ -667,7 +673,7 @@ class BAM_base:
                     is_employed[h-1] = False # set employment status to false
 
                 """4)
-                Production takes one unit of time regardless of the scale of prod/firms.
+                Production takes one unit of time regardless of the scale of prod/firms. 
                 But before production can start wage payments of the firms have to be made to the HH's.
                 Wage payments are directly subtracted from Net worth: 
                 Since Firms either received enough credit or layed some HH's off if credit received was not enough, wage payments can all be paid,
@@ -688,7 +694,7 @@ class BAM_base:
                         mw = max(mw, w[e-1]) # maximum wage paid updated in case wage payments to current worker e higher 
                     # wagePaid
                     W_pay[f] = Wp[f] # save wage payments firm has to make to each HH employed (wage payment per worker)
-                    # The wage are subtracted from the net worth of the firm in 7)
+                    # The wages are subtracted from the net worth of the firm in 7)
                 for c in range(self.Nh):
                     # getEmploymentStatus
                     if is_employed[c] == True:
@@ -825,30 +831,31 @@ class BAM_base:
                 # Some HH don't consume at all => hence they have large amounts of savings in the following
                 # checking MPC: S[c] / average => what range are values in (s.t. beta = 4 makes sense )
                 # np.mean(S) = 60.04 in t = 0 => S[0]=22.53 / np.mean(S) = 0.37 => alpha = 0.98 
-                # S[1] =  120.51 / np.mean(S) = 2.0070148090413094 => 0.54
+                # S[1] =  120.51 / np.mean(S) = 60.04 = 2.0070148090413094 => alpha = 0.54
         
 
                 """6) 
                 Firms collect revenue and calc gross profits. 
                 If gross profits are high enough, they pay principal and interest to bank. Otherwise they record an oustanding debt amount and try to pay
-                it back in 7) using their net worth.
+                it back in 7) by using their net worth.
                 If net profits are positive, firms pay dividends to owner of the firm (here no investments to increase productivity in next round). """
                 
-                # computeRevenues
+                # computeRevenues: Firms computing gross Profit
                 print("Firms calculating Revenues......")
                 print("")
                 for f in range(self.Nf):
                     Rev[f] = np.around(Qs[f]*p[f], decimals = 2)
-                    Total_Rev[f] = Total_Rev[f] + Rev[f] # calcTotalRevenues: add revenue of this round from firm f to total revenue (of firm f)
+                    Total_Rev[f] = Rev[f] # calcTotalRevenues: add revenue of this round from firm f to total revenue (of firm f)
                     Total_Rev[f] = Total_Rev[f] - Wb_a[f] # DAS DANN RAUS: wird in 7) von NW abgezogen !!! (sonst 2x )
                     # nur noch drin um eigene loops zu checken (i.e. never enough revenue to pay back banks to check own loops)
                 print("Revenues Calculated!!!")
                 print("")
 
-                # settleDebts: Firms paying back principal and interest from the revenue of this round, if possible.
-                # If firm made not enough revenue (gross profit) this round, the rest of the oustanding amount will be subtracted from its net worth in 7) 
-                # i.e. firms accounts negative retained earnings (RE)
-                # Then firms compute net Profit by subtracting wage payments and bank payments (if any) from their revenue (gross Profit) in this round.
+                # settleDebts: Firms compute net revenue (net Profit)
+                """Firms paying back principal and interest from the revenue of this round, if possible.
+                If firm made not enough revenue (gross profit) this round, the rest of the oustanding amount will be subtracted from its net worth in 7). 
+                RE are set to 0 and remaining outstanding amounts (negative profits) are saved.
+                Then firms compute net Profit by subtracting wage payments and bank payments (if any) from their revenue (gross Profit) in this round."""
                 print("Firms settling Debts by paying back banks and determine their net profit")
                 print("")
                 for f in range(self.Nf):
@@ -887,7 +894,7 @@ class BAM_base:
                                     payback = (credit[i]*(rates[i]+1)) # amount firm has to pay back to next bank
                                     outstanding[f].append(payback) # append amount to be paid back
                                     outstanding_to_bank[f].append(banks_f[i]) # save bank id
-                                P[f] = 0 # net profits are zero, since entire revenue of this round is used to pay back the bank 
+                                P[f] = np.around(Total_Rev[f] - np.sum( (np.array(Bi[f]))*(1+ np.array(r_f[f])) ) ,decimals=2) # net profits
                                 # The outstanding amount(s) will be subtracted from Net worth in 7), if firm has enough NW 
                                 break
                 # if no credit requirement in the economy, then no loans (principal) to be paid back, etc.: Hence lists are empty or entries remain 0
@@ -895,11 +902,11 @@ class BAM_base:
                 print("")
 
                 # payDividends:
-                # If net profit is positive, firms determine their dividend payments (no investment here) 
+                """If net profit is positive, firms determine their dividend payments (no investment here)."""
                 n_div = 0 # initialize counter for case no dividend payments happen 
                 for f in range(self.Nf):
                     divs_f = 0 # initialize current dividend of firm f (bei ihm auch divs)
-                    Total_Rev[f] = 0 # set total revenue of current firm to 0: i.e. reset gross profits of this round 
+                    Total_Rev[f] = 0 # set total revenue of current firm to 0 again: i.e. reset gross profits of this round 
                     if P[f] > 0:
                         # setDividends: If firm has positive net profit, it pays dividends 
                         divs[f] = np.around(P[f]*self.delta , decimals = 2) # dividends are profits * 0.5, if firm f has positive profits
@@ -926,25 +933,11 @@ class BAM_base:
                 the firm will exit the market in 8).
 
                 The bank(s) having open accounts (i.e. did not receive entire credit and interest payments) record non performing loan(s) or bad debt,
-                which amounts to share of credit firm had at bank i times its remaining oustanding amount (not net-worth ). 
+                which amounts to share of credit firm had at bank i times its remaining oustanding amount (not net-worth). 
                 The banks again receive the open payments sequentially starting with the one bank firm received credit from first (in case firm had credit 
                 from more than one bank).
                 
-
-                ?? IST DAS MIT DRIN: If net worth (equity) is negative, firm (bank) exits the market in 8). 
-                For a bankrupt firm a non performing loan have to be registered????
-                ?? If firm could not pay back entire loan => then now subtracting from Net worth ??!!
-                
-                # -> hier: def calcRetainedEarnings(self) ; def getRetainedEarnings(self): ; getNetWorth(self) etc.
-                # -> bei Ihm ALLES mit in 8 unter updateData in stats!!
-                # hier: ERST COMPUTATIONS, Dann SAVING ("mein updateData")"""
-
-               
-                # WAGE PAYMENTS FROM NET WORTH ABZIEHEN bei FIRMEN?! - > macht er in 7) und 8.. : bei mir direkt oben !!
-                # CHECK the OUTSTANDING FLAG => subtract missing payments from Net worth in case outstanding_flag = true .. 
-                # if outstanding_flag == 1:
-                    # subtract outstanding amount from Net worth .. 
-                # Dividend payments after profits are realized
+                ???For a bankrupt firm a non performing loan have to be registered????"""
                 
                 # 1) Firms
                 for f in range(self.Nf):
@@ -987,11 +980,12 @@ class BAM_base:
                                     Bad_debt[int(outstanding_banks[i])-1] = share * outstanding_amounts[i]
                                 NW[f] = NW[f] - sum(outstanding[f]) # subtract entire outstanding amounts from firm's net worth 
                                 break
-                        NW[f] = NW[f] - Wb_a[f] # finally also subtract the "actually already made wage payments in 4)"
+                        NW[f] = NW[f] - Wb_a[f] # finally firm also subtracts the "actually already made wage payments in 4)"
+                        RE[f] = np.around(P[f] - divs[f]) # calcRetainedEarnings: Earnings are profits minus dividends paid to HH's 
                     else:
                         # updateNetWorth in case profits were positive
                         RE[f] = np.around(P[f] - divs[f]) # calcRetainedEarnings: Earnings are profits minus dividends paid to HH's 
-                        NW[f] = NW[f] + RE[f] - Wb_a[f] # now also subtract wage payments
+                        NW[f] = NW[f] + RE[f] - Wb_a[f] # now also subtract wage payments: Hence Profits have to be large enough in order not to go bankrupt 
                         if NW[f] < 0:
                             print("positive Profits of firm %s not high enough to cover wage payments"%f, "Net worth now %s"%NW[f])
 
@@ -1008,9 +1002,9 @@ class BAM_base:
                     # calcVacRate
                     vac[f] = vac[f] - L[f] # update vacancies (subtract current amount of labour employed at firm f)
                 
+                # 2) HH's
                 """HH update their days of employment or unemplyoment respectively 
                 and compute their new income by updating their current savings (Y left after consuming) by their received divdend payments of firms with pos. profit"""
-                # 2) HH's
                 for c in range(self.Nh):
                     # update employment count
                     if is_employed[c] == True: # getEmploymentStatus
@@ -1018,43 +1012,42 @@ class BAM_base:
                     else:
                         d_unemployed[c] = d_unemployed[c] + 1
                     # update income
-                    Y[c] = np.around(S[c] + div[c] ) # Income is sum of savings, wage, unemplyoment benefits (if no wage) and dividends
+                    Y[c] = np.around(S[c] + div[c]) # Income is sum of new savings and dividend payments. 
+                    # Wage and unemplyoment benefits (if no wage) already paid before production started
                 
                 """Banks update their equity avaible for the next simulation round by adding their received credit payments (including interest) 
                 and subtract their recorded bad debt (low of motion for bank's equtity)"""
                 # 3) Banks
                 for b in range(self.Nb):
                     # updateEquity
-                    E[b] = E[b] + Cr_p[b] - Bad_debt[b] # equity before + total amount of loans paid back 
+                    E[b] = E[b] + Cr_p[b] - Bad_debt[b] # equity before + total amount of loans paid back - bad debt
+
 
                 """Store individual data of all agents:
                 Here all individual report variables gathered through the simulation are saved in an numpy 3-D array, i.e.
                 indivdual data of each round is saved in a T+2x"DatatoStore" matrix for each simulation round. """
 
-                # HIER WEITER !!!
-
-                n_data = 0 # initialize running index
                 # 1) HH
+                n_data = 0 # initialize running index
                 for c in range(self.Nh):
                     # getActualCons
+                    c_data[t, c, 1] = Y[c] # getIncome: initial income is overwritten in t = 0, otherwise overwritten
+                    # can just save data or has it to do with setting price and demand ???
                     c_data[t, c, 2] = C[c] # save consumption of HH c
-                    if C[c] > 0:
-                        n_data = n_data + 1 # increase running index if consumption was positive in this round
-                    # getMPC
-                    if t != 0:
-                        c_data[t, c, 4] = MPC[c] # for t = 0: MPC was initialized and already saved 
+                    n_data = n_data + 1 if C[c] > 0 else n_data # increase running index if consumption of HH c was positive in this round  
                     c_data[t, c, 3] = S[c] # getSavings
+                    c_data[t, c, 4] = MPC[c] if t != 0 else c_data[t, c, 4] # getMPC: for t = 0, MPC was initialized and did not change
                     c_data[t, c, 5] = C_d[c] # getDesiredCons
                     c_data[t, c, 6] = w[c] # getWage  
                     c_data[t, c, 7] = unemp_benefit[c] # getUnempBenefits  Code for the reservation Wages
                     c_data[t, c, 8] = prev_firm_id[c] # getPrevEmployer
                     c_data[t, c, 9] = firm_id[c] # getEmployedFirmId()
-                    c_data[t, c, 10] = 1 if is_employed[c] == True else 0 # getEmploymentStatus
+                    c_data[t, c, 10] = 1 if is_employed[c] == True else 0 # getEmploymentStatus: flag = 1 if c is employed
                     c_data[t, c, 11] = prev_F[c] # getPrevCFirm
                     c_data[t, c, 12] = div[c] # getDividends
                     c_data[t, c, 13] = d_employed[c] #getDaysEmployed
                     c_data[t, c, 14] = d_unemployed[c] # getDaysUnemployed
-                    c_data[t, c, 1] = Y[c] if t != 0 # getIncome: income is generated randomly in first period and already saved
+                    
                 print("Out of total %d Household, %d did consume"%(self.Nh,n_data))
 
                 #2) Firms
@@ -1065,100 +1058,92 @@ class BAM_base:
                     f_data[t, f, 4] = Qr[f] # getQtyRemaining
                     f_data[t, f, 5] = p[f] # getPrice
                     f_data[t, f, 6] = alpha[f] # getProductivity()
-                    f_data[t, f, 7] = L[f] # getRequiredLabor
+                    f_data[t, f, 7] = Ld[f] # getRequiredLabor
                     f_data[t, f, 8] = Lhat[f] # getNumberOfExpiredContract
                     f_data[t, f, 9] = L[f] # getTotalEmployees
-                    f_data[t, f, 10] = W_pay[f] # getWage
-                    f_data[t, f, 13] = Rev[f] # getRevenues
-                    f_data[t, f, 18] = NW[f] # getNetWorth
-                    f_data[t, f, 19] = vac[f] # getVacRate
-                    f_data[t, f, 14] = loan_to_be_paid[f] # getLoanToBePaid           
+                    f_data[t, f, 10] = W_pay[f] # getWage (= wage paid, i.e. Wp)
                     f_data[t, f, 11] = Wb_d[f] # getDesiredWageBill
                     f_data[t, f, 12] = Wb_a[f] # getActualWageBill   
-                    f_data[t, f, 15] = P[f] # getProfits
+                    f_data[t, f, 13] = Rev[f] # getRevenues
+                    f_data[t, f, 14] = loan_to_be_paid[f] # getLoanToBePaid  
+                    f_data[t, f, 15] = P[f] # getProfits 
                     f_data[t, f, 16] = divs[f] # getDividends
                     f_data[t, f, 17] = RE[f] # getRetainedEarnings
+                    f_data[t, f, 18] = NW[f] # getNetWorth
+                    f_data[t, f, 19] = vac[f] # getVacRate
                     
                     f_data[t, f, 20] = sum(outstanding[f]) # amount that was outstanding in 6)
 
                 # 3) Banks
                 for b in range(self.Nb):
                     b_data[t, b, 1] = E[b] # getEquity
-                    b_data[t, b, 2] = Cr[b] # getCreditSupply
-                    b_data[t, b, 3] = Cr_a[b] # getActualCreditSupplied
+                    b_data[t, b, 2] = Cr[b] # getCreditSupply (total credit supply)
+                    b_data[t, b, 3] = Cr_a[b] # getActualCreditSupplied: credit supplied this round to firms
                     b_data[t, b, 4] = Cr_rem[b] # getRemainingCredit
                     b_data[t, b, 5] = np.sum(np.array(Cr_d[b])*np.array(r_d[b])) / np.sum(np.array(Cr_d[b])) if len(Cr_d[b]) > 0 else 0 
                     # sum of credit disbursed (ausgezahlt) * rates disbursed (getRatesDisbursed) / sum of disbursecd credit (only if greater 0, else 0 )
-                    # ?????
-                    b_data[t, b, 7] = Cr_p[b] # getLoanPaid()
-                    b_data[t, b, 6] = b_data[t, b, 5] - b_data[t, b, 7] # disbursed credit - loan paid ??
-                    # b_data[t, b, 8] = Bad_debt[b]
+                    b_data[t, b, 7] = Cr_p[b] # getLoanPaid() 
+                    b_data[t, b, 8] = Bad_debt[b]
                 
 
-                """ Compute aggregate report variables (calcStatistics)
-                # calcStatistics ist FILLING AGGREGATE VARIABLES
-                # bei ihm unter 8
-                # always include [][mc] beim slicen!! => get value for each timepoint t (and each mc run)
-                
-                # price level
-                plvl = 0  # price * quantity sold 
-                for f in range(Fc):
-                    plvl = plvl + np.mean(f_data[:t+1, f, 5])*np.sum(f_data[:t+1,f, 3]) # mean of all prices of each firm * Qs of all firms (averaged over t) and then accumulated for each firm
+                """ Compute aggregate report variables (calcStatistics), i.e. filling the aggregate report variables.
+                Each aggregation is saved into corresponding report matrix with number of rows = T and each column being the current mc round.""" 
+               
+                """Inflation: determine aggregate price level and compute inflation:"""
+                plvl = 0  # intialize price level of this round  
+                for f in range(self.Nf):
+                    plvl = plvl + np.mean(f_data[:t+1, f, 5])*np.sum(f_data[:t+1,f, 3]) # mean of all prices of each firm * sum of Qs of all firms (averaged over t) and then accumulated for each firm
                     # t+1 s.t. all vectors for each firm of all periods before are also used 
                 plvl = plvl / np.sum(f_data[:t+1, :, 3]) # divide by overall quantity sold 
-                P_lvl[t][mc] = plvl
+                # why multiplying with quantity sold and then dividing ??!! NOT NEEDED ??!!
+                self.P_lvl[t][mc] = plvl
+                self.inflation[t][mc] = ( self.P_lvl[t][mc] - self.P_lvl[t-1][mc] ) / self.P_lvl[t-1][mc] if t!=0 else 0  
+                # self.inflation[t][mc] = self.inflation[t][mc]*100 # inflation in percentag points
 
-                S_avg[t][mc] = np.mean(c_data[t, :, 3]) # average savings (mean of savings of all consumers in t)
-                unemp_rate[t][mc] = 1 - (np.sum(c_data[t, :, 10])/Nh) # unemployment rate ( 1 - employment rate: sum of 1 if HH has job / number of HH)
+                """Log output:"""
+                self.production[t][mc] = np.sum(f_data[t, :,2]) # nominal GDP = sum of quantity produced by each firm
+                # np.log(np.sum(f_data[:,2])) = 8.209107419996224  # too high already for 10 firms ??!!
+                self.production_by_value[t][mc] = np.sum(f_data[t, :,2]*f_data[t, :,5]) # real GDP: quantity produced * price (sum)
+                # np.log(np.sum(f_data[t, :,2]*f_data[t, :,5])) =  7.721780700105768
+
+                """unemployment rate:"""
+                self.unemp_rate[t][mc] = 1 - (np.sum(c_data[t, :, 10])/self.Nh) # unemployment rate ( 1 - employment rate: sum of 1 if HH has job / number of HH)
+                # t = 0: unemployment rate bei 30% !!!
+
+                """Wages:"""
+                self.wage_lvl[t][mc] = np.sum(f_data[t,:,10]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # nominal wage level: sum of wage paid * number of employees relative to number of employees
+                self.wage_inflation[t][mc] = (self.wage_lvl[t][mc]- self.wage_lvl[t-1][mc]) / np.sum(self.wage_lvl[t-1][mc]) if t!=0 else 0
+                # wage_inflation[t][mc] = wage_inflation[t][mc]*100
+                self.real_wage[t][mc] = (np.sum(f_data[t,:,10]) / plvl) # real wage: sum of wage payments divided by price level 
+
+                """productivity / real wage ratio"""
+                self.avg_prod[t][mc] = np.sum(f_data[t,:,6]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # average productivity: sum of productivity * #empployees relative to # employees (for each t)
+                self.prduct_to_real_wage[t][mc] = self.avg_prod[t][mc] / self.real_wage[t][mc]
+
+                """Saving and consumption"""
+                self.S_avg[t][mc] = np.mean(c_data[t, :, 3]) # average savings (mean of savings of all consumers in t)
+                self.demand[t][mc] = np.sum(c_data[t, :,5]) # sum of desired consumption (total demand)
+                self.hh_income[t][mc] = np.sum(c_data[t, :,1]) # sum of individual income
+                self.hh_savings[t][mc] = np.sum(c_data[t, :3]) #  sum of invididual savings 
+                self.hh_consumption[t][mc] = np.sum(c_data[t, :,2]) # hh_consumption is sum of entire consumption of each HH
+                
                 print("total produced:", np.sum(f_data[t, :,2]*f_data[t,:,5]), "total consumed:", np.sum(c_data[t, :,2]))
-                avg_prod[t][mc] = np.sum(f_data[t,:,6]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # sum of productivity * #empployees relative to # employees (for each t)
-
-                inflation[t][mc] = P_lvl[t][mc]-P_lvl[t-1][mc] if t!=0 else 0 # / P_lvl[t-1][mc] missing ?? 
-                inflation[t][mc] = inflation[t][mc]*100 
-
-                wage_lvl[t][mc] = np.sum(f_data[t,:,10]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # sum of wage paid * number of employees relative to number of employees
-                wage_inflation[t][mc] = (wage_lvl[t][mc]-wage_lvl[t-1][mc])/np.sum(wage_lvl[t-1][mc]) if t!=0 else 0
-                wage_inflation[t][mc] = wage_inflation[t][mc]*100 
-
-                production[t][mc] = np.sum(f_data[t, :,2]) # sum of quantity produced of firms
-                production_by_value[t][mc] = np.sum(f_data[t, :,2]*f_data[t, :,5]) # quantity produced * price (sum)
-                consumption[t][mc] = np.sum(c_data[:,2]) # sum of consumption
-                demand[t][mc] = np.sum(c_data[t, :,5]) # sum of desired consumption (total demand)
-                hh_income[t][mc] = np.sum(c_data[t, :,1]) # sum of individual income
-                hh_savings[t][mc] = np.sum(c_data[t, :3]) #  sum of invididual savings 
-                hh_consumption[t][mc] = np.sum(c_data[t, :,2]) # hh_consumption = consumption ??
-
-                print("total demand:", demand[t][mc], "avg Price and Wage lvl:", P_lvl[t][mc], wage_lvl[t][mc])
+                print("total demand:", self.demand[t][mc], "avg Price and Wage lvl:", self.P_lvl[t][mc], self.wage_lvl[t][mc])
 
                 # own
-                consumption_rate[t][mc] = np.sum(c_data[t, :,2]) / Nh """
-
-
-
+                self.consumption_rate[t][mc] = np.sum(c_data[t, :,2]) / self.Nh 
 
                 """8) 
-                Firms with positive net worth/equity survive, but otherwise firms/banks go bankrupt.
-                New firms/banks enter the market of size smaller than average size of those who got bankrupt
-
-                # checkForBankrupcy
-                # ??? WHAT ABOUT FAILED BANKS ?? & does '4 times in a row' mean.. probability of failing
-                # or does firm fail directly as soon as negative NW ?? !!
-                # JA EIGNETLICH SCHON / IST BESSER ?!!cau k"""
-                # 8) New firms/banks enter the market of size smaller than average size ofthose who got bankrupt
-                # checkForBankrupcy
+                Firms with positive net worth/equity survive, but otherwise firms/banks with negative net worth go bankrupt and are replaced by.
+                new firms/banks which enter the market of size smaller than average size of those who got bankrupt."""
+    
+                # checkForBankrupcy: Firm
                 for f in range(self.Nf):
                     if NW[f] < 0:
-                        # updateBankrupcyPeriod
-                        bankrupcy_period[f] = bankrupcy_period[f] + 1
-                    else:
-                        bankrupcy_period[f] = 0 # resetBankrupcyPeriod - not needed because not updated ???
-                        # if net worth is positive once, then period set to 0 again
-                    # if firm had negative net worth 4 consecutive times
-                    if bankrupcy_period[f] > 4: 
-                        fid = f_data[t,f,0] # id of current firm
+                        fid = int(f_data[t,f,0]) # id of current firm
                         h_emp = w_emp[f]# getEmployedHousehold : HH's working at firm f
                         print("Firm %d has gone BANKRUPT!!!"%(fid))
-                        # HH (ids in list) working at current firm need to update
+                        # HH (ids in list) working at current firm are updated
                         for i in h_emp:
                             prev_firm_id[i-1] = fid # updatePrevEmployer
                             is_employed[i-1] = False # updateEmploymentStatus
@@ -1168,58 +1153,105 @@ class BAM_base:
                             w[i-1] = 0 # HH receives no more wage
                             d_employed[i-1] = 0
                             firm_went_bankrupt[i-1] = 1 # OWN: set flag s.t. worker uses M instead of M - 1 when searching for job again 
-                        # reset all individual report variables for firm f 
-                        f_data[t+1,fid-1,:] = np.zeros((1,1,20)) 
+                        
+                        '''New firm is entering: Resetting individual data by using the truncated mean at 10%. Hence lower and upper 5% are not included,
+                        when the averages are computed for the new individual report values.'''
+                        # row entries of firm f that went bankrupt are replaced with the respective truncated mean entries of all firms in this round
+                        f_data[t+1, fid-1,1] = stats.trim_mean(Qd, 0.1) # desired qunatity
+                        f_data[t+1, fid-1,2] = stats.trim_mean(Qp, 0.1) # produced quantity
+                        f_data[t+1, fid-1, 3] = stats.trim_mean(Qs, 0.1) # quantity sold
+                        f_data[t+1, fid-1, 4] = stats.trim_mean(Qr, 0.1) # quantity remaining: really really small, but not 0 ??
+                        # set to 0, since no warehouses ??!!
+                        f_data[t+1, fid-1, 5] = stats.trim_mean(p, 0.1) # price
+                        # ab hier: alles neu computed in loop => zeros anyways bzw recomputed and hence overwritten in 7) anyways.. ??!!
+                        f_data[t+1, fid-1, 6] = stats.trim_mean(alpha, 0.1) # productivity
+                        f_data[t+1, fid-1, 7] = np.round(stats.trim_mean(Ld, 0.1)) # required labor 
+                        f_data[t+1, fid-1, 8] = np.round(stats.trim_mean(Lhat, 0.1)) # expired contracts
+                        f_data[t+1, fid-1, 9] = np.round(stats.trim_mean(L, 0.1)) # total employees
+                        f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage paid to workers this round
+                        f_data[t+1, fid-1, 11] = stats.trim_mean(Wb_d, 0.1) # desired wage payment (total)
+                        f_data[t+1, fid-1, 12] = stats.trim_mean(Wb_a, 0.1) # actual wage payment (total)
+                        f_data[t+1, fid-1, 13] = stats.trim_mean(Rev, 0.1) # total revenue 
+                        f_data[t+1, fid-1, 14] = stats.trim_mean(loan_to_be_paid, 0.1) # total amount of loan  
+                        f_data[t+1, fid-1, 15] = stats.trim_mean(P, 0.1) # net profits
+                        f_data[t+1, fid-1, 16] = stats.trim_mean(divs, 0.1) # dividend payment (of net profit)
+                        # research and development
+                        f_data[t+1, fid-1, 17] = stats.trim_mean(RE, 0.1) # retained earnings (P - div)
+                        f_data[t+1, fid-1, 18] = stats.trim_mean(NW, 0.1) # average NW 
+                        # NW always very negative: i.e. new firms start with a negative NW ????
+                        f_data[t+1, fid-1, 19] = np.round(stats.trim_mean(vac, 0.1)) # current vacancies
+                        f_data[t+1 ,fid-1, 20] = stats.trim_mean(outstanding[f], 0.1) # average amount firm f went bankrupt had outstanding in 6)
+                        
+                        # SET MOST OF THEM TO 0 -> which of them are needed when determining new quantity ??!!
+                        """f_data[t+1,fid-1,:] = np.zeros((1,1,20)) 
                         # initialize new values of firm f
-                        f_data[t+1, fid-1, 0] = fid # id
+                        f_data[t+1, fid-1, 0] = fid # id"""
+                
+                # HIER WEITER
+                
+                # checkForBankrupcy: Banks
+                for b in range(self.Nb):
+                    if E[b] <= 0:
+                        b_data[t+1, b, 1] = stats.trim_mean(E, 0.1) # getEquity
+                        b_data[t+1, b, 2] = stats.trim_mean(Cr, 0.1) # getCreditSupply (total credit supply)
+                        # ab hier einfach alle 0 ??? BZW bleiben einfach 0 in t + 1
+                        b_data[t+1, b, 3] = stats.trim_mean(Cr_a, 0.1)  # getActualCreditSupplied: credit supplied this round to firms
+                        b_data[t+1, b, 4] = stats.trim_mean(Cr_rem, 0.1) # getRemainingCredit
+                        b_data[t+1, b, 5] = np.sum(np.array(Cr_d[b])*np.array(r_d[b])) / np.sum(np.array(Cr_d[b])) if len(Cr_d[b]) > 0 else 0 
+                        # sum of credit disbursed (ausgezahlt) * rates disbursed (getRatesDisbursed) / sum of disbursecd credit (only if greater 0, else 0 )
+                        b_data[t+1, b, 7] = Cr_p[b] # getLoanPaid() 
+                        b_data[t+1, b, 8] = Bad_debt[b]
 
-                # WB_a 2x drin bis jetzt!!
                 
                 #################################################################################################
                 # Reset some variables 
                 # WHICH VARIABLES TO RESET IN EACH t?? -> check the classes
-                # resetTotalRevenue -> total revenue resetted in 7) div payments
+                # resetTotalRevenue -> total revenue resetted in 7) div payments : MIT REIN, da mance firmen negative profit !!
 
                 # EIGENTLICH ALLE DIE NICHT durchgereicht werden.. 
                 # NEIN: resetten sich selber oder bleiben (da alles in time loop) ??!!
+                # ALLES NOCHMAL DURCHGEHEN FÜR t = 1 -> welche variablen resetten sich, welche können raus ??!!
+                # kleinen "prints" auskommentieren ... 
+
+                # all variables which are not resetted are refilled with new values in next round !!
                 
                 # 1) HH
-                firms_applied = [[] for _ in range(Nh)]
-                job_offers = [[] for _ in range(Nh)]  #f_job_offers ??
-                w_flag = np.zeros(Nh)
-                div_flag = np.zeros(Nh)
-                div = np.zeros(Nh)
+                firms_applied = [[] for _ in range(self.Nh)]
+                job_offers = [[] for _ in range(self.Nh)]  #f_job_offers ??
+                w_flag = np.zeros(self.Nh)
+                div_flag = np.zeros(self.Nh)
+                div = np.zeros(self.Nh)
 
                 # 2) Firms
-                job_applicants = [[] for _ in range(Fc)]
-                job_offered_to_HH = [[] for _ in range(Fc)]
-                credit_appl = [[] for _ in range(Fc)]
-                Lhat = np.zeros(Fc)
-                loan_paid = np.zeros(Fc)
-                Ld = np.zeros(Fc)
-                banks = [[] for _ in range(Fc)]
-                Bi = [[] for _ in range(Fc)]
-                r = [[] for _ in range(Fc)]
-                Rev = np.zeros(Fc)
-                divs = np.zeros(Fc)
-                loan_to_be_paid = np.zeros(Fc)
-                P = np.zeros(Fc)
-                RE = np.zeros(Fc)
-                B = np.zeros(Fc)
-                Wb_d = np.zeros(Fc)
-                Wb_a = np.zeros(Fc)
-                vac = np.zeros(Fc)
+                job_applicants = [[] for _ in range(self.Nf)]
+                job_offered_to_HH = [[] for _ in range(self.Nf)]
+                credit_appl = [[] for _ in range(self.Nf)]
+                Lhat = np.zeros(self.Nf)
+                loan_paid = np.zeros(self.Nf)
+                Ld = np.zeros(self.Nf)
+                banks = [[] for _ in range(self.Nf)]
+                Bi = [[] for _ in range(self.Nf)]
+                r = [[] for _ in range(self.Nf)]
+                Rev = np.zeros(self.Nf)
+                divs = np.zeros(self.Nf)
+                loan_to_be_paid = np.zeros(self.Nf)
+                P = np.zeros(self.Nf)
+                RE = np.zeros(self.Nf)
+                B = np.zeros(self.Nf)
+                Wb_d = np.zeros(self.Nf)
+                Wb_a = np.zeros(self.Nf)
+                vac = np.zeros(self.Nfc)
 
                 outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
                 outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
                 outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
 
                 # 3) Banks
-                Cr_p = np.zeros(Nb)
-                firms_appl = [[] for _ in range(Nb)]
-                firms_loaned = [[] for _ in range(Nb)]
-                Cr_a = np.zeros(Nb)
-                Cr_rem = np.zeros(Nb)
+                Cr_p = np.zeros(self.Nb)
+                firms_appl = [[] for _ in range(self.Nb)]
+                firms_loaned = [[] for _ in range(self.Nb)]
+                Cr_a = np.zeros(self.Nb)
+                Cr_rem = np.zeros(self.Nb)
 
                 Bad_debt = np.zeros(self.Nb)
 
