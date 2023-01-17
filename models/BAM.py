@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import stats
+import matplotlib.pyplot as plt
 
 """# main.py rein kopieren und aufbereiten ...
     #	erst initializieren => dann füllen (jeweils für HH, Firms und Banks) => checken mit NWA .. 
@@ -73,7 +74,7 @@ class BAM_base:
         for mc in range(self.MC):
             print("MC run number: %s" %mc)
             
-            # set new seed each MC run
+            # set new seed each MC run to ensure different random numbers are sampled each simulation
             np.random.seed(mc)
             
             #################################################################################################
@@ -115,12 +116,12 @@ class BAM_base:
             Qp = np.zeros(self.Nf) # Actual Qty produced: Y_it
             Qs = np.zeros(self.Nf) # Qty sold
             Qr = Qp - Qs # Qty Remaining
-            eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # Price update parameter
+            eta = np.zeros(self.Nf) # Price update random number to be sampled later
             p = np.zeros(self.Nf) # price
-            pho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # Qty update parameter
+            rho = np.zeros(self.Nf) # intiaize Qty update parameter
             bankrupcy_period = np.zeros(self.Nf)
 
-            alpha = np.random.uniform(low=5,high=6, size = self.Nf) # Labor Productivity
+            alpha = np.random.uniform(low=5,high=6, size = self.Nf) # Productivity: stays constant here, since no R&D in this version
             Ld = np.zeros(self.Nf) # Desired Labor to be employed
             Lhat = np.zeros(self.Nf) # Labor whose contracts are expiring
             L = np.zeros(self.Nf)  # actual Labor Employed
@@ -146,7 +147,7 @@ class BAM_base:
             B = np.zeros(self.Nf) # amount of credit (total)
             banks = [[] for _ in range(self.Nf)] # list of banks from where the firm got the loans -> LISTE FOR EACH FIRM (nested)
             Bi = [[] for _ in range(self.Nf)] # Amount of credit taken by banks
-            r_f = [[] for _ in range(self.Nf)] # rate of Interest on credit by banks !! only self.r bei ihm 
+            r_f = [[] for _ in range(self.Nf)] # rate of Interest on credit by banks for which match occured (only self.r bei ihm) 
             loan_paid = np.zeros(self.Nf)
             pay_loan = False # Flag to be activated when firm takes credit
             credit_appl = [[] for _ in range(self.Nf)] # list with bank ids each frim chooses randomly to apply for credit
@@ -289,48 +290,53 @@ class BAM_base:
 
                 """ 1) 
                 Firms decide on how much output to be produced and thus how much labor required (desired) for the production amount.
-                Accordingly price or quantity is updated along with firms expected demand (adaptively based on firm's past experience)."""
-
-                # HOW TO BREAK: t = 0 durchlaufen lassen und ab t = 1 dann break rein !!! 
+                Accordingly price or quantity (cannot be changed simulatneously) is updated along with firms expected demand (adaptively based on firm's past experience).
+                The firm's quantity remaining from last round and the deveation of the individual price the firm set last round compared to the
+                average price of last round determines how quantity or prices are adjusted in this round.
+                There is no storage or inventory, s.t. in case quantity remaining from last round (Qr) > 0, it is not carried over."""
 
                 for i in range(self.Nf):
-                    # range starts with 0
-                    id_F[i] = i + 1 # OWN: set id_F (eig gar nicht nötig, da running index dafür läuft) ; start with 1, 
-                    # setRequiredLabor <- adjust price and Y^D_it = D_ie^e
-                    if t == 0:
+                    # DETERMINE random numbers with PARMATER VALUES 
+                    eta[i] = np.random.uniform(low=0,high=self.H_eta) # sample value for the (possible) price update for the current firm 
+                    rho[i] = np.random.uniform(low=0,high=self.H_rho) # Qty update parameter
+                    # alpha = np.random.uniform(low=5,high=6, size = self.Nf) # resample alpha each round
+                    if t == 0: # setRequiredLabor, i.e. labor demand in t= 0
                         Ld[i] = hbyf # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period 
                     # otherwise: each firm decides output and price => s.t. it can determine labour demanded
-                    else: # t > 0 -> need price to set Qd <=> RequiredLabor
-                        """CHECKEN IN t = 1 + text !!"""
-                        prev_avg_p = self.P_lvl[t-1][mc] # extract (current) average previous price 
-                        # decideProduction 
-                        p_d = f_data[t-1, i, 5] - prev_avg_p  # demanded price = prev_FPrice - prev_APrice
-                        # p_d decides about how to set price, including inventories:
-                        if p_d >= 0:
-                            if f_data[t-1, i, 4] > 0: # if prev_inv > 0 => firm should reduce price to sell more
-                                p[i] = np.around(max(f_data[t-1, i, 5]*(1-eta[i]), prev_avg_p ), decimals=2) # either previous firm price * eta or previous average price 
-                                Qd[i] = np.around(f_data[t-1, i, 3]) if f_data[t-1, i, 3] > 0 else max(1.01*f_data[t-1, i, 1], 10)
-                            else: # firm should increase quantity - firm expect higher demand
+                    else: # if t > 0, price and quantity demanded (Y^D_it = D_ie^e) need to be adjusted before setRequiredLabor
+                        prev_avg_p = self.P_lvl[t-1,mc] # extract (current) average previous price 
+                        p_d = f_data[t-1, i, 5] - prev_avg_p  # price difference btw. individual firm price of last round and average price of last round
+                        # decideProduction:
+                        if p_d >= 0: # in case firm charged higher price than average price (price difference positive)
+                            if f_data[t-1, i, 4] > 0: # and firm had positive inventories, firm should reduce price to sell more and leave quantity unchanged
+                                # a)
+                                p[i] = np.around(max(f_data[t-1, i, 5]*(1-eta[i]), prev_avg_p ), decimals=2) # max of previous average price or previous firm price  * 1-eta (price reduction) 
+                                Qd[i] = np.around(f_data[t-1, i, 3]) if f_data[t-1, i, 3] > 0 else np.mean(f_data[t-1, :, 3]) # use average of quantity demanded last round in case qd were non positive last round
+                                # else max(1.01*f_data[t-1, i, 1], 10) # new else!
+                            else: # firm sold all products, i.e. had negative invetories: firm should increase quantity since it expects higher demand
+                                # d)
+                                p[i] = np.around(f_data[t-1, i, 5],decimals=2) # price remains
+                                Qd[i] = np.around(f_data[t-1, i, 3]*(1+rho[i]),decimals=2) if f_data[t-1, i, 3] > 0 else np.mean(f_data[t-1, :, 3])
+                                # max(1.01*f_data[t-1, i, 1],10)
+                        else: # if price difference negative, firm charged higher (individual) price than the average price 
+                            if f_data[t-1, i, 4] > 0: # if previous inventories of firm > 0 (i.e. did not sell all products): firm expects lower demand
+                                # c)
                                 p[i] = np.around(f_data[t-1, i, 5],decimals=2)
-                                Qd[i] = np.around(f_data[t-1, i, 3]*(1+pho[i]),decimals=2) if f_data[t-1, i, 3] > 0 else max(1.01*f_data[t-1, i, 1],10)
-                                # pho muss jede runde neu bestimmt werden !!
-                        else: # if p_d < 0 -> change quantity, depending on inventories
-                            if f_data[t-1, i, 4] > 0: # if prev_inv > 0
-                                #Reduce quantity - firm expect lower demand
-                                p[i] = np.around(f_data[t-1, i, 5],decimals=2)
-                                Qd[i] = np.around(f_data[t-1, i, 3]*(1-pho[i]),decimals=2) if f_data[t-1, i, 3] > 0 else max(1.01*f_data[t-1, i, 1],10)
-                            else:
-                                #Increase only price
+                                Qd[i] = np.around(f_data[t-1, i, 3]*(1-rho[i]),decimals=2) if f_data[t-1, i, 3] > 0 else np.mean(f_data[t-1, :, 3])
+                                # max(1.01*f_data[t-1, i, 1],10)
+                            else: # excess demand (zero or negative inventories): price is increased
+                                # b)
                                 p[i] = np.around(max(f_data[t-1, i, 5]*(1+eta[i]), prev_avg_p),decimals=2)
                                 Qd[i] = np.around(f_data[t-1, i, 3],decimals=2) if f_data[t-1, i, 3] > 0 else max(1.01*f_data[t-1, i, 1],10)
                         # setRequiredLabor
                         Ld[i] = Qd[i] // alpha[i] # otherwise: labour demanded = quantity demanded / productivity
 
+                        # die parameter have to determined here!!! e.g. alpha, etc., not in beginning and not in last round...
+
                 """ 2) 
                 A fully decentralized labor market opens. Firms post vacancies with offered wages. 
                 Workers approach subset of firms (randomly selected, size determined by M) acoording to the wage offer. 
-                Labor contract expires after finite period "theta" and worker whose contract has expired applies to most recent firm first. 
-                ????Firm pays wage bills to start."""
+                Labor contract expires after finite period "theta" and worker whose contract has expired applies to most recent firm first. """
                 
                 print("Labor Market opens")
                 hired = 0
@@ -349,17 +355,17 @@ class BAM_base:
                         # 1x a "coin-flip" (1x bernoulli RV) for each worker emplyoed (i.e. size determines length of output)
                         # e.g. s = np.random.binomial(1, 0.5, 10) yields array([0, 1, 0, 0, 1, 1, 0, 1, 1, 0])
                         for j in (c_f): # j takes on HH id employed within current firm i 
-                            j = int(j-1) # python starts slicing with 1
-                            if d_employed[j] > self.theta: # if contract expired (i.e. greater 8)
+                            # j = int(j-1) # python starts slicing with 1
+                            if d_employed[j-1] > self.theta: # if contract expired (i.e. greater 8)
                                 rv = rv_array[c_f.index(j)] # check if current worker j is fired or not (0 or 1 entry)
                                 # if rv = 0, then worker is not fired and gets new contract instead, hence not searching in the following for new employment 
                                 if rv == 1: # if worker is fired: later M - 1 since implied that HH already tried to regain job (50% chance)
                                     w_emp[i].remove(j) # removeHousehold  -> delete the current HH id in the current firm array 
-                                    prev_firm_id[j] = i # updatePrevEmployer -> since HH is fired from firm i 
-                                    is_employed[j] = False # updateEmploymentStatus
-                                    firm_id[j] = 0 # setEmployedFirmId -> 0 now, because no employed firm
-                                    w[j] = 0 # setWage -> no wage now
-                                    d_employed[j] = 0 # 0 days employed from now on
+                                    prev_firm_id[j-1] = i # updatePrevEmployer -> since HH is fired from firm i 
+                                    is_employed[j-1] = False # updateEmploymentStatus
+                                    firm_id[j-1] = 0 # setEmployedFirmId -> 0 now, because no employed firm
+                                    w[j-1] = 0 # setWage -> no wage now
+                                    d_employed[j-1] = 0 # 0 days employed from now on
                                     n = n + 1 # add expired contract
                         Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts: add number of fired workers n 
                         L[i] = len(w_emp[i]) # updateTotalEmployees -> length of list with workers id, i.e. the number of wokers signed at firm i
@@ -373,7 +379,7 @@ class BAM_base:
                     # in the first 4 rounds (up to t=4): initial value aa is used as min. wage
                     # then the wage_lvl of the period before is used respectively for every four periods
                     # e.g. if t = 3 (fourth period): then the wage level of t = 2 (third period) is used for 4 consective periods: if t = 7, then the wage level of t=6, and so on
-                    w_min = aa if t in range(3) else self.wage_lvl[w_min_slice[t-3]][mc] # minimum wage
+                    w_min = aa if t in range(3) else self.wage_lvl[w_min_slice[t-3],mc] # minimum wage
                     # LATER: USE *0.4 instead the average wage_lvl (minimum wage too high ??) ?????
                     """if f_data[t-1,i,3] == 0: # if firm has no quantitiy remaining (from last round, i.e. did not sell all products)
                         xi = 2*xi # use 2*xi, since firm wants to offer higher wage and increase chance for match later if no more products (or just entered)
@@ -403,8 +409,6 @@ class BAM_base:
                     # A: Unemployed Households applying for the vacancies
                     c_ids =  [j for j in c_ids if is_employed[int(j-1)] == False]  # get Household id who are unemployed (i.e. is_employed is False)
                     print("%d Households are participating in the labor market (A:)" %len(c_ids))
-                    #  FOR COMPARISON
-                    np.random.seed(1)
                     np.random.shuffle(c_ids) # randomly selected household starts to apply (sequentially)
                     for j in c_ids:
                         j = int(j)
@@ -427,7 +431,7 @@ class BAM_base:
                                    
                     # B: Firms offer Jobs to randomly selected applicants (HH who applied)
                     for f in f_empl:
-                        vac_firm = vac[f-1] # calculated vacancies of firm f computed before
+                        vac_firm = int(vac[f-1]) # calculated vacancies of firm f computed before
                         applicants = job_applicants[f-1]# getJobApplicants (list of all HH's (id) applying to current firm i that employes)
                         n_applicants = len(applicants) # number of applicants
                         if vac_firm >= n_applicants:
@@ -609,9 +613,9 @@ class BAM_base:
                                 C_s = C_s + C_r 
                                 C_r = 0
                                 # addBanksAndRates: save the computations on the firm side
-                                banks[f_c-1].append(int(b_a_np[i])) 
-                                Bi[f_c-1].append(cr) 
-                                r_f[f_c-1].append(r_fc_np[i]) 
+                                banks[f_c-1].append(int(b_a_np[i])) # append bank id that supplied lowest credit 
+                                Bi[f_c-1].append(cr) # append updated received credit
+                                r_f[f_c-1].append(r_fc_np[i]) # interest rate charged (r_np bei ihm) 
                                 # addFirmsRatesCredits:  save the computations on the bank side
                                 firms_loaned[int(b_a_np[i])-1].append(f_c) 
                                 Cr_d[int(b_a_np[i])-1].append(cr) 
@@ -714,11 +718,13 @@ class BAM_base:
                     # Qd[f] = np.around(Qd[f],decimals=2) #setDesiredQty  - needed??? : NO
                     Qs[f] = 0 # resetQtySold
                     # setActualQty: Firm compute 
-                    alpha[f] =  np.around(np.random.uniform(low=5,high=6),decimals=2) # setProductivity: labor prductivity of each firm
+                    # alpha[f] =  np.around(np.random.uniform(low=5,high=6),decimals=2) # setProductivity: labor prductivity of each firm
                     # productivity is btw. 5 and 6 for each firm and remains around this level throughout the entire simulation (hence no aggregate Output growth) 
+                    # for the case of resampling: done in 1)
                     qp = alpha[f] * L[f] # productivity * labor employed = quantity produced 
                     Qp[f] = np.around(qp, decimals=2) # save the quantity produced rounded
-                    Qr[f] = Qp[f] - Qs[f] # # setQtyRemaining: Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
+                    Qr[f] = Qp[f] - Qs[f] # setQtyRemaining: Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
+                    # Hence currently quantity remaining equals quantity produced
                     # Setting initial prices in t = 0, otherwise set before in 1) 
                     if t == 0 and Qp[f] != 0:
                         p[f] = 1.5 * Wb_a[f] / Qp[f] # intial price are aggregated wage payments relative to quantity produced, times 1.5
@@ -845,8 +851,8 @@ class BAM_base:
                 print("")
                 for f in range(self.Nf):
                     Rev[f] = np.around(Qs[f]*p[f], decimals = 2)
-                    Total_Rev[f] = Rev[f] # calcTotalRevenues: add revenue of this round from firm f to total revenue (of firm f)
-                    Total_Rev[f] = Total_Rev[f] - Wb_a[f] # DAS DANN RAUS: wird in 7) von NW abgezogen !!! (sonst 2x )
+                    Total_Rev[f] = Rev[f] # calcTotalRevenues: save revenue of current round
+                    # wage payments are subtracted in 7)
                     # nur noch drin um eigene loops zu checken (i.e. never enough revenue to pay back banks to check own loops)
                 print("Revenues Calculated!!!")
                 print("")
@@ -1055,7 +1061,7 @@ class BAM_base:
                     f_data[t, f, 1] = Qd[f] # getDesiredQty (0 in first round ??)
                     f_data[t, f ,2] = Qp[f] # getActualQty
                     f_data[t, f, 3] = Qs[f] # getQtySold
-                    f_data[t, f, 4] = Qr[f] # getQtyRemaining
+                    f_data[t, f, 4] = np.round(Qr[f]) # getQtyRemaining: round in case Qr is really small, e.g. -3.55..e-15 (actually 0)
                     f_data[t, f, 5] = p[f] # getPrice
                     f_data[t, f, 6] = alpha[f] # getProductivity()
                     f_data[t, f, 7] = Ld[f] # getRequiredLabor
@@ -1096,42 +1102,42 @@ class BAM_base:
                     # t+1 s.t. all vectors for each firm of all periods before are also used 
                 plvl = plvl / np.sum(f_data[:t+1, :, 3]) # divide by overall quantity sold 
                 # why multiplying with quantity sold and then dividing ??!! NOT NEEDED ??!!
-                self.P_lvl[t][mc] = plvl
-                self.inflation[t][mc] = ( self.P_lvl[t][mc] - self.P_lvl[t-1][mc] ) / self.P_lvl[t-1][mc] if t!=0 else 0  
+                self.P_lvl[t,mc] = plvl
+                self.inflation[t,mc] = ( self.P_lvl[t,mc] - self.P_lvl[t-1,mc] ) / self.P_lvl[t-1,mc] if t!=0 else 0  
                 # self.inflation[t][mc] = self.inflation[t][mc]*100 # inflation in percentag points
 
                 """Log output:"""
                 self.production[t][mc] = np.sum(f_data[t, :,2]) # nominal GDP = sum of quantity produced by each firm
                 # np.log(np.sum(f_data[:,2])) = 8.209107419996224  # too high already for 10 firms ??!!
-                self.production_by_value[t][mc] = np.sum(f_data[t, :,2]*f_data[t, :,5]) # real GDP: quantity produced * price (sum)
+                self.production_by_value[t,mc] = np.sum(f_data[t, :,2]*f_data[t, :,5]) # real GDP: quantity produced * price (sum)
                 # np.log(np.sum(f_data[t, :,2]*f_data[t, :,5])) =  7.721780700105768
 
                 """unemployment rate:"""
-                self.unemp_rate[t][mc] = 1 - (np.sum(c_data[t, :, 10])/self.Nh) # unemployment rate ( 1 - employment rate: sum of 1 if HH has job / number of HH)
+                self.unemp_rate[t,mc] = 1 - (np.sum(c_data[t, :, 10])/self.Nh) # unemployment rate ( 1 - employment rate: sum of 1 if HH has job / number of HH)
                 # t = 0: unemployment rate bei 30% !!!
 
                 """Wages:"""
-                self.wage_lvl[t][mc] = np.sum(f_data[t,:,10]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # nominal wage level: sum of wage paid * number of employees relative to number of employees
-                self.wage_inflation[t][mc] = (self.wage_lvl[t][mc]- self.wage_lvl[t-1][mc]) / np.sum(self.wage_lvl[t-1][mc]) if t!=0 else 0
+                self.wage_lvl[t,mc] = np.sum(f_data[t,:,10]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # nominal wage level: sum of wage paid * number of employees relative to number of employees
+                self.wage_inflation[t,mc] = (self.wage_lvl[t,mc]- self.wage_lvl[t-1,mc]) / np.sum(self.wage_lvl[t-1,mc]) if t!=0 else 0
                 # wage_inflation[t][mc] = wage_inflation[t][mc]*100
-                self.real_wage[t][mc] = (np.sum(f_data[t,:,10]) / plvl) # real wage: sum of wage payments divided by price level 
+                self.real_wage[t,mc] = (np.sum(f_data[t,:,10]) / plvl) # real wage: sum of wage payments divided by price level 
 
                 """productivity / real wage ratio"""
-                self.avg_prod[t][mc] = np.sum(f_data[t,:,6]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # average productivity: sum of productivity * #empployees relative to # employees (for each t)
-                self.prduct_to_real_wage[t][mc] = self.avg_prod[t][mc] / self.real_wage[t][mc]
+                self.avg_prod[t,mc] = np.sum(f_data[t,:,6]*f_data[t, :,9])/np.sum(f_data[t, :,9]) # average productivity: sum of productivity * #empployees relative to # employees (for each t)
+                self.prduct_to_real_wage[t,mc] = self.avg_prod[t,mc] / self.real_wage[t,mc]
 
                 """Saving and consumption"""
-                self.S_avg[t][mc] = np.mean(c_data[t, :, 3]) # average savings (mean of savings of all consumers in t)
-                self.demand[t][mc] = np.sum(c_data[t, :,5]) # sum of desired consumption (total demand)
-                self.hh_income[t][mc] = np.sum(c_data[t, :,1]) # sum of individual income
-                self.hh_savings[t][mc] = np.sum(c_data[t, :3]) #  sum of invididual savings 
-                self.hh_consumption[t][mc] = np.sum(c_data[t, :,2]) # hh_consumption is sum of entire consumption of each HH
+                self.S_avg[t,mc] = np.mean(c_data[t, :, 3]) # average savings (mean of savings of all consumers in t)
+                self.demand[t,mc] = np.sum(c_data[t, :,5]) # sum of desired consumption (total demand)
+                self.hh_income[t,mc] = np.sum(c_data[t, :,1]) # sum of individual income
+                self.hh_savings[t,mc] = np.sum(c_data[t, :3]) #  sum of invididual savings 
+                self.hh_consumption[t,mc] = np.sum(c_data[t, :,2]) # hh_consumption is sum of entire consumption of each HH
                 
                 print("total produced:", np.sum(f_data[t, :,2]*f_data[t,:,5]), "total consumed:", np.sum(c_data[t, :,2]))
-                print("total demand:", self.demand[t][mc], "avg Price and Wage lvl:", self.P_lvl[t][mc], self.wage_lvl[t][mc])
+                print("total demand:", self.demand[t,mc], "avg Price and Wage lvl:", self.P_lvl[t,mc], self.wage_lvl[t,mc])
 
                 # own
-                self.consumption_rate[t][mc] = np.sum(c_data[t, :,2]) / self.Nh 
+                self.consumption_rate[t,mc] = np.sum(c_data[t, :,2]) / self.Nh 
 
                 """8) 
                 Firms with positive net worth/equity survive, but otherwise firms/banks with negative net worth go bankrupt and are replaced by.
@@ -1157,67 +1163,65 @@ class BAM_base:
                         '''New firm is entering: Resetting individual data by using the truncated mean at 10%. Hence lower and upper 5% are not included,
                         when the averages are computed for the new individual report values.'''
                         # row entries of firm f that went bankrupt are replaced with the respective truncated mean entries of all firms in this round
-                        f_data[t+1, fid-1,1] = stats.trim_mean(Qd, 0.1) # desired qunatity
-                        f_data[t+1, fid-1,2] = stats.trim_mean(Qp, 0.1) # produced quantity
-                        f_data[t+1, fid-1, 3] = stats.trim_mean(Qs, 0.1) # quantity sold
-                        f_data[t+1, fid-1, 4] = stats.trim_mean(Qr, 0.1) # quantity remaining: really really small, but not 0 ??
-                        # set to 0, since no warehouses ??!!
-                        f_data[t+1, fid-1, 5] = stats.trim_mean(p, 0.1) # price
-                        # ab hier: alles neu computed in loop => zeros anyways bzw recomputed and hence overwritten in 7) anyways.. ??!!
-                        f_data[t+1, fid-1, 6] = stats.trim_mean(alpha, 0.1) # productivity
-                        f_data[t+1, fid-1, 7] = np.round(stats.trim_mean(Ld, 0.1)) # required labor 
-                        f_data[t+1, fid-1, 8] = np.round(stats.trim_mean(Lhat, 0.1)) # expired contracts
-                        f_data[t+1, fid-1, 9] = np.round(stats.trim_mean(L, 0.1)) # total employees
-                        f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage paid to workers this round
-                        f_data[t+1, fid-1, 11] = stats.trim_mean(Wb_d, 0.1) # desired wage payment (total)
-                        f_data[t+1, fid-1, 12] = stats.trim_mean(Wb_a, 0.1) # actual wage payment (total)
-                        f_data[t+1, fid-1, 13] = stats.trim_mean(Rev, 0.1) # total revenue 
-                        f_data[t+1, fid-1, 14] = stats.trim_mean(loan_to_be_paid, 0.1) # total amount of loan  
-                        f_data[t+1, fid-1, 15] = stats.trim_mean(P, 0.1) # net profits
-                        f_data[t+1, fid-1, 16] = stats.trim_mean(divs, 0.1) # dividend payment (of net profit)
-                        # research and development
-                        f_data[t+1, fid-1, 17] = stats.trim_mean(RE, 0.1) # retained earnings (P - div)
-                        f_data[t+1, fid-1, 18] = stats.trim_mean(NW, 0.1) # average NW 
-                        # NW always very negative: i.e. new firms start with a negative NW ????
-                        f_data[t+1, fid-1, 19] = np.round(stats.trim_mean(vac, 0.1)) # current vacancies
-                        f_data[t+1 ,fid-1, 20] = stats.trim_mean(outstanding[f], 0.1) # average amount firm f went bankrupt had outstanding in 6)
-                        
-                        # SET MOST OF THEM TO 0 -> which of them are needed when determining new quantity ??!!
-                        """f_data[t+1,fid-1,:] = np.zeros((1,1,20)) 
-                        # initialize new values of firm f
-                        f_data[t+1, fid-1, 0] = fid # id"""
-                
-                # HIER WEITER
+                        # update data as long as not last round reached
+                        if t != self.T:
+                            f_data[t+1, fid-1, 1] = stats.trim_mean(Qd, 0.1) # desired qunatity
+                            f_data[t+1, fid-1, 2] = stats.trim_mean(Qp, 0.1) # produced quantity
+                            f_data[t+1, fid-1, 3] = stats.trim_mean(Qs, 0.1) # quantity sold
+                            f_data[t+1, fid-1, 4] = stats.trim_mean(Qr, 0.1) # quantity remaining: really really small, but not 0 ??
+                            # set to 0, since no warehouses ??!!
+                            f_data[t+1, fid-1, 5] = stats.trim_mean(p, 0.1) # price
+                            # ab hier: alles neu computed in loop => zeros anyways bzw recomputed and hence overwritten in 7) anyways.. ??!!
+                            f_data[t+1, fid-1, 6] = stats.trim_mean(alpha, 0.1) # productivity
+                            # ab hier wird alles neu determined => 0 kann einfach so bleiben, da eh schon 0's
+                            """f_data[t+1, fid-1, 7] = np.round(stats.trim_mean(Ld, 0.1)) # required labor 
+                            f_data[t+1, fid-1, 8] = np.round(stats.trim_mean(Lhat, 0.1)) # expired contracts
+                            f_data[t+1, fid-1, 9] = np.round(stats.trim_mean(L, 0.1)) # total employees
+                            f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage paid to workers this round
+                            f_data[t+1, fid-1, 11] = stats.trim_mean(Wb_d, 0.1) # desired wage payment (total)
+                            f_data[t+1, fid-1, 12] = stats.trim_mean(Wb_a, 0.1) # actual wage payment (total)
+                            f_data[t+1, fid-1, 13] = stats.trim_mean(Rev, 0.1) # total revenue 
+                            f_data[t+1, fid-1, 14] = stats.trim_mean(loan_to_be_paid, 0.1) # total amount of loan  
+                            f_data[t+1, fid-1, 15] = stats.trim_mean(P, 0.1) # net profits
+                            f_data[t+1, fid-1, 16] = stats.trim_mean(divs, 0.1) # dividend payment (of net profit)
+                            # research and development
+                            f_data[t+1, fid-1, 17] = stats.trim_mean(RE, 0.1) # retained earnings (P - div)
+                            f_data[t+1, fid-1, 18] = stats.trim_mean(NW, 0.1) # average NW 
+                            # NW always very negative: i.e. new firms start with a negative NW ????
+                            f_data[t+1, fid-1, 19] = np.round(stats.trim_mean(vac, 0.1)) # current vacancies
+                            f_data[t+1 ,fid-1, 20] = stats.trim_mean(outstanding[f], 0.1) # average amount firm f went bankrupt had outstanding in 6)"""
+                            
+                            # SET MOST OF THEM TO 0 -> which of them are needed when determining new quantity ??!!
+                            """f_data[t+1,fid-1,:] = np.zeros((1,1,20)) 
+                            # initialize new values of firm f
+                            f_data[t+1, fid-1, 0] = fid # id"""
                 
                 # checkForBankrupcy: Banks
                 for b in range(self.Nb):
-                    if E[b] <= 0:
+                    if E[b] <= 0 and t!=self.T:
                         b_data[t+1, b, 1] = stats.trim_mean(E, 0.1) # getEquity
                         b_data[t+1, b, 2] = stats.trim_mean(Cr, 0.1) # getCreditSupply (total credit supply)
                         # ab hier einfach alle 0 ??? BZW bleiben einfach 0 in t + 1
-                        b_data[t+1, b, 3] = stats.trim_mean(Cr_a, 0.1)  # getActualCreditSupplied: credit supplied this round to firms
+                        """b_data[t+1, b, 3] = stats.trim_mean(Cr_a, 0.1)  # getActualCreditSupplied: credit supplied this round to firms
                         b_data[t+1, b, 4] = stats.trim_mean(Cr_rem, 0.1) # getRemainingCredit
                         b_data[t+1, b, 5] = np.sum(np.array(Cr_d[b])*np.array(r_d[b])) / np.sum(np.array(Cr_d[b])) if len(Cr_d[b]) > 0 else 0 
                         # sum of credit disbursed (ausgezahlt) * rates disbursed (getRatesDisbursed) / sum of disbursecd credit (only if greater 0, else 0 )
-                        b_data[t+1, b, 7] = Cr_p[b] # getLoanPaid() 
-                        b_data[t+1, b, 8] = Bad_debt[b]
+                        b_data[t+1, b, 7] = 0 # getLoanPaid() 
+                        b_data[t+1, b, 8] = 0 # bad debt """
 
                 
-                #################################################################################################
-                # Reset some variables 
+                """ Reset some variables to be filled again with new values in the next round:""" 
+                
+            
                 # WHICH VARIABLES TO RESET IN EACH t?? -> check the classes
-                # resetTotalRevenue -> total revenue resetted in 7) div payments : MIT REIN, da mance firmen negative profit !!
-
-                # EIGENTLICH ALLE DIE NICHT durchgereicht werden.. 
-                # NEIN: resetten sich selber oder bleiben (da alles in time loop) ??!!
                 # ALLES NOCHMAL DURCHGEHEN FÜR t = 1 -> welche variablen resetten sich, welche können raus ??!!
                 # kleinen "prints" auskommentieren ... 
-
                 # all variables which are not resetted are refilled with new values in next round !!
+                # Nein, zum beispiel w_emp! 
                 
                 # 1) HH
                 firms_applied = [[] for _ in range(self.Nh)]
-                job_offers = [[] for _ in range(self.Nh)]  #f_job_offers ??
+                f_job_offers = [[] for _ in range(self.Nh)]  
                 w_flag = np.zeros(self.Nh)
                 div_flag = np.zeros(self.Nh)
                 div = np.zeros(self.Nh)
@@ -1240,15 +1244,16 @@ class BAM_base:
                 B = np.zeros(self.Nf)
                 Wb_d = np.zeros(self.Nf)
                 Wb_a = np.zeros(self.Nf)
-                vac = np.zeros(self.Nfc)
+                vac = np.zeros(self.Nf)
 
-                outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
-                outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
-                outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
+                outstanding = [[] for _ in range(self.Nf)] 
+                outstanding_flag = np.zeros(self.Nf) 
+                outstanding_to_bank = [[] for _ in range(self.Nf)] 
+                r_f = [[] for _ in range(self.Nf)] # rate of interest on credit by banks for which a match occured
 
                 # 3) Banks
                 Cr_p = np.zeros(self.Nb)
-                firms_appl = [[] for _ in range(self.Nb)]
+                firms_applied_b = [[] for _ in range(self.Nb)]
                 firms_loaned = [[] for _ in range(self.Nb)]
                 Cr_a = np.zeros(self.Nb)
                 Cr_rem = np.zeros(self.Nb)
@@ -1256,13 +1261,46 @@ class BAM_base:
                 Bad_debt = np.zeros(self.Nb)
 
 
-
-            """Plotting main aggregate report variables if number of MC replications small enough:
+            """Plotting main aggregate report variables if number of MC replications small enough and simulation ran through:
             The plots are saved in folder: """
             if self.plots and self.MC <= 2:
-                """plotting
-                - analog zu ihm
-                - erstmal nur die Plots, die auch im Buch sind bzw. die ich vergleichen kann"""
+                # Philips curve
+                plt.clf()
+                plt.scatter(self.unemp_rate[:,mc], self.wage_inflation[:,mc])
+                plt.xlabel("Unemployment Rate")
+                plt.ylabel("Wage Inflation")
+                plt.savefig('plots/philips_mc%s.png' %mc)
+
+                # Log output
+                plt.clf()
+                plt.plot(np.log(self.production[:,mc]))
+                plt.xlabel("Time")
+                plt.ylabel("Log output")
+                plt.savefig("plots/LogOutput_mc%s.png" %mc)
+
+                # inflation rate
+                plt.clf()
+                plt.plot(self.inflation[:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Inflation rate")
+                plt.savefig("plots/Inflation_mc%s.png" %mc)
+
+                # productivity/real wage
+
+
+                """Plots only using the last 500 iterations and zooming in s.t. fluctuations are better depicted"""
+                # Log output
+                plt.clf()
+                plt.plot(np.log(self.production[500:,mc]))
+                plt.xlabel("Time")
+                plt.ylabel("Log output")
+                plt.ylim(7.8, 7.95)
+                plt.savefig("plots/LogOutput_mc%s_zoom.png" %mc)
+            
+
+            print("Done")
+
+
                 
 
 
