@@ -14,13 +14,13 @@ from models.BAM import BAM_base # BAM base model
 #################################################################################################
 
 """ intial Parameters to be estimated later"""
-parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':1000, 
+parameters = {'Nh':50, 'Nf':10, 'Nb':10, 'T':1000, 
               'Z':3, 'M':4, 'H':2, 'H_eta': 0.1, 'H_rho':0.1, 'H_phi':0.01, 'h_xi':0.05,
               'c_P':1, 'c_R':0.5}
 # 'Z':2 im Buch -> bei ihm 3 !!!
 
 """ simulate the base model"""
-BAM = BAM_base(MC = 2, parameters=parameters, plots=True) 
+BAM = BAM_base(MC = 1, parameters=parameters, plots=True) 
 BAM_simulate = BAM.simulation()
 print(BAM_simulate)
 
