@@ -207,7 +207,7 @@ class BAM_base:
                 id_F[f] = f + 1 # set id 
                 f_data[:,f,0] = f+1 # start with 1 for id
                 Wp[f] = np.random.uniform(low = (aa-1), high = (aa+1)) # initial wage is random number around initial minimum required wage
-                p[f] = np.round(np.random.uniform(low = 11.5, high = 14), decimals=2)
+                p[f] = np.round(np.random.uniform(low = 2, high = 5), decimals=2)
 
 
             # BANKS
@@ -344,7 +344,7 @@ class BAM_base:
                         Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts: add number of fired workers n and update fired workers (in this round) 
                         L[i] = len(w_emp[i]) # updateTotalEmployees: workforce or length of list with workers id, i.e. the number of wokers signed at firm i
                         """calcVacancies of firm i"""
-                        vac[i] = int((Ld[i] - L[i] + Lhat[i])) # labour demanded (determined before) minus labour employed + Labor whose contracts are expiring
+                        vac[i] = int((Ld[i] - L[i] + Lhat[i])) # labour demanded (determined before) minus current labour employed + Labor whose contracts are expiring
                         if vac[i] > 0: 
                             f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
                     """setWage"""
@@ -679,6 +679,7 @@ class BAM_base:
                 print("Firms producing....!")
                 # doProduction
                 for f in range(self.Nf):
+                    Qs[f] = 0 # resetQtySold
                     if t > 0:
                         Qp_last[f] = Qp[f] # last quantity produced of last round 
                     # setActualQty: Firms producing their products
@@ -698,12 +699,12 @@ class BAM_base:
                 c_ids = np.array(range(self.Nh)) + 1 # initialize consumer ids starting with 1 (not 0)
                 f_ids = np.array(range(self.Nf)) + 1 # initialize firm ids starting with 1 (not 0)
                 savg = self.S_avg[t-1,mc] # slice average saving of last round (0 in t = 0)
-                """f_id = list(f_ids) # convert ids to list, which might altered in the following, but is initialized again for each HH
+                f_id = list(f_ids) # initialize list to exclude firms in the following that did not produce (list ist inialized again when each HH consumes in A)
                 for f in f_ids:
                     if Qp[f-1] <= 0: # remove firm id from list if quantity produced = 0
                         f_id.remove(f)
                 if len(f_id) == 0:
-                    print("NO firms produced anything")"""
+                    print("NO firms produced anything")
                 
                 print("Consumption Goods market OPENS!!!")
                 print("")
@@ -737,7 +738,7 @@ class BAM_base:
                         Qp_f_last = Qp_last[f_last] # slice out the produced quantities of last round by firms the HH 
                         i = np.argmax(Qp_f_last) # entry with max quantity 
                         # Largest of the firms the HH bought from last round is only choosen in case the same firm actually produced this round or not went bankrupt last round
-                        if f_last[i] in f_id and bankrupt_flag[f] == 0:
+                        if f_last[i] in f_id and bankrupt_flag[i] == 0:
                             select_f.append(f_last[i]) # HH directly sets biggest firm she purchased from last round as one of her choices to satisfy demand later
                             f_id.remove(f_last[i]) # remove already choosen firm from the universe of firms the HH chooses
                             Z = self.Z-1 # parameter Z (number of firms to buy products from) is reduced by 1, since HH choose biggest firm she purchased from last round
@@ -746,7 +747,7 @@ class BAM_base:
 
                     # HH c chooses random firms to (potentially) buy products from
                     if len(f_id) > 0: # if there are any firms producing
-                        if len(f_id) >= Z: # & if there are enough firms to be matched
+                        if len(f_id) > Z: # & if there are enough firms to be matched
                             select_f.extend(np.random.choice(f_id, self.Z, replace = False)) # select random list of firms to go to and buy products from 
                         else:
                             select_f.extend(f_id) # no random firms to choose because number of firms which produced = Z
@@ -1225,9 +1226,6 @@ class BAM_base:
                 outstanding_flag = np.zeros(self.Nf) 
                 outstanding_to_bank = [[] for _ in range(self.Nf)] 
                 r_f = [[] for _ in range(self.Nf)] # rate of interest on credit by banks for which a match occured
-
-                for f in range(self.Nf):
-                    Qs[f] = 0 # resetQtySold
 
                 # 3) Banks
                 Cr_p = np.zeros(self.Nb)

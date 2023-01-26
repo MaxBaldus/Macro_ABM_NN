@@ -10,7 +10,7 @@ The both simpleer ABMs are taken from the book:
 The more sophisticated model ABM macro model also comes from:
 
 
-test
+The start off code is oriented at: inder
 
 
 python version used: 
