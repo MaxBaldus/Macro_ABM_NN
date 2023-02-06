@@ -4,10 +4,11 @@ from models.toymodel import Toymodel # importing toy model (benchmark?)
 from models.BAM import BAM_base # BAM base model
 
 """Simulating the toy model"""
-toymodel = Toymodel(Time=1000, Ni=100, MC=0, gamma=2, phi=0.1, pbar=0.01, delta=0.05, rbar=0.075)
+"""
+toymodel = Toymodel(Time=1000, Ni=100, MC=3, gamma=2, pbar=0.01, delta=0.05, rbar=0.075)
 toymodel_simulation = toymodel.simulation()
 print(toymodel_simulation)
-
+"""
 
 #################################################################################################
 # Simulating the BAM base model by Delli Gatti (2011)
@@ -15,7 +16,7 @@ print(toymodel_simulation)
 
 """ intial Parameters to be estimated later"""
 parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':100, 
-              'Z':3, 'M':4, 'H':2, 'H_eta': 0.1, 'H_rho':0.1, 'H_phi':0.01, 'h_xi':0.05,
+              'Z':2, 'M':4, 'H':2, 'H_eta': 0.1, 'H_rho':0.1, 'H_phi':0.01, 'h_xi':0.05,
               'c_P':1, 'c_R':0.5}
 # 'Z':2 im Buch -> bei ihm 3 !!!
 

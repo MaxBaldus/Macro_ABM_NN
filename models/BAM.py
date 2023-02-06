@@ -182,7 +182,7 @@ class BAM_base:
             Fill some individual report variables with random number when t = 0"""
             
             # HOUSEHOLDS
-            Y0 = np.random.uniform(low=50,high=100,size=self.Nh) # initial (random) income of each HH  
+            Y0 = np.random.uniform(low=1,high=5,size=self.Nh) # initial (random) income of each HH  
             for h in range(self.Nh): # for each of the 500 HH
                     MPC[h] = np.random.uniform(low=0.6,high=0.9) # initial MPC for each HH (then recomputed in each loop)
                     id_H[h] = h + 1 # each HH gets number which is the id
@@ -196,10 +196,11 @@ class BAM_base:
             # FIRMS
             NWa = np.mean(Y0) * 2 # initial net worth of the firms is the mean of initial HH's income times two
             NW = np.ones(self.Nf) * (NWa)  # initial net worth of each firm (all firms start with the same net worth)
-            hbyf = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
+            # hbyf = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
+            hbyf = 50
             aa = (np.mean(Y0) * 0.6) # initial minimum (required) wage is 60% of initial mean income of the HH's 
-            alpha = np.random.uniform(low=5,high=6, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
-            # alpha = np.ones(self.Nf) * 6 # productivity of each firm is the same and remains constant in the baseline version of the model (np R&D), i.e. 6
+            alpha = np.random.uniform(low=0.3,high=0.7, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
+            # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
             # Sample random numbers, depending on parameter values:
             eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # sample value for the (possible) price update (growth rate) for the current firm 
             rho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # sample growth rate of quantity of firm i
@@ -1150,7 +1151,7 @@ class BAM_base:
                         L[f] =  0 # new firm enters with 0 labor employed
                         w_emp[f] = [] # workers employed is empty list 
                         NW[f] = np.mean(Y0) * 2 # intial Net worth of new firm
-                        alpha[f] = np.random.uniform(low=5,high=6) # draw new productivity btw. 5 and 6 
+                        alpha[f] = np.random.uniform(low=0.3,high=0.7) # draw new productivity btw. 5 and 6 
 
                         """Resetting individual Agent data"""
                         # row entries of firm f that went bankrupt are replaced with the respective truncated mean entries of all firms in this round
@@ -1188,11 +1189,11 @@ class BAM_base:
                 # all variables which are not resetted are refilled with new values in next round !!
                 # Nein, zum beispiel w_emp! 
 
-                if t > 150:
+                """if t > 150:
                     print(Qr)  # Qr checken !! integer values ??!! was ist Qd ??!! -> Einheit .. 
                     print(vac) # always reset to 0 => am Ende printen (before reset) mit L 
                     print(L)
-                    input("Press Enter to continue...")
+                    input("Press Enter to continue...")"""
                 
                 # 1) HH
                 firms_applied = [[] for _ in range(self.Nh)]
