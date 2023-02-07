@@ -34,7 +34,7 @@ class BAM_base:
         "Parameters set by modeller"
         self.beta = 4 # MPC parameter that determines shape of decline of consumption propensity when consumption increases 
         self.theta = 8 # Duration of individual contract
-        self.r_bar = 0.01 # Base interest rate set by central bank (exogenous in this model)
+        self.r_bar = 0.04 # Base interest rate set by central bank (exogenous in this model)
         self.capital_requirement_coef = 0.11 # capital requirement coefficients uniform across banks 
         self.delta = 0.5 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
 
@@ -126,7 +126,7 @@ class BAM_base:
             vac = np.zeros(self.Nf, int) # Vacancy
             W_pay = np.zeros(self.Nf) # Wage updated when paying
             job_applicants = [[] for _ in range(self.Nf)] # Ids of Job applicants (HH that applied for job) -> Liste für each firm => array with [] entries for each i
-            #job_offered_from_HH = [[] for _ in range(self.Nf)] # Ids of selected candidates (HH that applied for job and which may be picked by firm i)
+            job_offered_to_HH = [[] for _ in range(self.Nf)] # Ids of selected candidates (HH that applied for job and which may be picked by firm i)
             w_emp = [[] for _ in range(self.Nf)] # Ids of workers/household employed - each firm has a list with worker ids
             is_hiring = np.zeros(self.Nf, bool) # Flag to be activated when firm enters labor market to hire 
 
@@ -194,10 +194,10 @@ class BAM_base:
                     c_data[0,h,5] = MPC[h]*Y[h] # initial desired consumption (same as C in t = 0)
             
             # FIRMS
-            NWa = np.mean(Y0) * 10 # initial net worth of the firms is the mean of initial HH's income times two
+            NWa = np.mean(Y0) * 2 # initial net worth of the firms is the mean of initial HH's income times two
             NW = np.ones(self.Nf) * (NWa)  # initial net worth of each firm (all firms start with the same net worth)
-            # initial_ld = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
-            initial_ld = 3  
+            # hbyf = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
+            hbyf = 50
             aa = (np.mean(Y0) * 0.6) # initial minimum (required) wage is 60% of initial mean income of the HH's 
             alpha = np.random.uniform(low=0.3,high=0.7, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
@@ -258,7 +258,6 @@ class BAM_base:
             column 18 = net worth NW
             column 19 = vancies vac  
             column 20 = outstanding amount: amount of credit and interest firm could not pay back using gross profits
-
             3) Banks
             column 1 = Equity E   
             column 2 = Credit supply Cr  
@@ -281,13 +280,11 @@ class BAM_base:
                 average price of last round determines how quantity or prices are adjusted in this round.
                 There is no storage or inventory, s.t. in case quantity remaining from last round (Qr > 0), it is not carried over."""
 
+                Qs_last_round = stats.trim_mean(Qs, 0.1) # trimmed average of quantity sold last round 
                 for i in range(self.Nf):
                     # alpha is constant in the base version, i.e. no growth
-                    if t == 0 or bankrupt_flag[i] == 1: # setRequiredLabor, i.e. labor demand in t = 0 or if firm exited the market 
-                        Ld[i] = initial_ld # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period
-                    # HIER WEITER !!! SKRIPT SPEICHERN before code ändern
-                    # NEGATIVE VACANCIES !!!
-
+                    if t == 0: # setRequiredLabor, i.e. labor demand in t= 0
+                        Ld[i] = hbyf # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period 
                     # otherwise: each firm decides output and price => s.t. it can determine labour demanded
                     else: # if t > 0, price and quantity demanded (Y^D_it = D_ie^e) need to be adjusted before setRequiredLabor
                         prev_avg_p = self.P_lvl[t-1,mc] # extract (current) average previous price 
@@ -298,7 +295,7 @@ class BAM_base:
                                 # a)
                                 p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p ), decimals=2) # max of previous average price or previous firm price  * 1-eta (price reduction) 
                                 Qd[i] = np.around(Qs[i]) if Qs[i] > 0 else Qs_last_round # use average of quantity demanded last round in case Qd were non positive last round
-                            else: # firm sold all products, i.e. had negative inventories: firm should increase quantity since it expects higher demand
+                            else: # firm sold all products, i.e. had negative invetories: firm should increase quantity since it expects higher demand
                                 # d)
                                 p[i] = np.around(p[i],decimals=2) # price remains
                                 Qd[i] = np.around(Qs[i]*(1+rho[i]),decimals=2) if Qs[i] > 0 else Qs_last_round
@@ -330,7 +327,7 @@ class BAM_base:
                 for i in range(self.Nf):
                     """Firms updating vacancies in the following by keeping or firing workers in case contract expired:
                     i.e. rounds of employment is greater than 8"""
-                    if L[i] >= 0: # always activated 
+                    if L[i] >= 0: # activate in case firm actually has workers employed currently 
                         c_f = w_emp[i] # getEmployedHousehold: slice the list with worker id's (all workers) for firm i 
                         n = 0 # counter for the number of expired contracts of each firm i 
                         # in case the duration of her contract is greater 8, her contract expires and she has to apply again to the firm she used to work for
@@ -357,7 +354,7 @@ class BAM_base:
                     # then the wage_lvl of the period before is used respectively for every four periods
                     # e.g. if t = 3 (fourth period): then the wage level of t = 2 (third period) is used for 4 consective periods: if t = 7, then the wage level of t=6, and so on
                     w_min = np.around(aa, decimals = 2) if t in range(3) else self.wage_lvl[w_min_slice[t-3],mc] # minimum wage
-                    if t > 0: # in first round, wage of each firm is initialized with aa (each firm paying random wage)
+                    if t > 0: # in first round, wage of each firm is initialized with aa (each firm paying same wage)
                         if vac[i] > 0: # wage if firm has currently open vacancies:
                             # Wp[i] = np.around(max(w_min, f_data[t-1, i, 10]*(1+xi)),decimals=2) # either minimum wage or wage of period before revised upwards 
                             Wp[i] = np.around(max(w_min, Wp[i]*(1+xi)),decimals=2) # either minimum wage or wage of period before revised upwards 
@@ -365,14 +362,14 @@ class BAM_base:
                         else: # wage if firm i currently no open vacancies
                             Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage is either min. wage or wage of period before 
                             is_hiring[i] = False  
-                    Wb_d[i]  = Wp[i] * Ld[i] # setDesiredWageBill
+                    Wb_d[i]  = Wp[i] * Ld[i] # setDesiredWageBill:
                     """Finished: Firms posted Vacancies and Wage offers. 
                     In t = 0 wage is the same for each firm (i.e. initial wage aa), because max(aa, 0) (Wp[i] = 0) """
                 
                 """SearchandMatch: 
                 There must be at least 1 entry in the list with firm id's that have open vacancies: otherwise no searchandmatch.""" 
                 if len(f_empl) > 0: # if there are firms that offer labour / have open vacancies (i.e. if any firm id's in f_empl list), i.e. L^d > L 
-                    # A: Unemployed Households applying for the vacancies: filling firms_applied & job_applicants
+                    # A: Unemployed Households applying for the vacancies
                     c_ids =  [j for j in c_ids if is_employed[int(j-1)] == False]  # get Household id who are unemployed (i.e. is_employed is False)
                     #print("%d Households are participating in the labor market (A:)" %len(c_ids))
                     np.random.shuffle(c_ids) # randomly selected household starts to apply (sequentially)
@@ -381,41 +378,42 @@ class BAM_base:
                         appl_firm = [] # store firm id's applied to by HH j
                         prev_emp = int(prev_firm_id[j-1]) #getPrevEmployer, i.e. the id of firm HH j were employed before 
                         f_empl_c = [x for x in f_empl if x != prev_emp] # gather firm ids that have open vacancies (neglect firm if HH was just fired)
-                        M = self.M # number of firms HH applies to
+                        M = self.M if t == 0 or firm_went_bankrupt[j-1] == 1 or d_unemployed[j-1] > 0 else self.M - 1 # number of firms HH applies to
+                        # in t = 0 or if firm the HH worked before went bankrput or if HH is unemployed more than one round, 
+                        # HH does apply to a firm where they worked before: in this case M = 4
                         if expired[j-1] == True and prev_emp in f_empl: # in case contract just expired and same firm is also hiring, HH tries to apply to firm she worked before first
                             appl_firm.append(prev_emp)
-                            M = self.M - 1 # # HH does apply to the firm where they worked before in case contract expired, then M = 4
                         if len(f_empl_c) > M: # if there are more than M or M-1 firms with open vacancies (prev_emp cannot be in f_empl_c)
                             ids_to_append = list(np.random.choice(f_empl_c, M, replace = False)) # choose some random firm ids to apply to 
                             appl_firm.extend(ids_to_append) # append entries to application list without saving new list inside list 
                         else: # otherwise: HH applies to the only firms hiring (with open vacancies)
                             appl_firm = f_empl_c # save firm id's HH applies to
-                        firms_applied[j-1].extend(appl_firm) # attach list with firm id's HH j applies to (attach to its entry in list)
+                        firms_applied[j-1].extend(appl_firm) # attach list with firm id's HH j will apply to (attach to its entry in list)
                         #print("firms applied:", firms_applied[j-1], "by HH", j-1)
                         # Houshold j applies for the vacancies
                         for a in appl_firm: # a takes on the firm id that HH applies to 
                             job_applicants[a-1].append(j) # add HH id to the list of firm id's the HH applies to 
                             #print("Job applicants:", job_applicants[a-1])
                                    
-                    # B: Firms offer Jobs to randomly selected applicants (HH's who applied)
+                    # B: Firms offer Jobs to randomly selected applicants (HH who applied)
                     for f in f_empl:
-                        vac_firm = int(vac[f-1]) # vacancies of firm f computed before
+                        vac_firm = int(vac[f-1]) # calculated vacancies of firm f computed before
                         applicants = job_applicants[f-1]# getJobApplicants (list of all HH's (id) applying to current firm i that employes)
                         n_applicants = len(applicants) # number of applicants
                         if vac_firm >= n_applicants:
-                            # labor supply shortage: if more vacancies than number of applicants => firm i accepts all applicants
-                            #job_offered_from_HH[f-1] = applicants # each firm has list with HH's ids that offered job / applied to firm i
+                            # job shortage: if more vacancies than number of applicants => firm i accepts all applicants
+                            job_offered_to_HH[f-1] = applicants # HH's that offered job to firm i
                             # updateHouseholdJobOffers (offered jobs by firm (id) to HH)
                             for a in applicants:
                                 job_offered_from_firm[a-1].append(f) # save the firm id that offers job to HH which is currently applying 
                         else:
                             # more HH applying for jobs than firms offer vacancies => shuffle random number of applicants (HH id's), according to #vacancies of firm f
                             applicants = np.random.choice(applicants, vac_firm, replace=False) 
-                            #job_offered_from_HH[f-1] = list(applicants) # HH's id to which a job is offered by firm f (firm -> HH) after HH applied
+                            job_offered_to_HH[f-1] = list(applicants) # HH's id to which a job is offered by firm f (firm -> HH)
                             # updateHouseholdJobOffers (offered jobs by firm (id) to HH)
                             for a in applicants:
                                 job_offered_from_firm[a-1].append(f) # save the firm id that offers job to HH which is currently applying (firm -> HH)
-                        #print("job offered to HH:", job_offered_from_HH[f-1], "by firm", f)
+                        #print("job offered to HH:", job_offered_to_HH[f-1], "by firm", f)
                     
                     # C: Household accepts if job offered is of highest wage
                     for l in c_ids:
@@ -430,7 +428,7 @@ class BAM_base:
                         if len(f_applied_ids) != 0: # if HH applied to some firms (id's) (i.e. if there is array inside f_applied_ids)
                             ind = 0 # counter
                             for ii in f_applied_ids: 
-                                f_e[ind] = np.around(Wp[ii], decimals = 2) # extract the wages of the firms where HH applied 
+                                f_e[ind] = Wp[ii] # extract the wages of the firms where HH applied 
                                 ind += 1 # increase index
                             for of in f_job_offers: # extract the wages of the offering firms
                                 offer_wage.append(np.around(Wp[of] ,decimals=2)) 
@@ -472,8 +470,7 @@ class BAM_base:
                 else:
                     print("No Firm with open vacancies")
                     print("")
-                print("Labor Market CLOSED!!!! with %d NEW household hired!!" %(hired))
-                print("Labor Market CLOSED!!!! with %d HH's currently employed (L)" %(np.sum(L)))
+                print("Labor Market CLOSED!!!! with %d household hired!!" %(hired))
                 print("")
 
                 """Firms set the wage bills"""
@@ -684,7 +681,7 @@ class BAM_base:
                 for f in range(self.Nf):
                     Qs[f] = 0 # resetQtySold
                     if t > 0:
-                        Qp_last[f] = Qp[f] # quantity produced in last round 
+                        Qp_last[f] = Qp[f] # last quantity produced of last round 
                     # setActualQty: Firms producing their products
                     # productivity alpha is btw. 5 and 6 for each firm and remains around this level throughout the entire simulation (hence no aggregate Output growth) 
                     qp = alpha[f] * L[f] # productivity * labor employed = quantity produced 
@@ -735,7 +732,7 @@ class BAM_base:
                         C_d_c = C_d[c] # getDesiredConsn
                     
                     # HH visits largest firm from the previous round first (appends the firm with the largest Qp to her selected firm's list), i.e. having a
-                    # preferential attachment. The other Z-1 firms are then chosen at random, in case firm of last round did not went bankrupt
+                    # preferential attachment. The other Z-1 firms are then choosen at random
                     if t > 0 and len(goods_purchased[c]) > 0:
                         f_last = goods_purchased[c] # extract list with firm id(s) HH purchased from last round (id's already start from 0, hence not -1 in the following)
                         Qp_f_last = Qp_last[f_last] # slice out the produced quantities of last round by firms the HH 
@@ -749,14 +746,13 @@ class BAM_base:
                         Z = self.Z # parameter Z remains since biggest firm from last round not attached 
 
                     # HH c chooses random firms to (potentially) buy products from
-                    if len(f_id) > 0: # if there are any firms producing remaining 
+                    if len(f_id) > 0: # if there are any firms producing
                         if len(f_id) > Z: # & if there are enough firms to be matched
                             select_f.extend(np.random.choice(f_id, self.Z, replace = False)) # select random list of firms to go to and buy products from 
                         else:
                             select_f.extend(f_id) # no random firms to choose because number of firms which produced = Z
                     #else:
                     #    print("There was no production in the economy, hence HH cannot choose firms to buy consumption goods!!!")
-                    goods_purchased[c] = [] # reset goods purchased list with (potential) firm ids of current HH s.t. it can be filled again for this round
 
                     # B: HH checks the prices of chosen firms & purchases if stock of chosen firms still greater 0
                     cs = 0 # initialize amount of consumption / purchased amount later from firm with lowest price 
@@ -780,7 +776,7 @@ class BAM_base:
                             fi = select_f[i] # get firm id of selected firms (Z) that offers the minimum (lowest) price
                             Qrf = np.around(Qr[fi-1], decimals = 2) # extract quantity remaining of firm that offers lowest price
                             #print("firm %s"%fi, "current supply (nominal) %s ;"%Qrf, "HH %s"%ck, "rem cons %s"%c_rem)
-                            if Qrf > 0: # if remaining quantity of firm with minimum price is at least one unit  
+                            if Qrf > 1: # if remaining quantity of firm with minimum price is at least one unit  
                                 # Supply of current firm: 
                                 Qr_f = np.around(Qrf*pmin, decimals = 2) # real supply of firm fi is the current supply or stock * price of current firm
                                 Qs_f = 0 # initialize amount of supplied quantity of firm fi to consumer c (after purchase)
@@ -803,11 +799,11 @@ class BAM_base:
                                 # Update report variables:
                                 Qs[fi-1] = Qs[fi-1] + np.around(Qs_f / pmin ,decimals=2) # setQtySold (real): add overall supplied quantity of firm fi
                                 # subtract produced quantity by supplied (sold to c) qunatity and update remaining quantity
-                                Qr[fi-1] = np.abs(np.around(Qp[fi-1] - Qs[fi-1], decimals = 2))  # setQtyRemaining: round to 2 decimals and avoid slightly negative nubmers (-0.)
+                                Qr[fi-1] = Qp[fi-1] - Qs[fi-1]  # setQtyRemaining
                                 prices = np.delete(prices, i) # delete the price of the firm that sold to c out of price list, since either Firm sold everything or demand is satisfied
                                 select_f = list(np.delete(select_f, i)) # delete firm that sold to c form list of chosen firms (Z)
                             # append current firm id (fi) to list of firms without stock if stock went to 0
-                            if Qr[fi-1] <= 0:
+                            if Qr[fi-1] < 1:
                                 f_out_of_stock.append(fi)
                                 #print("Firm %d out of stock" %(fi))
                             # c continues to purchase from (2nd and 3rd) firm until remaining demand = 0
@@ -816,7 +812,6 @@ class BAM_base:
                     # setActualCons & updateSavings
                     C[c] = np.around(cs, decimals=2) # save the overall consumption of HH c
                     S[c] = np.around(Y[c] - C[c], decimals=2) # new savings (or current Y avaiable) are the current Income minus Consumption of HH c in this round
-                Qs_last_round = np.mean(Qs) # average of quantity sold this round, used again in t + 1 in the beginning, when Qd and Ld is determined
                 print("Consumption Goods market CLOSED!!!")           
                 print("")
                 # Some HH don't consume at all => hence they have large amounts of savings in the following
@@ -917,12 +912,10 @@ class BAM_base:
                 Firms compute Retained Earnings, i.e. their Earnings after interest payments and dividend payments (zero investment here).
                 They are added to the current net worth of each firm which are carried forward to next period. 
                 HH's update their income after the dividend payments and Banks update their equity after principal and interest payments (if any).
-
                 If a firm could not pay back entire credit with its revenue, the firm recorded a negative profit and 
                 the outstanding amount is subtracted from its current net worth. 
                 If the current (available) net worth is not sufficient to cover for the remaining oustanding amount(s) (cover negative profit), 
                 the firm will exit the market in 8).
-
                 The bank(s) having open accounts (i.e. did not receive entire credit and interest payments) record non performing loan(s) or bad debt,
                 which amounts to share of credit firm had at bank i times its remaining oustanding amount (not net-worth). 
                 The banks again receive the open payments sequentially starting with the one bank firm received credit from first (in case firm had credit 
@@ -1145,12 +1138,12 @@ class BAM_base:
                         when the averages are computed for the new individual report values.'''
                         Qd[f] = np.round(stats.trim_mean(Qd, 0.1), decimals = 2) # initial desired quantity of new firm 
                         Qp[f] = np.round(stats.trim_mean(Qp, 0.1), decimals = 2) # produced quantity
-                        Qs[f] = 0 # quantity sold of new firm (reset in each round anyways)
-                        Qr[f] = 0 # quantity remaining of new firm is 0
+                        Qs[f] = np.round(stats.trim_mean(Qs, 0.1), decimals = 2) # quantity sold
+                        Qr[f] = np.round(stats.trim_mean(Qr, 0.1), decimals = 2) # quantity remaining: really really small, but not 0 ??
                         p[f] =  np.round(stats.trim_mean(p, 0.1), decimals = 2) # price
                         Wp[f] = np.round(stats.trim_mean(Wp, 0.1), decimals = 2)  # wage payments 
                         W_pay[f] = np.round(stats.trim_mean(Wp, 0.1), decimals = 2)  # wage payments 
-                        Ld[f] = 0 # labor demand again determined
+                        Ld[f] = hbyf
                         vac[f] = 0 # vacancies again determined
                         L[f] =  0 # new firm enters with 0 labor employed
                         w_emp[f] = [] # workers employed is empty list 
@@ -1169,7 +1162,7 @@ class BAM_base:
                             f_data[t+1, fid-1, 5] = stats.trim_mean(p, 0.1) # price
                             f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage payments 
                             f_data[t+1, fid-1, 6] = np.random.uniform(low=5,high=6) # productivity 
-                            f_data[t+1, fid-1, 7] = initial_ld # required labor 
+                            f_data[t+1, fid-1, 7] = hbyf # required labor 
                             f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage paid to workers this round
                             # research and development
                             f_data[t+1, fid-1, 18] = np.mean(Y0) * 2 # average NW 
@@ -1206,11 +1199,10 @@ class BAM_base:
                 div_flag = np.zeros(self.Nh)
                 div = np.zeros(self.Nh) 
                 expired = np.zeros(self.Nh, bool) # reset the exired flag, since contract can only expire in each round 
-                job_offered_from_firm = [[] for _ in range(self.Nh)]
 
                 # 2) Firms
                 job_applicants = [[] for _ in range(self.Nf)]
-                #job_offered_from_HH = [[] for _ in range(self.Nf)]
+                job_offered_to_HH = [[] for _ in range(self.Nf)]
                 credit_appl = [[] for _ in range(self.Nf)]
                 Lhat = np.zeros(self.Nf)
                 loan_paid = np.zeros(self.Nf)
@@ -1358,11 +1350,3 @@ class BAM_base_estimate:
 
     
 
-
-
-    
-
-
-        
-
-    

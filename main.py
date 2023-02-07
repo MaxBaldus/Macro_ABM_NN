@@ -15,7 +15,7 @@ print(toymodel_simulation)
 #################################################################################################
 
 """ intial Parameters to be estimated later"""
-parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':100, 
+parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':1000, 
               'Z':2, 'M':4, 'H':2, 'H_eta': 0.1, 'H_rho':0.1, 'H_phi':0.01, 'h_xi':0.05,
               'c_P':1, 'c_R':0.5}
 # 'Z':2 im Buch -> bei ihm 3 !!!
