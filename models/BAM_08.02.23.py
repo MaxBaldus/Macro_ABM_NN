@@ -39,7 +39,7 @@ class BAM_base:
         self.theta = 8 # Duration of individual contract
         self.r_bar = 0.01 # Base interest rate set by central bank (exogenous in this model)
         self.capital_requirement_coef = 0.11 # capital requirement coefficients uniform across banks 
-        self.delta = 0.05 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
+        self.delta = 0.35 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
 
         #################################################################################################
         # AGGREGATE REPORT VARIABLES
@@ -200,19 +200,19 @@ class BAM_base:
             NWa = np.mean(Y0) * 10 # initial net worth of the firms is the mean of initial HH's income times two
             NW = np.ones(self.Nf) * (NWa)  # initial net worth of each firm (all firms start with the same net worth)
             # initial_Ld = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
-            initial_Ld = 7  
+            initial_Ld = 7
             aa = (np.mean(Y0) * 0.6) # initial minimum (required) wage is 60% of initial mean income of the HH's 
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
             # alpha = 0.5
             # Sample random numbers, depending on parameter values:
-            #eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # sample value for the (possible) price update (growth rate) for the current firm 
-            #rho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # sample growth rate of quantity of firm i
+            eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # sample value for the (possible) price update (growth rate) for the current firm 
+            rho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # sample growth rate of quantity of firm i
             for f in range(self.Nf):
                 id_F[f] = f + 1 # set id 
                 f_data[:,f,0] = f+1 # start with 1 for id
                 Wp[f] = np.random.uniform(low = (aa), high = (aa+1)) # initial wage is random number around initial minimum required wage
-                p[f] = np.round(np.random.uniform(low = 2, high = 4), decimals=2)
+                p[f] = np.round(np.random.uniform(low = 2, high = 5), decimals=2)
 
 
             # BANKS
@@ -285,15 +285,12 @@ class BAM_base:
                 average price of last round determines how quantity or prices are adjusted in this round.
                 There is no storage or inventory, s.t. in case quantity remaining from last round (Qr > 0), it is not carried over."""
 
-                # Sample random quantity and price shocks for each firm, upper bound depending on respective parameter values (shocks change each period)
-                eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # sample value for the (possible) price update (growth rate) for the current firm 
-                rho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # sample growth rate of quantity of firm i
                 for i in range(self.Nf):
                     # alpha is constant in the base version, i.e. no growth
                     if t == 0: # setRequiredLabor, i.e. labor demand in t = 0 
                         Ld[i] = initial_Ld # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period
                     elif bankrupt_flag[i] == 1: 
-                        Ld[i] = np.around(np.mean(Ld), decimals=0) # in case firm went bankrupt, initial labor demand of new firm is average labor demand of last round
+                        Ld[i] = np.around(np.mean(Ld), decimals=0) # in case firm went bankrupt, initial labor demand of new firm is average labor demand
                         #Ld[i] = initial_Ld # in case firm went bankrupt, initial labor demand of new firm is average labor demand
                     # otherwise: each firm decides output and price => s.t. it can determine labour demanded
                     else: # if t > 0, price and quantity demanded (Y^D_it = D_ie^e) need to be adjusted before setRequiredLabor
@@ -304,24 +301,24 @@ class BAM_base:
                             if Qr[i] > 0: # and firm had positive inventories, firm should reduce price to sell more and leave quantity unchanged
                                 # a)
                                 p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p ), decimals=2) # max of previous average price or previous firm price  * 1-eta (price reduction) 
-                                Qd[i] = np.around(Qp[i]) #if Qs[i] > 0 else Qs_last_round # use average of quantity demanded last round in case Qd were non positive last round
+                                Qd[i] = np.around(Qs[i]) if Qs[i] > 0 else Qs_last_round # use average of quantity demanded last round in case Qd were non positive last round
                             else: # firm sold all products, i.e. had negative inventories: firm should increase quantity since it expects higher demand
                                 # d)
                                 p[i] = np.around(p[i],decimals=2) # price remains
-                                Qd[i] = np.around(Qp[i]*(1+rho[i]),decimals=2) #if Qs[i] > 0 else Qs_last_round
+                                Qd[i] = np.around(Qs[i]*(1+rho[i]),decimals=2) if Qs[i] > 0 else Qs_last_round
                         else: # if price difference negative, firm charged higher (individual) price than the average price 
                             if Qr[i] > 0: # if previous inventories of firm > 0 (i.e. did not sell all products): firm expects lower demand
                                 # c)
                                 p[i] = np.around(p[i],decimals=2)
-                                Qd[i] = np.around(Qp[i]*(1-rho[i]),decimals=2) #if Qs[i] > 0 else Qs_last_round
+                                Qd[i] = np.around(Qs[i]*(1-rho[i]),decimals=2) if Qs[i] > 0 else Qs_last_round
                             else: # excess demand (zero or negative inventories): price is increased
                                 # b)
                                 p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p),decimals=2)
-                                Qd[i] = np.around(Qp[i],decimals=2) #if Qs[i] > 0 else Qs_last_round
+                                Qd[i] = np.around(Qs[i],decimals=2) if Qs[i] > 0 else Qs_last_round
                         # setRequiredLabor
                         # Ld[i] = Qd[i] // alpha[i] # here: integers => hence need at least a 1 s.t. firm is hiring
                         Ld[i] = np.around(Qd[i] / alpha[i], decimals = 2)
-                        # now only using / , firms directly hire as soon as Ld is positive  
+                        # now only using / , firms directly hire as soon as Ld is positive more 
 
                 """ 2) 
                 A fully decentralized labor market opens. Firms post vacancies with offered wages. 
@@ -339,27 +336,27 @@ class BAM_base:
                 for i in range(self.Nf):
                     """Firms updating vacancies in the following by keeping or firing workers in case contract expired:
                     i.e. rounds of employment is greater than 8"""
-                    c_f = w_emp[i] # getEmployedHousehold: slice the list with worker id's (all workers) for firm i 
-                    n = 0 # counter for the number of expired contracts of each firm i 
-                    # in case the duration of her contract is greater 8, her contract expires and she has to apply again to the firm she used to work for
-                    for j in (c_f): # j takes on HH id employed within current firm i 
-                        if d_employed[j-1] > self.theta: # if contract expired (i.e. days employed is greater than 8) 
-                            w_emp[i].remove(j) # removeHousehold  -> delete the current HH id in the current firm array 
-                            prev_firm_id[j-1] = i # updatePrevEmployer -> since HH is fired from firm i 
-                            is_employed[j-1] = False # updateEmploymentStatus
-                            firm_id[j-1] = 0 # setEmployedFirmId -> 0 now, because no employed firm
-                            w[j-1] = 0 # setWage -> no wage now
-                            d_employed[j-1] = 0 # 0 days employed from now on
-                            n = n + 1 # add expired contract
-                            expired[j-1] = True # set entry to true when contract expired
-                    Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts: add number of fired workers n and update fired workers (in this round) 
-                    L[i] = len(w_emp[i]) # updateTotalEmployees: workforce or length of list with workers id, i.e. the number of wokers signed at firm i
-                    """calcVacancies of firm i"""
-                    # vac[i] = int((Ld[i] - L[i] + Lhat[i])) # labour demanded (determined before) minus current labour employed + Labor whose contracts are expiring
-                    vac[i] = max(np.around((Ld[i] - L[i] + Lhat[i]), decimals = 2) ,0) # vacancie rate cannot be negative
-                    # vac[i] = np.around((Ld[i] - L[i] + Lhat[i]), decimals = 2) 
-                    if vac[i] > 0: 
-                        f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
+                    if L[i] >= 0: # always activated 
+                        c_f = w_emp[i] # getEmployedHousehold: slice the list with worker id's (all workers) for firm i 
+                        n = 0 # counter for the number of expired contracts of each firm i 
+                        # in case the duration of her contract is greater 8, her contract expires and she has to apply again to the firm she used to work for
+                        for j in (c_f): # j takes on HH id employed within current firm i 
+                            if d_employed[j-1] > self.theta: # if contract expired (i.e. days employed is greater than 8) 
+                                w_emp[i].remove(j) # removeHousehold  -> delete the current HH id in the current firm array 
+                                prev_firm_id[j-1] = i # updatePrevEmployer -> since HH is fired from firm i 
+                                is_employed[j-1] = False # updateEmploymentStatus
+                                firm_id[j-1] = 0 # setEmployedFirmId -> 0 now, because no employed firm
+                                w[j-1] = 0 # setWage -> no wage now
+                                d_employed[j-1] = 0 # 0 days employed from now on
+                                n = n + 1 # add expired contract
+                                expired[j-1] = True # set entry to true when contract expired
+                        Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts: add number of fired workers n and update fired workers (in this round) 
+                        L[i] = len(w_emp[i]) # updateTotalEmployees: workforce or length of list with workers id, i.e. the number of wokers signed at firm i
+                        """calcVacancies of firm i"""
+                        # vac[i] = int((Ld[i] - L[i] + Lhat[i])) # labour demanded (determined before) minus current labour employed + Labor whose contracts are expiring
+                        vac[i] = np.max(np.around((Ld[i] - L[i] + Lhat[i]), decimals = 2) ,0) # vacancie rate cannot be negative
+                        if vac[i] > 0: 
+                            f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
                     """setWage"""
                     xi = np.random.uniform(low=0,high=self.h_xi) # compute xi (uniformly distributed random wage shock) for firm i
                     # the minimum wage: w_min is periodically revised upward every four time steps (quarters) in order to catch up with inflation
@@ -619,10 +616,10 @@ class BAM_base:
                 """If internal and external finances are not enough to pay for wage bills of HH: some random HH are fired
                 before production starts"""
                 # A: updateProductionDecisions
-                hh_layed_off = [] # initialize list to store HH id's that will be fired in the following
+                hh_layed_off = [] # initialize list to store HH id's that will be fired in the follwing
                 print("Firms updating hiring decision.....")
                 print("")
-                L_sum = sum(L)
+
                 for f in range(self.Nf): # go through through all firms
                     if B[f] > 0:# if 
                         unsatisfied_cr =  B[f] - sum(Bi[f]) # amount of credit needed minus total amount (sum) of credit received by bank(s) 
@@ -650,10 +647,6 @@ class BAM_base:
                     prev_firm_id[h-1] = firm_id[h-1] # updatePrevEmployer: save firm id which fired HH and is now firm HH worked previously
                     firm_id[h-1] = 0   # setEmployedFirmId: HH not employed anymore, therefore id is 0
                     is_employed[h-1] = False # set employment status to false
-                
-                if L_sum != sum(L):
-                    input("Press Enter to continue...")
-                
 
                 """4)
                 Production takes one unit of time regardless of the scale of prod/firms. 
@@ -993,7 +986,7 @@ class BAM_base:
                             #print("positive Profits of firm %s not high enough to cover wage payments"%f, "Net worth now %s"%NW[f])
 
                     # calcVacRate
-                    # vac[f] = vac[f] - L[f] # update vacancies (subtract current amount of labour employed at firm f)
+                    vac[f] = vac[f] - L[f] # update vacancies (subtract current amount of labour employed at firm f)
                 
                 # 2) HH's
                 """HH update their days of employment or unemplyoment respectively 
@@ -1128,10 +1121,6 @@ class BAM_base:
 
                 """Vacancy"""
                 self.vac_rate[t,mc] = np.round(np.sum(vac) / np.sum(L), decimals = 2) # vacancie rate is number of job openings (i.e. vacancies) relative to the labor force (labor employed currently)
-                
-                # wann schmiert das modell ab, i.e. u = 1
-                if self.unemp_rate[t,mc] == 1:
-                    input("Press Enter to continue...")
 
                 """8) 
                 Firms with positive net worth/equity survive, but otherwise firms/banks with negative net worth go bankrupt and are replaced by.
@@ -1232,7 +1221,7 @@ class BAM_base:
                 credit_appl = [[] for _ in range(self.Nf)]
                 Lhat = np.zeros(self.Nf)
                 loan_paid = np.zeros(self.Nf)
-                # Ld = np.zeros(self.Nf)
+                Ld = np.zeros(self.Nf)
                 banks = [[] for _ in range(self.Nf)]
                 Bi = [[] for _ in range(self.Nf)]
                 r = [[] for _ in range(self.Nf)]
