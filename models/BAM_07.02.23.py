@@ -2,9 +2,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 
-# numba 
-# normalize flow 
-
 class BAM_base:
 
     def __init__(self, MC:int, parameters:dict, plots:bool):
@@ -39,7 +36,7 @@ class BAM_base:
         self.theta = 8 # Duration of individual contract
         self.r_bar = 0.01 # Base interest rate set by central bank (exogenous in this model)
         self.capital_requirement_coef = 0.11 # capital requirement coefficients uniform across banks 
-        self.delta = 0.35 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
+        self.delta = 0.5 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
 
         #################################################################################################
         # AGGREGATE REPORT VARIABLES
@@ -185,7 +182,7 @@ class BAM_base:
             Fill some individual report variables with random number when t = 0"""
             
             # HOUSEHOLDS
-            Y0 = np.random.uniform(low=1,high=2,size=self.Nh) # initial (random) income of each HH  
+            Y0 = np.random.uniform(low=1,high=5,size=self.Nh) # initial (random) income of each HH  
             for h in range(self.Nh): # for each of the 500 HH
                     MPC[h] = np.random.uniform(low=0.6,high=0.9) # initial MPC for each HH (then recomputed in each loop)
                     id_H[h] = h + 1 # each HH gets number which is the id
@@ -199,19 +196,18 @@ class BAM_base:
             # FIRMS
             NWa = np.mean(Y0) * 10 # initial net worth of the firms is the mean of initial HH's income times two
             NW = np.ones(self.Nf) * (NWa)  # initial net worth of each firm (all firms start with the same net worth)
-            # initial_Ld = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
-            initial_Ld = 7
+            # initial_ld = self.Nh // self.Nf # initial labour demand Ld in t = 0: ratio of HH and firms (household by firm)
+            initial_ld = 3  
             aa = (np.mean(Y0) * 0.6) # initial minimum (required) wage is 60% of initial mean income of the HH's 
-            alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
+            alpha = np.random.uniform(low=0.3,high=0.7, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
-            # alpha = 0.5
             # Sample random numbers, depending on parameter values:
             eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # sample value for the (possible) price update (growth rate) for the current firm 
             rho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # sample growth rate of quantity of firm i
             for f in range(self.Nf):
                 id_F[f] = f + 1 # set id 
                 f_data[:,f,0] = f+1 # start with 1 for id
-                Wp[f] = np.random.uniform(low = (aa), high = (aa+1)) # initial wage is random number around initial minimum required wage
+                Wp[f] = np.random.uniform(low = (aa-1), high = (aa+1)) # initial wage is random number around initial minimum required wage
                 p[f] = np.round(np.random.uniform(low = 2, high = 5), decimals=2)
 
 
@@ -287,11 +283,11 @@ class BAM_base:
 
                 for i in range(self.Nf):
                     # alpha is constant in the base version, i.e. no growth
-                    if t == 0: # setRequiredLabor, i.e. labor demand in t = 0 
-                        Ld[i] = initial_Ld # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period
-                    elif bankrupt_flag[i] == 1: 
-                        Ld[i] = np.around(np.mean(Ld), decimals=0) # in case firm went bankrupt, initial labor demand of new firm is average labor demand
-                        #Ld[i] = initial_Ld # in case firm went bankrupt, initial labor demand of new firm is average labor demand
+                    if t == 0 or bankrupt_flag[i] == 1: # setRequiredLabor, i.e. labor demand in t = 0 or if firm exited the market 
+                        Ld[i] = initial_ld # labor demanded is HH per firm for each firm in first period => hence each firm same demand in first period
+                    # HIER WEITER !!! SKRIPT SPEICHERN before code ändern
+                    # NEGATIVE VACANCIES !!!
+
                     # otherwise: each firm decides output and price => s.t. it can determine labour demanded
                     else: # if t > 0, price and quantity demanded (Y^D_it = D_ie^e) need to be adjusted before setRequiredLabor
                         prev_avg_p = self.P_lvl[t-1,mc] # extract (current) average previous price 
@@ -316,9 +312,7 @@ class BAM_base:
                                 p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p),decimals=2)
                                 Qd[i] = np.around(Qs[i],decimals=2) if Qs[i] > 0 else Qs_last_round
                         # setRequiredLabor
-                        # Ld[i] = Qd[i] // alpha[i] # here: integers => hence need at least a 1 s.t. firm is hiring
-                        Ld[i] = np.around(Qd[i] / alpha[i], decimals = 2)
-                        # now only using / , firms directly hire as soon as Ld is positive more 
+                        Ld[i] = Qd[i] // alpha[i] # otherwise: labour demanded = quantity demanded / productivity
 
                 """ 2) 
                 A fully decentralized labor market opens. Firms post vacancies with offered wages. 
@@ -353,8 +347,7 @@ class BAM_base:
                         Lhat[i] = Lhat[i] + n # updateNumberOfExpiredContracts: add number of fired workers n and update fired workers (in this round) 
                         L[i] = len(w_emp[i]) # updateTotalEmployees: workforce or length of list with workers id, i.e. the number of wokers signed at firm i
                         """calcVacancies of firm i"""
-                        # vac[i] = int((Ld[i] - L[i] + Lhat[i])) # labour demanded (determined before) minus current labour employed + Labor whose contracts are expiring
-                        vac[i] = np.max(np.around((Ld[i] - L[i] + Lhat[i]), decimals = 2) ,0) # vacancie rate cannot be negative
+                        vac[i] = int((Ld[i] - L[i] + Lhat[i])) # labour demanded (determined before) minus current labour employed + Labor whose contracts are expiring
                         if vac[i] > 0: 
                             f_empl.append(i+1) # if firm i has vacancies => then save firm_id (i) to list 
                     """setWage"""
@@ -441,29 +434,31 @@ class BAM_base:
                                 ind += 1 # increase index
                             for of in f_job_offers: # extract the wages of the offering firms
                                 offer_wage.append(np.around(Wp[of] ,decimals=2)) 
-                            # In case HH got any job offer: HH extracts the max. wage of the firm she applied to. 
-                            # If this wage matches the wages the HH was offered, it is the highest wage and the HH directly accepts the job (w_max in offer_wage).
-                            # Otherwise the HH chooses the the firm offering highest wage, also if "preffered firm with highest wage HH applied to" is not employing her (no match)
-                            if len(offer_wage) > 0:
-                                w_max = max(f_e) # max. wage of firms the HH l applied to 
-                                # w_max = max(offer_wage) if t == 0 and len(offer_wage) > 0 else max(f_e) 
-                                if w_max in offer_wage: 
-                                    # Settlement if firm with highest wage HH applied to also offered job to HH. Always the case in t = 0, since all firms offer equal weight
-                                    # update report variables:
-                                    f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured (i.e. firm that offered highest wage)
-                                    is_employed[l-1] = True # updateEmploymentStatus
-                                    firm_id[l-1] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
-                                    w[l-1] = np.around(w_max,decimals=2) # save wage HH l is earning
-                                    hired = hired + 1 # counter for #HH increases by 1
-                                    w_emp[f_max_id].append(l) # employHousehold: save HH id to list of firm that is employing
-                                    L[f_max_id] = len(w_emp[f_max_id]) # updateTotalEmployees: update number of HH employed 
-                                    firm_went_bankrupt[l-1] = 0 # reset flag for employed worker in case he became unemployed because his previous firm went bankrupt
-                                    # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, w_max))
-                                # elif t > 0 and len(offer_wage) > 0: # Settlement if not in first round and if list of job offering firms is not empty
-                                else: # Settlement if firm with max. wage HH applied to not offering a job, but other firm(s) do
-                                    mm = max(np.array(offer_wage)) # extract max. offered wage
-                                    # Settlememt: HH applied to firms and extracts max. wage of the firms she has job offer 
-                                    # hence if there are job offers to HH => she accepts job with highest wage  
+                            w_max = max(f_e) # max. wage of firms the HH l applied to 
+                            # w_max = max(offer_wage) if t == 0 and len(offer_wage) > 0 else max(f_e) 
+                            # HH extracts the max. wage of the firm she applied to: If this wage matches the wages the HH was offered, it is the highest
+                            # wage and the HH directly accepts the job (w_max in offer_wage).
+                            # Otherwise the HH chooses the the firm offering highest wage, also if "preffered firm with highest wage HH applied to" is not employing her (no match)  
+                            if w_max in offer_wage: 
+                                # Settlement if firm with highest wage HH applied to also offered job to HH. Always the case in t = 0, since all firms offer equal weight
+                                # update report variables:
+                                f_max_id = f_job_offers[offer_wage.index(w_max)] # save firm id for which match occured (i.e. firm that offered highest wage)
+                                is_employed[l-1] = True # updateEmploymentStatus
+                                firm_id[l-1] = f_max_id + 1 # save the firm id where HH is employed (add one since Python starts counting at 0)
+                                w[l-1] = np.around(w_max,decimals=2) # save wage HH l is earning
+                                hired = hired + 1 # counter for #HH increases by 1
+                                w_emp[f_max_id].append(l) # employHousehold: save HH id to list of firm that is employing
+                                L[f_max_id] = len(w_emp[f_max_id]) # updateTotalEmployees: update number of HH employed 
+                                firm_went_bankrupt[l-1] = 0 # reset flag for employed worker in case he became unemployed because his previous firm went bankrupt
+                                # print("Household no: %d has got employed in Firm no: %d at wage %f"% (l, f_max_id+1, w_max))
+                            # elif t > 0 and len(offer_wage) > 0: # Settlement if not in first round and if list of job offering firms is not empty
+                            elif len(offer_wage) > 0: # Settlement if firm with max. wage HH applied to not offering a job, but other firm(s) do
+                                mm = max(np.array(offer_wage)) # extract max. offered wage
+                                # Settlememt: HH applied to firms and extracts max. wage of the firms she has job offer 
+                                # hence if there are job offers to HH => she accepts job with highest wage
+                                # if mm > self.wage_lvl[t-1][mc]: # e.g.  * 0.4 => smaller minimum wage ??!! -> wenn davor bei w_min = ...
+                                if mm > w_min: # check again whether max. offered wage above current minimum wage (eigentlich not needed) 
+                                    # if maximum offered wage is larger than (average) wage_level of before => HH l accepts the job, otherwise HH remains unemployed    
                                     # Update report variables:
                                     f_max_id = f_job_offers[offer_wage.index(mm)] # save firm id for which match occured (i.e. firm that offered highest wage)
                                     is_employed[l-1] = True # updateEmploymentStatus
@@ -659,6 +654,8 @@ class BAM_base:
 
                 print("Firms pay wages")
                 # wagePayments
+                # min_w = self.wage_lvl[t-1][mc] # wage level of period before is minimum wage (0 in t = 0)
+                # brauche ich nicht: da bereits w_min oben bestimmt: min_w = w_min
                 min_w = w_min # extract the current minimum wage of each simulation round 
                 mw = 0 # initialize overall maximum wage that was paid in this round
                 for f in range(self.Nf):
@@ -677,7 +674,7 @@ class BAM_base:
                     else:
                         # if HH not employed: receives unemployment payment unequal to 0
                         if t == 0:
-                            min_w = 0.4 * mw # minimum wage is half of maximum wage paid in the first round t = 0
+                            min_w = 0.5 * mw # minimum wage is half of maximum wage paid in the first round t = 0
                         unemp_benefit[c] = np.around(0.5 * min_w, decimals=2) # unemployment benefits are half of the current min. wage
                     # Sine HH's are either paid or received unemployment payment before the goods market opens, they update their income accordingly 
                     Y[c] = np.around(Y[c] + w[c] + unemp_benefit[c], decimals = 2) # if wage = 0, then unemployment benefits are added or vice versa
@@ -691,7 +688,6 @@ class BAM_base:
                     # setActualQty: Firms producing their products
                     # productivity alpha is btw. 5 and 6 for each firm and remains around this level throughout the entire simulation (hence no aggregate Output growth) 
                     qp = alpha[f] * L[f] # productivity * labor employed = quantity produced 
-                    #qp = alpha * L[f]
                     Qp[f] = np.around(qp, decimals=2) # save the quantity produced rounded
                     Qr[f] = Qp[f] - Qs[f] # setQtyRemaining: Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
                     # Hence currently quantity remaining equals quantity produced before goods market opens
@@ -1047,7 +1043,6 @@ class BAM_base:
                     f_data[t, f, 4] = np.round(Qr[f]) # getQtyRemaining: round in case Qr is really small, e.g. -3.55..e-15 (actually 0)
                     f_data[t, f, 5] = p[f] # getPrice
                     f_data[t, f, 6] = alpha[f] # getProductivity()
-                    # f_data[t, f, 6] = alpha # getProductivity()
                     f_data[t, f, 7] = Ld[f] # getRequiredLabor
                     f_data[t, f, 8] = Lhat[f] # getNumberOfExpiredContract
                     f_data[t, f, 9] = L[f] # getTotalEmployees
@@ -1160,9 +1155,9 @@ class BAM_base:
                         L[f] =  0 # new firm enters with 0 labor employed
                         w_emp[f] = [] # workers employed is empty list 
                         NW[f] = np.mean(Y0) * 2 # intial Net worth of new firm
-                        alpha[f] = np.random.uniform(low=0.5,high=0.5) # draw new productivity btw. 5 and 6 
+                        alpha[f] = np.random.uniform(low=0.3,high=0.7) # draw new productivity btw. 5 and 6 
 
-                        """Resetting individual firm (agent) data"""
+                        """Resetting individual Agent data"""
                         # row entries of firm f that went bankrupt are replaced with the respective truncated mean entries of all firms in this round
                         # update data as long as not last round reached
                         # RL sometimes later !!?? also new row for each agent, in case went bankrupt ??!!
@@ -1174,17 +1169,15 @@ class BAM_base:
                             f_data[t+1, fid-1, 5] = stats.trim_mean(p, 0.1) # price
                             f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage payments 
                             f_data[t+1, fid-1, 6] = np.random.uniform(low=5,high=6) # productivity 
-                            f_data[t+1, fid-1, 7] = initial_Ld # required labor 
+                            f_data[t+1, fid-1, 7] = initial_ld # required labor 
                             f_data[t+1, fid-1, 10] = stats.trim_mean(W_pay, 0.1) # wage paid to workers this round
                             # research and development
                             f_data[t+1, fid-1, 18] = np.mean(Y0) * 2 # average NW 
                             f_data[t+1, fid-1, 21] = np.round(stats.trim_mean(Wp, 0.1), decimals = 2)  # wage payments
                     else:
-                        bankrupt_flag[f] = 0 # set bankrupt_flag to 0 (again) if firm did not went bankrupt
+                        bankrupt_flag[f] = 0
                 
                 # checkForBankrupcy: Banks
-                bankrupt_banks = sum(1 for i in E if i < 0)
-                print("%s Banks went bankrupt" %bankrupt_banks)
                 for b in range(self.Nb):
                     if E[b] <= 0:
                         E[b] = np.random.uniform(low = 5000, high = 10000)  # initial Equity of new bank
@@ -1260,14 +1253,6 @@ class BAM_base:
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
                 plt.savefig("plots/LogOutput_mc%s.png" %mc)
-
-                # Log output ZOOM
-                plt.clf()
-                plt.plot(np.log(self.production[:,mc]))
-                plt.xlabel("Time")
-                plt.ylabel("Log output")
-                plt.ylim(4.85, 5.5)
-                plt.savefig("plots/LogOutput_mc%s_ZOOM.png" %mc)
 
                 # inflation rate
                 plt.clf()
