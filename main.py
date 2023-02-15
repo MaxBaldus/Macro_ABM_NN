@@ -1,15 +1,19 @@
 import numpy as np
 from scipy import stats
+import pandas as pd
+
 from models.toymodel import Toymodel # importing toy model (benchmark?)
 from models.BAM import BAM_base # BAM base model
 #from models.BAM_firstcycles import BAM_base # BAM base model
+from estimation.data_prep import Filters
 
-"""Simulating the toy model"""
-"""
-toymodel = Toymodel(Time=1000, Ni=100, MC=3, gamma=2, pbar=0.01, delta=0.05, rbar=0.075)
-toymodel_simulation = toymodel.simulation()
-print(toymodel_simulation)
-"""
+#################################################################################################
+# Simulating a simple macro ABM
+#################################################################################################
+
+toymodel = Toymodel(Time=1000, Ni=100, MC=1, gamma=2, pbar=0.01, delta=0.05, rbar=0.075, plots=True)
+toymodel_simulation = toymodel.simulation_toy()
+#print(toymodel_simulation)
 
 #################################################################################################
 # Simulating the BAM base model by Delli Gatti (2011)
@@ -22,23 +26,50 @@ parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':1000,
 # 'Z':2 im Buch -> bei ihm 3 !!!
 
 """ simulate the base model"""
-BAM = BAM_base(MC = 1, parameters=parameters, plots=True) 
-BAM_simulation = BAM.simulation()
-print(BAM_simulation)
+#BAM = BAM_base(MC = 1, parameters=parameters, plots=True) 
+#BAM_simulation = BAM.simulation()
+#print(BAM_simulation)
 
 # structure: 
 # Class model# 
 # one model is one class => can be called => inputs are simulation parameters and specific model parameters
 # output is specific time series (e.g. gdp as numpy array) needed for estimation -> analog to output by DP
 
-# class estimation
-# calling neural network with "real and simulated" data and estimate ??
-# output are ESTIMATED parameters.. ??
+#################################################################################################
+# Estimating the simple macro ABM
+#################################################################################################
 
-# class forecasting
-# using estimated model parameters for forecasting.. 
+"""loading the data and plotting the data and its components"""
+german_gdp = pd.read_csv("data/CLVMNACSCAB1GQDE.csv") # gdp 
+# Inflation
+# Unemployment 
+filters = Filters(german_gdp['CLVMNACSCAB1GQDE'], inflation=None, unemployment=None)
+gdp_components = filters.HP_filter(empirical=True) # plots are saved in plots ..
+# print(component# s)
 
 
+
+# erstmal nur mit einer Zeitreihe
+# robustness checks a la paper
+# tuning the lag length? -> for forecasts ..??
+# MH sampling or grid-search ??!!
+
+
+
+
+
+
+
+#################################################################################################
+# Estimating the BAM model(s)
+#################################################################################################
 
 """ Idee: extra class mit function für MC plots,
 => MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)"""
+
+
+#################################################################################################
+# Forecasting
+#################################################################################################
+
+

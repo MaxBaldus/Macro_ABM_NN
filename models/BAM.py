@@ -1378,6 +1378,9 @@ class BAM_base_estimate:
 
         # hier analog to platt code => parameters also as dictionary ??!!
 
+        # real GDP => deflated ... 
+        # unemployment in levels 
+        # price deflator: compute inflation rate from this (simulated data as well as for real data): instead of inflation rate - WHY ??
 
 
             

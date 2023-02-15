@@ -1,16 +1,22 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from estimation.data_prep import Filters
 
 """Explaining model in short words..."""
 
 class Toymodel:
-    """ Initializing the class and constructer objects (init class) by assign arguments passed to attributes of the class. 
+    
+    """ Initializing the class and constructer objects (init class) by assigning arguments passed to attributes of the class. 
     These attributes from the init class can then be used throughout all methods of the particular class.""" 
-    def __init__(self, Time: int, Ni: int, MC: int, gamma: int, pbar: int, delta:int, rbar: int):
+    
+    def __init__(self, Time: int, Ni: int, MC: int, gamma: int, pbar: int, delta:int, rbar: int, plots:bool):
+        
         """simulation hyperparameter"""
         self.Time = Time # number of simulation runs
         self.Ni = Ni # number of firms
         self.MC = MC # MC runs
+        self.plots = plots # plot parameter decides whether plots are produced
+
         
         """model parameters"""
         self.gamma = gamma # investment accelerator
@@ -24,9 +30,12 @@ class Toymodel:
         self.AA = np.zeros((self.Time,self.MC)) # aggregate net worth
         self.BB = np.zeros((self.Time,self.MC)) # aggregate debt
         self.LEV = np.zeros((self.Time,self.MC)) # leverage 
+
+        self.YY_cycle = np.zeros((self.Time,self.MC))
+        self.YY_trend = np.zeros((self.Time,self.MC))
     
     """ The simulation of the toy base model is run with the simulation method"""
-    def simulation(self):
+    def simulation_toy(self):
         
         for mc in range(self.MC):
             
@@ -92,31 +101,44 @@ class Toymodel:
                 self.BB[t,mc] = sum(B) # aggregated debt
                 self.LEV[t,mc] = self.BB[t,mc] / self.AA[t,mc] # aggregated leverage (aggregated debt divided by aggregated equity)
 
-            print(np.mean(self.YY_growth[:,mc])) # average growth rates around 0 (since no research and development)
+            #print(np.mean(self.YY_growth[:,mc])) # average growth rates around 0 (since no research and development)
 
-        """Plotting logarithms of aggregate report variables"""
-        plt.figure("GDP") # log GDP figure
-        plt.plot(np.log(self.YY[:,0]), label = "GDP mc=1") # GDP of 1st MC round
-        plt.plot(np.log(self.YY[:,1]), label = "GDP mc=2") # GDP of 2nd MC round
-        plt.plot(np.log(self.YY[:,2]), label = "GDP mc=3") # GDP of 3rd MC round
-        plt.xlabel("Time")
-        plt.ylabel("Log output")
-        plt.legend()
+            """applying the filters to each mc simulated time series"""
+            filters = Filters(GDP=self.YY[:,mc], inflation=None, unemployment=None)
+            components = filters.HP_filter(empirical = False)    
+            # print(components)      
 
-        plt.figure("GDP growth") # GDP growth rate figure
-        plt.plot(self.YY_growth[1:self.Time,0], label = "GDP_growth mc=1") # GDP growth of 1st MC round
-        #plt.plot(YY_growth[1:self.Time,1], label = "GDP_growth mc=2") # GDP growth of 2nd MC round
-        #plt.plot(YY_growth[1:self.Time,2], label = "GDP_growth mc=3") # GDP growth of 3rd MC round
-        plt.xlabel("Time")
-        plt.ylabel("Output growth rate")
-        plt.ylim(-0.1, 0.1)
-        plt.legend()
-        
-        plt.show() # show all figures
+        if self.plots:
+            """Plotting logarithms of aggregate report variables"""
+            plt.figure("GDP") # log GDP figure
+            plt.plot(np.log(self.YY[850:,0]), label = "GDP mc=1") # GDP of 1st MC round
+            #plt.plot(np.log(self.YY[:,1]), label = "GDP mc=2") # GDP of 2nd MC round
+            #plt.plot(np.log(self.YY[:,2]), label = "GDP mc=3") # GDP of 3rd MC round
+            plt.xlabel("Time")
+            plt.ylabel("Log output")
+            plt.legend()
+
+            plt.figure("GDP growth") # GDP growth rate figure
+            plt.plot(self.YY_growth[1:self.Time,0], label = "GDP_growth mc=1") # GDP growth of 1st MC round
+            #plt.plot(YY_growth[1:self.Time,1], label = "GDP_growth mc=2") # GDP growth of 2nd MC round
+            #plt.plot(YY_growth[1:self.Time,2], label = "GDP_growth mc=3") # GDP growth of 3rd MC round
+            plt.xlabel("Time")
+            plt.ylabel("Output growth rate")
+            plt.ylim(-0.1, 0.1)
+            plt.legend()
+
+            plt.figure("GDP Components") # log GDP figure
+            plt.plot(components[0][850:], label = "cycle") # GDP of 1st MC round
+            plt.plot(components[1][850:], label = "trend") # GDP of 2nd MC round
+            #plt.plot(np.log(self.YY[:,2]), label = "GDP mc=3") # GDP of 3rd MC round
+            plt.xlabel("Time")
+            plt.ylabel("Log output")
+            plt.legend()
+            
+            plt.show() # show all figures
         
         
         return self.YY, self.AA, self.BB, self.LEV
-
 
 
     """In the +_version of the toymodel similar to the BAM_+ version a sinmple growth process is included, i.e. ..."""
@@ -188,7 +210,7 @@ class Toymodel:
                 self.BB[t,mc] = sum(B) # aggregated debt
                 self.LEV[t,mc] = self.BB[t,mc] / self.AA[t,mc] # aggregated leverage (aggregated debt divided by aggregated equity)
 
-            print(np.mean(self.YY_growth[:,mc])) # average growth rates around 0
+            #print(np.mean(self.YY_growth[:,mc])) # average growth rates around 0
 
         """Plotting logarithms of aggregate report variables"""
         plt.figure("GDP") # log GDP figure
@@ -215,6 +237,11 @@ class Toymodel:
         
         
         return self.YY, self.AA, self.BB, self.LEV
+
+    
+    def toymodel_estimation(self):
+
+        """structure: loop from delli gatti inside estimation"""
             
 
     
