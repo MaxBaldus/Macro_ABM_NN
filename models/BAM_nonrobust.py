@@ -165,7 +165,7 @@ class BAM_base_nonrobust:
             divs = np.zeros(self.Nf) # Dividend payments to the households
 
             B = np.zeros(self.Nf) # amount of credit (total)
-            banks = [[] for _ in range(self.Nf)] # list of banks from where the firm got the loans -> LISTE FOR EACH FIRM (nested)
+            banks = [[] for _ in range(self.Nf)] # list of banks from where the firm got the loans 
             Bi = [[] for _ in range(self.Nf)] # Amount of credit taken by banks
             r_f = [[] for _ in range(self.Nf)] # rate of Interest on credit by banks for which match occured (only self.r bei ihm) 
             loan_paid = np.zeros(self.Nf)
