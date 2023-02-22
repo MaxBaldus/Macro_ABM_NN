@@ -111,7 +111,7 @@ class Toymodel:
         if self.plots:
             """Plotting logarithms of aggregate report variables"""
             plt.figure("GDP") # log GDP figure
-            plt.plot(np.log(self.YY[850:,0]), label = "GDP mc=1") # GDP of 1st MC round
+            plt.plot(np.log(self.YY[0:,0]), label = "GDP mc=1") # GDP of 1st MC round
             #plt.plot(np.log(self.YY[:,1]), label = "GDP mc=2") # GDP of 2nd MC round
             #plt.plot(np.log(self.YY[:,2]), label = "GDP mc=3") # GDP of 3rd MC round
             plt.xlabel("Time")

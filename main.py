@@ -12,7 +12,7 @@ from estimation.data_prep import Filters
 # Simulating a simple macro ABM
 #################################################################################################
 
-#toymodel = Toymodel(Time=1000, Ni=100, MC=1, gamma=2, pbar=0.01, delta=0.05, rbar=0.075, plots=True)
+#toymodel = Toymodel(Time=1000, Ni=100, MC=2, gamma=2, pbar=0.01, delta=0.05, rbar=0.075, plots=True)
 #toymodel_simulation = toymodel.simulation_toy()
 #print(toymodel_simulation)
 
@@ -30,7 +30,7 @@ parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':100,
 #print(BAM_simulation)
 
 """ simulate the base model"""
-BAM = BAM_base(T=10, MC = 1, plots=True,
+BAM = BAM_base(T=100, MC = 1, plots=True,
                Nh=500, Nf=100, Nb=10,
                H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05) 
 BAM_simulation = BAM.simulation()
