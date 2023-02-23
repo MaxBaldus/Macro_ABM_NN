@@ -30,7 +30,7 @@ from estimation.data_prep import Filters
 #print(BAM_simulation)
 
 """ simulate the base model"""
-BAM = BAM_base(T=10, MC = 1, plots=True,
+BAM = BAM_base(T=1000, MC = 1, plots=True,
                Nh=500, Nf=100, Nb=10,
                H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05) 
 BAM_simulation = BAM.simulation()

@@ -210,20 +210,20 @@ class BAM_base:
             Fill or initialize some individual report variables with random numbers when t = 0
             """
             # HOUSEHOLDS
-            S = np.around(np.random.uniform(low=10,high=10,size=self.Nh), decimals = 8) # initial (random) income of each HH  
+            S = np.around(np.random.uniform(low=5,high=5,size=self.Nh), decimals = 8) # initial (random) income of each HH  
             # S_initial = 10 => sum(C_d) 3179 ; S_intiial = 2 => sum(Qr) = 25
             MPC = np.around(np.random.uniform(low=0.6,high=0.9,size=self.Nh), decimals = 8) # initial random marginal propensity to consume of each HH 
 
             # FIRMS
-            NW = np.around(np.random.uniform(low=20 ,high=20,size=self.Nf), decimals = 8) # initial net worth of the firms 
+            NW = np.around(np.random.uniform(low=10 ,high=10,size=self.Nf), decimals = 8) # initial net worth of the firms 
             # assuming: B / NW = 0.4 => 0.4 * NW should be loaned (circa) 
             # in t = 0 ->  NW = 20 => few firms are around 0.2, 0.15 , other are higher up to 1 (depending on number of vacancies)
             # B often the same value if NW in t=0 the same for all firms => changed NW initial NW a little bit
-            p = np.around(np.random.uniform(low=7.5 ,high=8,size=self.Nf), decimals = 8) # initial prices
+            p = np.around(np.random.uniform(low=2.5 ,high=2,size=self.Nf), decimals = 8) # initial prices
 
 
             #Ld_zero = np.around(np.random.uniform(low=12 ,high=12), decimals = 2) # initial labour demand per firm 
-            Ld_zero = 16.5 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
+            Ld_zero = 6 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
             # with 16.5 => intial vacancies s.t. u = 7% => sum(Qp) = 241
             Wp = np.around(np.random.uniform(low= 2,high=2.1,size=self.Nf), decimals = 8) # initial wages
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
@@ -390,7 +390,7 @@ class BAM_base:
                     np.random.shuffle(c_ids) # randomly selected household starts to apply (sequentially)
                     for j in c_ids:
                         
-                        f_empl_current = f_empl.copy()
+                        f_empl_current = f_empl.copy() # copy the list with firm ids which are employing in this round
                         appl_firm = [] # list with firm ids the HH j will apply to 
                         prev_emp = int(prev_firm_id[j-1]) # getPrevEmployer, i.e. the id of firm HH j were employed before (prev_emp is 0 as long as HH never fired or contract expired)
                         M = self.M # number of firms HH visits
@@ -410,27 +410,40 @@ class BAM_base:
                         wages_chosen_firms = [] # initialize list with the wages of the chosen firms 
                         for ii in appl_firm: 
                                 wages_chosen_firms.append(np.around(Wp[ii-1], decimals = 8)) # extract the wages of the firms where HH applied 
-                        
-                        # HH signs conctract with the firm that offers highest wage, in case the firm still has open vacancies
-                        w_max = max(wages_chosen_firms)
-                        f_max_id = appl_firm[wages_chosen_firms.index(w_max)] # id of the firm that offered highest wage
 
-                        current_vac = vac[f_max_id - 1] # extract current number of vacancies of firm that offers the highest wage
-                        if current_vac > 0:
-                            vac[f_max_id - 1] = current_vac - 1 # update vacancies of firm that just hired HH j
+                        """
+                        HH tries to sign conctract with the firm that offers highest wage, in case the firm still has open vacancies, 
+                        otherwise she tries the firm with the 2nd highest wage, and so on until either HH is either hired or no more more
+                        firms to apply to
+                        """
+                        while len(appl_firm) > 0:
                             
-                            # update labor market variables
-                            is_employed[j-1] = True # updateEmploymentStatus
-                            #firm_id[j-1] = f_max_id # save the firm id where HH is employed (add one since Python starts counting at 0)
-                            w[j-1] = np.around(w_max,decimals=2) # save wage HH l is earning
-                            hired = hired + 1 # counter for #HH increases by 1
-                            w_emp[f_max_id - 1].append(j) # employHousehold: save HH id to list of firm that is employing
-                            L[f_max_id - 1] = len(w_emp[f_max_id - 1]) # updateTotalEmployees: update number of HH employed 
-                            #firm_went_bankrupt[j-1] = 0 # reset flag for employed worker in case she became unemployed because his previous firm went bankrupt
+                            w_max = max(wages_chosen_firms)
+                            f_max_id = appl_firm[wages_chosen_firms.index(w_max)] # id of the firm that offered highest wage
+
+                            current_vac = vac[f_max_id - 1] # extract current number of vacancies of firm that offers the highest wage
+                            
+                            if current_vac > 0:
+                                vac[f_max_id - 1] = current_vac - 1 # update vacancies of firm that just hired HH j
+                                
+                                # update labor market variables
+                                is_employed[j-1] = True # updateEmploymentStatus
+                                #firm_id[j-1] = f_max_id # save the firm id where HH is employed (add one since Python starts counting at 0)
+                                w[j-1] = np.around(w_max,decimals=2) # save wage HH l is earning
+                                hired = hired + 1 # counter for #HH increases by 1
+                                w_emp[f_max_id - 1].append(j) # employHousehold: save HH id to list of firm that is employing
+                                #L[f_max_id - 1] = len(w_emp[f_max_id - 1]) # updateTotalEmployees: update number of HH employed 
+                                #firm_went_bankrupt[j-1] = 0 # reset flag for employed worker in case she became unemployed because his previous firm went bankrupt
+
+                                break
+
+                            else:
+                                wages_chosen_firms.remove(w_max)
+                                appl_firm.remove(f_max_id)
 
                         # labor market closes in case no more open vacancies (i.e. no more firms employing) 
-                        if sum(vac) == 0:
-                            break
+                        #if sum(vac) == 0:
+                        #    break"
                     
                     """
                     labor market issues:
@@ -466,11 +479,13 @@ class BAM_base:
                 
                 f_cr = [] # initialize list with id's of firms which need credit in the following
                 hh_layed_off = [] # initialize list to store HH id's that might be fired in case total credit supply not sufficient
+                
                 """
                 Firms compute total wage bills and compute their credit demand as well as their individual leverage they have to report to the banks 
                 in order to receive a loan. 
                 """
                 for f in range(self.Nf):
+                    L[f] = len(w_emp[f])
                     W[f] = np.around(Wp[f] * L[f], decimals=8)  # (actual) total wage bills = wages * labour employed
 
                     if W[f] > NW[f]: # if wage bills f has to pay is larger than the net worth 
@@ -598,10 +613,7 @@ class BAM_base:
 
                                 # update employments on firms side
                                 w_emp[f-1].remove(h) # update list with HH ids working at firm f
-                                L[f-1] = len(w_emp[f-1]) # update labour employed at firm f
-                                W[f-1] = np.around(Wp[f-1] * L[f-1], decimals=8)  # update (total wage bills = wages * labour employed
-
-            
+                                            
                                 # update employment status on HH's side
                                 prev_firm_id[h-1] = 0 # set previous firm id to 0, since HH no more preferential attachment, since it was sacked
                                 #firm_id[h-1] = 0   # setEmployedFirmId: HH not employed anymore, therefore id is 0
@@ -609,6 +621,8 @@ class BAM_base:
                                 w[h-1] = 0 # no wage payments in this round iff layed off
                                 #firm_id[j-1] = 0 # HH not employed anymore             
                                 
+                            L[f-1] = len(w_emp[f-1]) # update labour employed at firm f
+                            W[f-1] = np.around(Wp[f-1] * L[f-1], decimals=8)  # update (total wage bills = wages * labour employed
                     """
                     Issues:
                     - interest rate differences really small, since mark up so small !! 
@@ -936,6 +950,7 @@ class BAM_base:
                 Wages
                 """
                 self.wage_lvl[t,mc] = np.sum(W)/np.sum(L) # nominal wage level: sum of wage paid * number of employees relative to number of employees
+                self.wage_inflation[t,mc] = (self.wage_lvl[t,mc]- self.wage_lvl[t-1,mc]) / np.sum(self.wage_lvl[t-1,mc]) if t!=0 else 0
                 self.real_wage_lvl[t,mc] = (1-self.inflation[t,mc])*self.wage_lvl[t,mc] if t!= 0 else 0 # (1-inflation rate)* wage = real income
 
                 """
@@ -972,12 +987,13 @@ class BAM_base:
                     
                     if NW[f] <= 0:
 
-                        h_emp = w_emp[f]# get HH's working at firm f
+                        h_emp = w_emp[f].copy() # get HH's working at firm f
                         bankrupt_flag[f] = 1 # set flag to 1 in case firm went bankrupt
 
                         # update workers
                         for i in h_emp:
-                            
+
+                            w_emp[f].remove(i) # delete worker form employment list of bankrupt firm
                             prev_firm_id[i-1] = 0 # no more preferential attachment, since HH went bankrupt
                             is_employed[i-1] = False # updateEmploymentStatus
                             # firm_id[i-1] = 0 # setEmployedFirmId (HH no contract anymore => hence firm number that employed him set to 0)
@@ -994,7 +1010,7 @@ class BAM_base:
                         Qr[f] = np.round(stats.trim_mean(Qr, 0.1), decimals = 8) # average remaining quantity
                         p[f] =  np.round(stats.trim_mean(p, 0.1), decimals = 8) # average price
                         #Ld[f] = 0 # labor demand again determined
-                        L[f] =  0 # new firm enters with 0 labor employed
+                        L[f] =  len(w_emp[f]) # new firm enters with 0 labor employed
                         w_emp[f] = [] # workers employed is empty list 
                         NW[f] = np.mean(NW) # intial Net worth of new firm
                         alpha[f] = np.random.uniform(low=0.5,high=0.5) # draw new productivity btw. 5 and 6 
@@ -1052,36 +1068,36 @@ class BAM_base:
 
                 # Log output
                 plt.clf()
-                plt.plot(np.log(self.production[:,mc]))
+                plt.plot(np.log(self.production[499:,mc]))
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
                 plt.savefig("plots/LogOutput_mc%s.png" %mc)
 
-                # Log output ZOOM
+                """# Log output ZOOM
                 plt.clf()
-                plt.plot(np.log(self.production[:,mc]))
+                plt.plot(np.log(self.production[499:,mc]))
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
                 plt.ylim(4.65, 5.5)
-                plt.savefig("plots/LogOutput_mc%s_ZOOM.png" %mc)
+                plt.savefig("plots/LogOutput_mc%s_ZOOM.png" %mc)"""
 
                 # inflation rate
                 plt.clf()
-                plt.plot(self.inflation[:,mc])
+                plt.plot(self.inflation[499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("Inflation rate")
                 plt.savefig("plots/Inflation_mc%s.png" %mc)
 
                 # unemployment 
                 plt.clf()
-                plt.plot(self.unemp_rate[:,mc])
+                plt.plot(self.unemp_rate[499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("unemployment rate")
                 plt.savefig("plots/unemployment_mc%s.png" %mc)
                 
                 # productivity/real wage
                 plt.clf()
-                plt.plot(self.product_to_real_wage[:,mc])
+                plt.plot(self.product_to_real_wage[499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("Productivity-real wage")
                 plt.savefig("plots/product_to_real_wage_mc%s.png" %mc)
@@ -1089,21 +1105,21 @@ class BAM_base:
 
                 # Philips curve
                 plt.clf()
-                plt.scatter(self.unemp_rate[:,mc], self.wage_inflation[:,mc])
+                plt.scatter(self.unemp_rate[499:,mc], self.wage_inflation[499:,mc])
                 plt.xlabel("Unemployment Rate")
                 plt.ylabel("Wage Inflation")
                 plt.savefig('plots/philips_mc%s.png' %mc)
 
                 # Okuns law
                 plt.clf()
-                plt.scatter(self.unemp_growth_rate[:,mc], self.output_growth_rate[:,mc])
+                plt.scatter(self.unemp_growth_rate[499:,mc], self.output_growth_rate[499:,mc])
                 plt.xlabel("Unemployment growth rate")
                 plt.ylabel("Output growth rate")
                 plt.savefig('plots/Okun_mc%s.png' %mc)
 
                 # Beveridge
                 plt.clf()
-                plt.scatter(self.unemp_rate[:,mc], self.vac_rate[:,mc])
+                plt.scatter(self.unemp_rate[499:,mc], self.vac_rate[499:,mc])
                 plt.xlabel("Unemployment rate")
                 plt.ylabel("Vacancy rate")
                 plt.savefig('plots/Beveridge_mc%s.png' %mc)
