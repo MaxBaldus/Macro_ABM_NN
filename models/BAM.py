@@ -100,7 +100,8 @@ class BAM_base:
             np.random.seed(mc)
 
             # initialize csv file and add header
-            header = ['t', 'Ld', 'L', 'u' ,'Sum C', 'Sum NW', '#bankrupt', 'Sum Profit', 'p_min', 'p_max', 'Sum Qp', 'sum HH Savings', 'Sum Qd'] 
+            header = ['t', 'Ld', 'L', 'u' ,'Sum C/sum(p)', 'Sum NW', '#bankrupt', 'Sum Profit', 'f_cr' , 'p_min', 'p_max', 'Sum Qp', 'sum HH Savings', 'Sum Qd', 
+                      'Sum Qr', 'Sum Qs', 'sum(C)', 'wage lvl', 'E', 'Cr'] 
             with open('simulated_data.csv', 'w', encoding = 'UTF8') as f:
                 writer = csv.writer(f)
                 writer.writerow(header)
@@ -210,27 +211,27 @@ class BAM_base:
             Fill or initialize some individual report variables with random numbers when t = 0
             """
             # HOUSEHOLDS
-            S = np.around(np.random.uniform(low=5,high=5,size=self.Nh), decimals = 8) # initial (random) income of each HH  
+            S = np.around(np.random.uniform(low=1,high=1,size=self.Nh), decimals = 4) # initial (random) income of each HH  
             # S_initial = 10 => sum(C_d) 3179 ; S_intiial = 2 => sum(Qr) = 25
-            MPC = np.around(np.random.uniform(low=0.6,high=0.9,size=self.Nh), decimals = 8) # initial random marginal propensity to consume of each HH 
+            MPC = np.around(np.random.uniform(low=0.6,high=0.9,size=self.Nh), decimals = 4) # initial random marginal propensity to consume of each HH 
 
             # FIRMS
-            NW = np.around(np.random.uniform(low=10 ,high=10,size=self.Nf), decimals = 8) # initial net worth of the firms 
+            NW = np.around(np.random.uniform(low=5 ,high=5, size=self.Nf), decimals = 4) # initial net worth of the firms 
             # assuming: B / NW = 0.4 => 0.4 * NW should be loaned (circa) 
             # in t = 0 ->  NW = 20 => few firms are around 0.2, 0.15 , other are higher up to 1 (depending on number of vacancies)
             # B often the same value if NW in t=0 the same for all firms => changed NW initial NW a little bit
-            p = np.around(np.random.uniform(low=2.5 ,high=2,size=self.Nf), decimals = 8) # initial prices
+            p = np.around(np.random.uniform(low=1.4, high=1.4,size=self.Nf), decimals = 4) # initial prices
 
 
             #Ld_zero = np.around(np.random.uniform(low=12 ,high=12), decimals = 2) # initial labour demand per firm 
             Ld_zero = 6 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
             # with 16.5 => intial vacancies s.t. u = 7% => sum(Qp) = 241
-            Wp = np.around(np.random.uniform(low= 2,high=2.1,size=self.Nf), decimals = 8) # initial wages
+            Wp = np.around(np.random.uniform(low= 0.95,high=1,size=self.Nf), decimals = 4) # initial wages
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
             # p_zero = np.around(np.random.uniform(low = 2, high = 2), decimals=2) # initial prices of firms 
             p_zero = 2
-            w_min_zero = 1.9
+            w_min_zero = 0.95
             
             # BANKS
             E = np.random.uniform(low = 5, high = 5, size = self.Nb)
@@ -243,7 +244,7 @@ class BAM_base:
             for t in range(self.T):
                 print("time period equals %s" %t)
                 print("")
-                
+               
                 """ 
                 1) 
                 Firms decide on how much output to be produced and thus how much labor required (desired) for the production amount.
@@ -256,7 +257,6 @@ class BAM_base:
 
                 print("1) Firms adjust and determine their prices and desired quantities and set their labour demand")
                 print("")
-
                 # Sample random quantity and price shocks for each firm, upper bound depending on respective parameter values (shocks change each period)
                 eta = np.random.uniform(low=0,high=self.H_eta, size = self.Nf) # sample value for the (possible) price update (growth rate) for the current firm 
                 rho = np.random.uniform(low=0,high=self.H_rho, size = self.Nf) # sample growth rate of quantity of firm i
@@ -278,23 +278,23 @@ class BAM_base:
                         if p_d >= 0: # in case firm charged higher price than average price (price difference positive)
                             if Qr[i] > 0: # and firm had positive inventories, firm should reduce price to sell more and leave quantity unchanged
                                 # a)
-                                p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p ), decimals=8) # max of previous average price or previous firm price  * 1-eta (price reduction) 
+                                p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p ), decimals=4) # max of previous average price or previous firm price  * 1-eta (price reduction) 
                                 Qd[i] = np.around(Qp[i]) #if Qs[i] > 0 else Qs_last_round # use average of quantity demanded last round in case Qd were non positive last round
                             else: # firm sold all products, i.e. had negative inventories: firm should increase quantity since it expects higher demand
                                 # d)
                                 p[i] = np.around(p[i],decimals=2) # price remains
-                                Qd[i] = np.around(Qp[i]*(1+rho[i]),decimals=8) #if Qs[i] > 0 else Qs_last_round
+                                Qd[i] = np.around(Qp[i]*(1+rho[i]),decimals=4) #if Qs[i] > 0 else Qs_last_round
                         else: # if price difference negative, firm charged higher (individual) price than the average price 
                             if Qr[i] > 0: # if previous inventories of firm > 0 (i.e. did not sell all products): firm expects lower demand
                                 # c)
                                 p[i] = np.around(p[i],decimals=2)
-                                Qd[i] = np.around(Qp[i]*(1-rho[i]),decimals=8) #if Qs[i] > 0 else Qs_last_round
+                                Qd[i] = np.around(Qp[i]*(1-rho[i]),decimals=4) #if Qs[i] > 0 else Qs_last_round
                             else: # excess demand (zero or negative inventories): price is increased
                                 # b)
-                                p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p),decimals=8)
-                                Qd[i] = np.around(Qp[i],decimals=8) #if Qs[i] > 0 else Qs_last_round
+                                p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p),decimals=4)
+                                Qd[i] = np.around(Qp[i],decimals=4) #if Qs[i] > 0 else Qs_last_round
                         # setRequiredLabor: alpha is constant in the base version
-                        Ld[i] = np.around(Qd[i] / alpha[i], decimals = 8) # labor demand of current round
+                        Ld[i] = np.around(Qd[i] / alpha[i], decimals = 4) # labor demand of current round
                 
 
                 """ 
@@ -360,7 +360,7 @@ class BAM_base:
                     xi = np.random.uniform(low=0,high=self.h_xi) # sample xi (uniformly distributed random wage shock) for firm i
  
                     if vac[i] > 0: # firm increases wage in case it has currently open vacancies:
-                            Wp[i] = np.around(max(w_min, Wp[i]*(1+xi)),decimals=8) # Wage of firm i is set: either minimum wage or wage of period before revised upwards 
+                            Wp[i] = np.around(max(w_min, Wp[i]*(1+xi)),decimals=4) # Wage of firm i is set: either minimum wage or wage of period before revised upwards 
                             is_hiring[i] = True 
                     else:
                         Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage is either min. wage or wage of period before 
@@ -409,7 +409,7 @@ class BAM_base:
 
                         wages_chosen_firms = [] # initialize list with the wages of the chosen firms 
                         for ii in appl_firm: 
-                                wages_chosen_firms.append(np.around(Wp[ii-1], decimals = 8)) # extract the wages of the firms where HH applied 
+                                wages_chosen_firms.append(np.around(Wp[ii-1], decimals = 4)) # extract the wages of the firms where HH applied 
 
                         """
                         HH tries to sign conctract with the firm that offers highest wage, in case the firm still has open vacancies, 
@@ -470,7 +470,7 @@ class BAM_base:
                 Interest rate is calc acc. to markup on an baseline rate (set exogenous by 'CB'). 
                 After credit market closed, if firms are still short in net worth, they fire workers.
                 """
-                # Initialize list to store values
+                # Initialize list to store values again in each round
                 banks = [[] for _ in range(self.Nf)] # list of banks from where the firm got the loans (nested list for each firm)
                 Bi = [[] for _ in range(self.Nf)] # Amount of credit taken by banks
                 r_f = [[] for _ in range(self.Nf)] # rate of Interest on credit by banks for which match occured (only self.r bei ihm) 
@@ -486,14 +486,14 @@ class BAM_base:
                 """
                 for f in range(self.Nf):
                     L[f] = len(w_emp[f])
-                    W[f] = np.around(Wp[f] * L[f], decimals=8)  # (actual) total wage bills = wages * labour employed
+                    W[f] = np.around(Wp[f] * L[f], decimals=4)  # (actual) total wage bills = wages * labour employed
 
                     if W[f] > NW[f]: # if wage bills f has to pay is larger than the net worth 
-                        B[f] = max(np.around(W[f] - NW[f], decimals=8), 0) # amount of credit needed
+                        B[f] = max(np.around(W[f] - NW[f], decimals=4), 0) # amount of credit needed
                         f_cr.append(f + 1) # save id of firm that needs credit
 
                         # leverage (debt ratio)
-                        lev[f] = np.around(B[f] / NW[f], decimals=8)
+                        lev[f] = np.around(B[f] / NW[f], decimals=4)
                 
                 """
                 Credit market opens if there are any firms at all that need credit. 
@@ -512,7 +512,7 @@ class BAM_base:
                     for b in range(self.Nb):
                         
                         # total credit supply of each bank
-                        Cr[b] = np.around(E[b] / self.capital_requirement_coef, decimals=8) # amount of credit that can be supplied is an multiple of the equity base: E
+                        Cr[b] = np.around(E[b] / self.capital_requirement_coef, decimals=4) # amount of credit that can be supplied is an multiple of the equity base: E
 
                         # interest rates for each firm are computed (also for firms that don't apply for credit)
                         phi[b] = np.random.uniform(low=0,high=self.H_phi) # idiosyncratic interest rate shock
@@ -561,7 +561,7 @@ class BAM_base:
                                     r_f[f-1].append(r_min) # interest rate charged by bank b_min_id
 
                                     # update information on bank side
-                                    Cr_rem[b_min_id -1] = np.around(Credit_remaining - cr_supplied, decimals=8) # credit remaining of bank b
+                                    Cr_rem[b_min_id -1] = np.around(Credit_remaining - cr_supplied, decimals=4) # credit remaining of bank b
                                     #firms_loaned[b_min_id -1].append(f) # save firm id the bank with lowest interest loaned money to 
                                     #Cr_s[b_min_id-1].append(cr_supplied) # save credit amount given out to firm by bank (id) with lowest interest rate 
                                     #r_s[b_min_id-1].append(r_min) # save interest rate charged to firm by bank with lowest interest rate
@@ -570,7 +570,7 @@ class BAM_base:
 
                                 else:
                                     cr_supplied = Credit_remaining # supplied credit by bank b_min_id is the entire remaining credit remaining
-                                    B_current = np.around(B_current - cr_supplied, decimals=8) # remainig credit demand by firm 
+                                    B_current = np.around(B_current - cr_supplied, decimals=4) # remainig credit demand by firm 
                                     
 
                                     # update information on firm side
@@ -580,7 +580,7 @@ class BAM_base:
                                     r_f[f-1].append(r_min) # interest rate charged by bank b_min_id
 
                                     # update information on bank side
-                                    Cr_rem[b_min_id -1] = np.around(Credit_remaining - cr_supplied, decimals=8) # credit remaining of bank b
+                                    Cr_rem[b_min_id -1] = np.around(Credit_remaining - cr_supplied, decimals=4) # credit remaining of bank b
                                     #firms_loaned[b_min_id -1].append(f) # save firm id the bank with lowest interest loaned money to 
                                     #Cr_s[b_min_id-1].append(cr_supplied) # save credit amount given out to firm by bank (id) with lowest interest rate 
                                     #r_s[b_min_id-1].append(r_min) # save interest rate charged to firm by bank with lowest interest rate
@@ -596,14 +596,17 @@ class BAM_base:
                         Firm checks whether external finances received are enough now to cover the wage bills (W).
                         If not, firm starts to fire random selected HH's until internal and external resources are enough to cover wage bills.
                         """
-                        capital = np.around(NW[f-1] + sum(Bi[f-1]), decimals = 8)
+                        capital = np.around(NW[f-1] + sum(Bi[f-1]), decimals = 4)
                         wage_bill = W[f-1] # extract wage bill 
                         
                         if wage_bill > capital: # if wage bills f has to pay is still larger than the net worth + received credit
                             
                             # firm updates its wage bill and fires randomly chosen HH's
-                            diff = np.around(W[f-1] - capital, decimals=8) # firm computes amount not enough to cover wage bill
-                            L_fire = math.ceil(diff / Wp[f-1]) # rounded difference btw. wage bill and capital (int. and ext.) to next higher integer is number of HH's fired
+                            diff = np.around(W[f-1] - capital, decimals=4) # firm computes amount not enough to cover wage bill
+                            
+                            # rounded difference btw. wage bill and capital (int. and ext.) to next higher integer is number of HH's fired
+                            L_fire = math.ceil(diff / Wp[f-1]) 
+
                             # W[f-1] = wage_bill - L_fire*Wp[f-1]# update wage bill by subtracting individual wages
 
                             h_lo = np.random.choice(w_emp[f-1], L_fire, replace = False) # choose random worker(s) which are fired
@@ -622,7 +625,7 @@ class BAM_base:
                                 #firm_id[j-1] = 0 # HH not employed anymore             
                                 
                             L[f-1] = len(w_emp[f-1]) # update labour employed at firm f
-                            W[f-1] = np.around(Wp[f-1] * L[f-1], decimals=8)  # update (total wage bills = wages * labour employed
+                            W[f-1] = np.around(Wp[f-1] * L[f-1], decimals=4)  # update (total wage bills = wages * labour employed
                     """
                     Issues:
                     - interest rate differences really small, since mark up so small !! 
@@ -651,16 +654,16 @@ class BAM_base:
                 print("")            
 
                 f_produced = [] # intialize list to store firm id if firm produced this round 
-
+                
                 for f in range(self.Nf):
 
-                    NW[f] = NW[f] - W[f]
+                    #NW[f] = NW[f] - W[f] # wage payment are subtracted from the net worth 
                     
                     if t > 0:
                         Qp_last[f] = Qp[f] # save the quantity produced in the last round 
 
                     # Firms producing their products: 
-                    Qp[f] = np.around(alpha[f] * L[f], decimals = 8) # productivity * labor employed = quantity produced in this round
+                    Qp[f] = np.around(alpha[f] * L[f], decimals = 4) # productivity * labor employed = quantity produced in this round
                     
                     # append firm id if firm actually produced something
                     if Qp[f] > 0:
@@ -691,17 +694,21 @@ class BAM_base:
                     
                     """
                     For t = 0, the wage of this round instead of the wage of last round and the initially drawn MPC are used.
+                    Entire consumption of each HH is set to 0.
                     """
+                    C[c-1] = 0 # initialze overall consumption
+
                     # marginal propensity to consume c
-                    MPC[c-1] = np.around(1/(1 + (np.tanh((S[c-1])/savg))**self.beta),decimals=8) if t > 0 else MPC[c-1] 
+                    MPC[c-1] = np.around(1/(1 + (np.tanh((S[c-1])/savg))**self.beta),decimals=4) if t > 0 else MPC[c-1] 
+                    
                     # determine spending of HH in this round
                     w_fraction = np.around(w_last_round[c-1]*MPC[c-1], decimals=8) if t > 0 else np.around(w[c-1]*MPC[c-1], decimals=8) 
                     S_fraction = np.around(S[c-1]*MPC[c-1], decimals=8) 
-                    spending = w_fraction + S_fraction 
+                    spending = np.around(w_fraction + S_fraction , decimals = 8)
                     C_d[c-1] = spending # desired consumption 
 
-                    # update current savings
-                    S[c-1] = S[c-1] - S_fraction
+                    # update current savings 
+                    S[c-1] = np.around(S[c-1] - S_fraction, decimals=8)
 
                     prev_firm = int(goods_visited[c-1]) # id of largest firm with lowest price HH visited in last round
                     f_produced_current = f_produced.copy() # firm ids that actually produced
@@ -748,8 +755,8 @@ class BAM_base:
                                 C[c-1] = C[c-1] + consumption_p # new consumption level in terms of 'overall prices'
 
                                 # update information on firms side
-                                Qs[f_min_id -1] = np.around(Qs[f_min_id -1] + consumption , decimals=8) # actual quantity sold 
-                                Qr[f_min_id- 1] = np.round(Qr[f_min_id-1] - consumption, decimals = 8)
+                                Qs[f_min_id -1] = np.around(Qs[f_min_id -1] + consumption , decimals=4) # actual quantity sold 
+                                Qr[f_min_id- 1] = np.round(Qr[f_min_id-1] - consumption, decimals = 4)
 
                                 appl_firms.remove(f_min_id) # delete firm id from list
                                 prices_chosen_firms.remove(p_min) # delete current min price
@@ -761,8 +768,8 @@ class BAM_base:
                                 consumption_p = consumption*p_min # consumption in terms of overall price level 
 
                                 # update information on HH side
-                                C_d[c-1] = np.around(C_d[c-1] - consumption_p, decimals=8) # updated remaining consumption in terms of 'overall price level'
-                                C[c-1] = np.around(C[c-1] + consumption_p, decimals= 8) # new consumption level in terms of 'overall prices'
+                                C_d[c-1] = np.around(C_d[c-1] - consumption_p, decimals=4) # updated remaining consumption in terms of 'overall price level'
+                                C[c-1] = np.around(C[c-1] + consumption_p, decimals= 4) # new consumption level in terms of 'overall prices'
 
                                 # update information on firms side
                                 Qs[f_min_id -1] = Qs[f_min_id -1] + consumption # actual quantity sold 
@@ -779,9 +786,9 @@ class BAM_base:
                     Consumers saves wage of last round for the consumption in the next round and updates her savings in terms of produced goods (Y) of firm with 
                     lowest price out of her subsample.
                     """
-                    w_last_round[c-1] = w[c-1] if t > 0 else w[c-1] - w_fraction # wage of this round becomes wage of last round
+                    w_last_round[c-1] = w[c-1] # wage of this round becomes wage of last round
                     C_d[c-1] = np.around(C_d[c-1], decimals=8) # round remaining desired consumption 
-                    S[c-1] = S[c-1] + C_d[c-1] # update savings with desired consumption that was not satisfied
+                    S[c-1] = np.around(S[c-1] + C_d[c-1] + (w[c-1] - w_fraction), decimals=8) # update savings with desired consumption that was not satisfied
 
                 print("Consumption Goods market closed!")           
                 print("")
@@ -808,12 +815,15 @@ class BAM_base:
                 ??? which amounts to the share of credit firm had at bank i times its remaining oustanding amount (not net-worth). 
                 The banks again receive the open payments sequentially starting with the one bank firm received credit from first (in case firm had credit 
                 from more than one bank).
-
                 """
                 print("Firms calculating Revenues, net profits (settling debt and paying dividends) and retained earnings")
                 print("")
                 for f in range(self.Nf):
-                    Rev[f] = np.around(Qs[f]*p[f], decimals = 8)
+                    
+                    Rev[f] = np.around(Qs[f]*p[f], decimals = 4)
+
+                    # finally firms subtract entire wage payments
+                    # NW[f] = np.around(NW[f] - W[f], decimals=8)
 
                     """
                     Firms paying back principal and interest from the revenue of this round, in case they went to the credit market this round (and if firm made 
@@ -826,14 +836,14 @@ class BAM_base:
                     rates = r_f[f].copy() # getRates: interest rate(s) charged to firm i 
 
                     if len(banks_f) > 0:
-                        loans_to_be_paid = np.around(np.sum( np.array(credit)*(1 + np.array(rates))),decimals=8)  # compute current total amount of all loans
+                        loans_to_be_paid = np.around(np.sum( np.array(credit)*(1 + np.array(rates))),decimals=4)  # compute current total amount of all loans
 
                         if Rev[f] >= loans_to_be_paid:
                             
                             # firm pays back entire principal and interest to each bank 
                             for i in range(len(banks_f)):
                                 
-                                E[banks_f[i] -1] = np.around(E[banks_f[i] -1] + (credit[i]*rates[i]), decimals=8) 
+                                E[banks_f[i] -1] = np.around(E[banks_f[i] -1] + (credit[i]*rates[i]), decimals=4) 
 
                             P[f] = np.around(Rev[f] - loans_to_be_paid ,decimals=8) # net profits
                             divs[f] = np.around(P[f]*self.delta , decimals = 8) # dividends are profits * delta (share), if firm f has positive profits
@@ -858,7 +868,7 @@ class BAM_base:
                                     # If amount left to pay back loan of current bank i greater than loan & interest charged: firm pays back entire amount to current bank i
                                     E[banks_f[i] -1] = np.around(E[banks_f[i] -1] + (credit[i]*rates[i]), decimals=8) 
                                     
-                                    amount_left = np.around(amount_left - current_loan_to_be_paid, decimals=8) # update new amount left and check whether next bank can be paid back , decimals=2) 
+                                    amount_left = np.around(amount_left - current_loan_to_be_paid, decimals=4) # update new amount left and check whether next bank can be paid back , decimals=2) 
                                     banks_f_current.remove(banks_f[i]) # remove bank id from list 
                                 
                                 else:
@@ -895,25 +905,30 @@ class BAM_base:
 
                                             banks_f_current.remove(banks_f[i]) # remove bank that registered bad debt from list
 
-                                        # firm update profits and net worth and exit market in 8)
-                                        P[f] = np.around(Rev[f] - loans_to_be_paid ,decimals=8) # net profit
-                                        NW[f] = np.around(NW[f] - oustanding_amount, decimals=8) # update net worth
+                                    # firm update profits and net worth and exit market in 8)
+                                    P[f] = np.around(Rev[f] - amount_left ,decimals=8) # net profit
+                                    NW[f] = 0 # update net worth
 
-                                        break
+                                    break
 
                     else:
 
-                        P[f] = np.around(Rev[f]) # gross profits are net profits in case firm did not take any credit
+                        P[f] = np.around(Rev[f], decimals = 8) # gross profits are net profits in case firm did not take any credit
                         divs[f] = np.around(P[f]*self.delta , decimals = 8) # dividends are profits * delta (share), if firm f has positive profits
                         NW[f] = np.around(NW[f] + (1-self.delta)*P[f], decimals = 8) # udpate firms NW
-                      
+                    
+                    # add retained profits to the NW, then subtract then finally subtract the wage payments
+                    NW[f] = NW[f] + P[f] - W[f]
+
+                    
+  
                 """
                 HH's receive dividend payments (assumed that each agent has an equal share in all firms) and update their days of employment.
                 """
                 # each HH receives an equal share
                 for c in range(self.Nh):
 
-                    div[c] = div[c] + np.around(divs[f]/self.Nh ,decimals=8)
+                    div[c] = div[c] + np.around(divs[f]/self.Nh ,decimals=4)
                     S[c] = S[c] + div[c] # dividends are added to savings
 
                     # update employment count
@@ -962,7 +977,7 @@ class BAM_base:
                 """
                 Vacancies
                 """
-                self.vac_rate[t,mc] = np.round(np.sum(vac) / np.sum(L), decimals = 8) # vacancie rate is number of job openings (i.e. vacancies) relative to the labor force (labor employed currently)
+                self.vac_rate[t,mc] = np.round(np.sum(vac) / np.sum(L), decimals = 4) # vacancie rate is number of job openings (i.e. vacancies) relative to the labor force (labor employed currently)
 
                 """
                 Saving and consumption
@@ -975,6 +990,15 @@ class BAM_base:
                 Firms with positive net worth/equity survive, but otherwise firms/banks with negative (or zero) net worth/equity go bankrupt and are replaced by.
                 new firms/banks which enter the market of size smaller than average size of those who got bankrupt (by using a truncated mean).
                 """
+                # Replacement values
+                Qp_replacement = np.round(stats.trim_mean(Qp, 0.1), decimals = 4) # average produced quantity
+                Qr_replacement = np.round(stats.trim_mean(Qr, 0.1), decimals = 4) # average remaining quantity
+                p_replacement =  np.round(stats.trim_mean(p, 0.1), decimals = 4) # average price
+
+                E_replacement = np.round(stats.trim_mean(E, 0.1), decimals = 4) # average Equity of new bank
+                NW_replacement = np.round(stats.trim_mean(NW, 0.1), decimals = 4) # averaged trimmed net worth of current round (used for replacements later)
+
+                L_report= sum(L)
                 
                 # 1) Firms
                 bankrupt_firms = sum(1 for i in NW if i < 0) # count the bankrupt firms and report
@@ -1006,14 +1030,15 @@ class BAM_base:
                         New firm is entering: Resetting individual data by using the truncated mean at 10%. Hence lower and upper 5% are not included,
                         when the averages are computed for the new individual report values.
                         """
-                        Qp[f] = np.round(stats.trim_mean(Qp, 0.1), decimals = 8) # average produced quantity
-                        Qr[f] = np.round(stats.trim_mean(Qr, 0.1), decimals = 8) # average remaining quantity
-                        p[f] =  np.round(stats.trim_mean(p, 0.1), decimals = 8) # average price
-                        #Ld[f] = 0 # labor demand again determined
+                        Qp[f] = Qp_replacement
+                        Qr[f] = Qr_replacement
+                        p[f] =  p_replacement
+                        NW[f] = NW_replacement
+
                         L[f] =  len(w_emp[f]) # new firm enters with 0 labor employed
                         w_emp[f] = [] # workers employed is empty list 
-                        NW[f] = np.mean(NW) # intial Net worth of new firm
-                        alpha[f] = np.random.uniform(low=0.5,high=0.5) # draw new productivity btw. 5 and 6 
+                       
+                        # alpha[f] = np.random.uniform(low=0.5,high=0.5) # draw new productivity btw. 5 and 6 
                             
 
                 # 2) Banks
@@ -1024,14 +1049,15 @@ class BAM_base:
 
                     if E[b] <= 0:
 
-                        E[b] = np.round(stats.trim_mean(E, 0.1), decimals = 8) # initial Equity of new bank
+                        E[b] = E_replacement
 
                
                 """
                 Open csv file created and add data of the current round
                 """
 
-                add_row = [t, sum(Ld) / self.Nf, sum(L), 1-(sum(L)/self.Nh) ,sum(C), sum(NW), bankrupt_firms, sum(P), min(p), max(p), sum(Qp), sum(S), sum(Qd)]
+                add_row = [t, sum(Ld) / self.Nf, L_report, self.unemp_rate[t,mc] ,sum(C)/np.mean(p), sum(NW), bankrupt_firms, sum(P), len(f_cr) ,min(p), 
+                           max(p), sum(Qp), sum(S), sum(Qd), sum(Qr), sum(Qs), sum(C), self.wage_lvl[t,mc], sum(E), sum(Cr)]
                 with open('simulated_data.csv', 'a', encoding = 'UTF8') as f:
                     writer = csv.writer(f)
                     writer.writerow(add_row)
@@ -1068,61 +1094,53 @@ class BAM_base:
 
                 # Log output
                 plt.clf()
-                plt.plot(np.log(self.production[499:,mc]))
+                plt.plot(np.log(self.production[:,mc]))
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
-                plt.savefig("plots/LogOutput_mc%s.png" %mc)
-
-                """# Log output ZOOM
-                plt.clf()
-                plt.plot(np.log(self.production[499:,mc]))
-                plt.xlabel("Time")
-                plt.ylabel("Log output")
-                plt.ylim(4.65, 5.5)
-                plt.savefig("plots/LogOutput_mc%s_ZOOM.png" %mc)"""
+                plt.savefig("plots/full/LogOutput_mc%s.png" %mc)
 
                 # inflation rate
                 plt.clf()
-                plt.plot(self.inflation[499:,mc])
+                plt.plot(self.inflation[:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("Inflation rate")
-                plt.savefig("plots/Inflation_mc%s.png" %mc)
+                plt.savefig("plots/full/Inflation_mc%s.png" %mc)
 
                 # unemployment 
                 plt.clf()
-                plt.plot(self.unemp_rate[499:,mc])
+                plt.plot(self.unemp_rate[:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("unemployment rate")
-                plt.savefig("plots/unemployment_mc%s.png" %mc)
+                plt.savefig("plots/full/unemployment_mc%s.png" %mc)
                 
                 # productivity/real wage
                 plt.clf()
-                plt.plot(self.product_to_real_wage[499:,mc])
+                plt.plot(self.product_to_real_wage[:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("Productivity-real wage")
-                plt.savefig("plots/product_to_real_wage_mc%s.png" %mc)
+                plt.savefig("plots/full/product_to_real_wage_mc%s.png" %mc)
 
 
                 # Philips curve
                 plt.clf()
-                plt.scatter(self.unemp_rate[499:,mc], self.wage_inflation[499:,mc])
+                plt.scatter(self.unemp_rate[:,mc], self.wage_inflation[:,mc])
                 plt.xlabel("Unemployment Rate")
                 plt.ylabel("Wage Inflation")
-                plt.savefig('plots/philips_mc%s.png' %mc)
+                plt.savefig('plots/full/philips_mc%s.png' %mc)
 
                 # Okuns law
                 plt.clf()
-                plt.scatter(self.unemp_growth_rate[499:,mc], self.output_growth_rate[499:,mc])
+                plt.scatter(self.unemp_growth_rate[:,mc], self.output_growth_rate[:,mc])
                 plt.xlabel("Unemployment growth rate")
                 plt.ylabel("Output growth rate")
-                plt.savefig('plots/Okun_mc%s.png' %mc)
+                plt.savefig('plots/full/Okun_mc%s.png' %mc)
 
                 # Beveridge
                 plt.clf()
-                plt.scatter(self.unemp_rate[499:,mc], self.vac_rate[499:,mc])
+                plt.scatter(self.unemp_rate[:,mc], self.vac_rate[:,mc])
                 plt.xlabel("Unemployment rate")
                 plt.ylabel("Vacancy rate")
-                plt.savefig('plots/Beveridge_mc%s.png' %mc)
+                plt.savefig('plots/full/Beveridge_mc%s.png' %mc)
 
                 # firm size distribution
 
@@ -1131,7 +1149,7 @@ class BAM_base:
                 plt.plot(self.bankrupt_firms_total[:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("bankruptcies")
-                plt.savefig("plots/bankruptcies%s.png" %mc)
+                plt.savefig("plots/full/bankruptcies%s.png" %mc)
 
 
                 # mean HH Income
@@ -1139,19 +1157,78 @@ class BAM_base:
                 plt.plot(self.aver_savings[:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("average HH Income")
-                plt.savefig("plots/HH_income_mc%s.png" %mc)
+                plt.savefig("plots/full/HH_income_mc%s.png" %mc)
+                
 
-                # maybe HH stop consuming at one point ??!!
-
-
-                """Plots only using the last 500 iterations and zooming in s.t. fluctuations are better depicted"""
-                """# Log output
+                """
+                Plots only using the last 500 iterations 
+                """
+                # Log output
                 plt.clf()
-                plt.plot(np.log(self.production[500:,mc]))
+                plt.plot(np.log(self.production[499:,mc]))
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
-                plt.ylim(7.8, 7.95)
-                plt.savefig("plots/LogOutput_mc%s_zoom.png" %mc)"""
+                plt.savefig("plots/cut/LogOutput_mc%s.png" %mc)
+
+                # inflation rate
+                plt.clf()
+                plt.plot(self.inflation[499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Inflation rate")
+                plt.savefig("plots/cut/Inflation_mc%s.png" %mc)
+
+                # unemployment 
+                plt.clf()
+                plt.plot(self.unemp_rate[499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("unemployment rate")
+                plt.savefig("plots/cut/unemployment_mc%s.png" %mc)
+                
+                # productivity/real wage
+                plt.clf()
+                plt.plot(self.product_to_real_wage[499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Productivity-real wage")
+                plt.savefig("plots/cut/product_to_real_wage_mc%s.png" %mc)
+
+
+                # Philips curve
+                plt.clf()
+                plt.scatter(self.unemp_rate[499:,mc], self.wage_inflation[499:,mc])
+                plt.xlabel("Unemployment Rate")
+                plt.ylabel("Wage Inflation")
+                plt.savefig('plots/cut/philips_mc%s.png' %mc)
+
+                # Okuns law
+                plt.clf()
+                plt.scatter(self.unemp_growth_rate[499:,mc], self.output_growth_rate[499:,mc])
+                plt.xlabel("Unemployment growth rate")
+                plt.ylabel("Output growth rate")
+                plt.savefig('plots/cut/Okun_mc%s.png' %mc)
+
+                # Beveridge
+                plt.clf()
+                plt.scatter(self.unemp_rate[499:,mc], self.vac_rate[499:,mc])
+                plt.xlabel("Unemployment rate")
+                plt.ylabel("Vacancy rate")
+                plt.savefig('plots/cut/Beveridge_mc%s.png' %mc)
+
+                # firm size distribution
+
+                # bankrutpcy
+                plt.clf()
+                plt.plot(self.bankrupt_firms_total[499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("bankruptcies")
+                plt.savefig("plots/cut/bankruptcies%s.png" %mc)
+
+
+                # mean HH Income
+                plt.clf()
+                plt.plot(self.aver_savings[499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("average HH Income")
+                plt.savefig("plots/cut/HH_income_mc%s.png" %mc)
             
 
             print("Done")
