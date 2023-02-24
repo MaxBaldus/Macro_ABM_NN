@@ -4,7 +4,7 @@ import pandas as pd
 
 from models.toymodel import Toymodel # importing toy model (benchmark?)
 from models.BAM import BAM_base # BAM base model
-from models.BAM_nonrobust import BAM_base_nonrobust
+# from models.BAM_nonrobust import BAM_base_nonrobust
 #from models.BAM_firstcycles import BAM_base # BAM base model
 from estimation.data_prep import Filters
 

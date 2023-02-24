@@ -224,9 +224,9 @@ class BAM_base:
 
 
             #Ld_zero = np.around(np.random.uniform(low=12 ,high=12), decimals = 2) # initial labour demand per firm 
-            Ld_zero = 6 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
+            Ld_zero = 5 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
             # with 16.5 => intial vacancies s.t. u = 7% => sum(Qp) = 241
-            Wp = np.around(np.random.uniform(low= 0.95,high=1,size=self.Nf), decimals = 4) # initial wages
+            Wp = np.around(np.random.uniform(low= 0.95,high=1.05,size=self.Nf), decimals = 4) # initial wages
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
             # p_zero = np.around(np.random.uniform(low = 2, high = 2), decimals=2) # initial prices of firms 
@@ -457,6 +457,11 @@ class BAM_base:
                 else:
                     print("No Firm with open vacancies")
                     print("")
+
+                # current labour employed
+                for f in range(self.Nf):
+
+                    L[f] = len(w_emp[f])
                 
                 print("Labor Market CLOSED!!!! with %d NEW household hired!!" %(hired))
                 print("Labor Market CLOSED!!!! with %d HH's currently employed (L)" %(np.sum(L)))
@@ -485,7 +490,7 @@ class BAM_base:
                 in order to receive a loan. 
                 """
                 for f in range(self.Nf):
-                    L[f] = len(w_emp[f])
+                   
                     W[f] = np.around(Wp[f] * L[f], decimals=4)  # (actual) total wage bills = wages * labour employed
 
                     if W[f] > NW[f]: # if wage bills f has to pay is larger than the net worth 
@@ -990,13 +995,14 @@ class BAM_base:
                 Firms with positive net worth/equity survive, but otherwise firms/banks with negative (or zero) net worth/equity go bankrupt and are replaced by.
                 new firms/banks which enter the market of size smaller than average size of those who got bankrupt (by using a truncated mean).
                 """
-                # Replacement values
+                # Replacement values, only using values of incumbent firms
+                NW_incumbent = [i for i in NW if i > 0]
                 Qp_replacement = np.round(stats.trim_mean(Qp, 0.1), decimals = 4) # average produced quantity
                 Qr_replacement = np.round(stats.trim_mean(Qr, 0.1), decimals = 4) # average remaining quantity
                 p_replacement =  np.round(stats.trim_mean(p, 0.1), decimals = 4) # average price
 
                 E_replacement = np.round(stats.trim_mean(E, 0.1), decimals = 4) # average Equity of new bank
-                NW_replacement = np.round(stats.trim_mean(NW, 0.1), decimals = 4) # averaged trimmed net worth of current round (used for replacements later)
+                NW_replacement = np.round(stats.trim_mean(NW_incumbent, 0.1), decimals = 4) # averaged trimmed net worth of current round (used for replacements later)
 
                 L_report= sum(L)
                 
