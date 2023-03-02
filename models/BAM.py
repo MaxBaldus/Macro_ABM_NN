@@ -226,7 +226,7 @@ class BAM_base:
             #Ld_zero = np.around(np.random.uniform(low=12 ,high=12), decimals = 2) # initial labour demand per firm 
             Ld_zero = 5 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
             # with 16.5 => intial vacancies s.t. u = 7% => sum(Qp) = 241
-            Wp = np.around(np.random.uniform(low= 0.95,high=1.05,size=self.Nf), decimals = 4) # initial wages
+            Wp = np.around(np.random.uniform(low= 1,high=1,size=self.Nf), decimals = 4) # initial wages
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
             # p_zero = np.around(np.random.uniform(low = 2, high = 2), decimals=2) # initial prices of firms 
@@ -1068,6 +1068,16 @@ class BAM_base:
                     writer = csv.writer(f)
                     writer.writerow(add_row)
 
+                # firm size distribution
+                if t in [499,599,699, 799, 899,999]:
+                    
+                    plt.clf()
+                    plt.hist(L)
+                    plt.xlabel("Firm Size distribution by labor L")
+                    plt.savefig("plots/cut/firm_size/size_disribution_mc%s_t=%s.png" %(mc,t))
+
+                    
+
             
                 """ 
                 TO DO:
@@ -1090,6 +1100,9 @@ class BAM_base:
                 - in the end: check which "updating lists of each market" are really needed in the end ..  (go through everything step by step for t = 1 (&t=2))
                 - initial entry: Ld = average ??!!
                 - resetting all key lists in beginning of each market ??
+
+                - using only numpy arrays: never use append and no for loops inside for loops
+                - rather: use 2-d numpy arrays: save values to initiazed list, then remove values not used .. 
                 """
 
             """
@@ -1147,8 +1160,6 @@ class BAM_base:
                 plt.xlabel("Unemployment rate")
                 plt.ylabel("Vacancy rate")
                 plt.savefig('plots/full/Beveridge_mc%s.png' %mc)
-
-                # firm size distribution
 
                 # bankrutpcy
                 plt.clf()
@@ -1219,7 +1230,6 @@ class BAM_base:
                 plt.ylabel("Vacancy rate")
                 plt.savefig('plots/cut/Beveridge_mc%s.png' %mc)
 
-                # firm size distribution
 
                 # bankrutpcy
                 plt.clf()
