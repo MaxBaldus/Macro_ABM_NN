@@ -2,18 +2,25 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-from models.toymodel import Toymodel # importing toy model (benchmark?)
+import models.toymodel
+#from models.toymodel import Toymodel # importing toy model (benchmark?)
 from models.BAM import BAM_base # BAM base model
-# from models.BAM_nonrobust import BAM_base_nonrobust
-#from models.BAM_firstcycles import BAM_base # BAM base model
 from estimation.data_prep import Filters
 
 #################################################################################################
 # Simulating a simple macro ABM
 #################################################################################################
 
-#toymodel = Toymodel(Time=1000, Ni=100, MC=2, gamma=2, pbar=0.01, delta=0.05, rbar=0.075, plots=True)
-#toymodel_simulation = toymodel.simulation_toy()
+"""
+Simulating a simple macro model with 3 Monte carlo replications. Plots are saved into plots/toymodel
+"""
+#toymodel = Toymodel(Time=1000, Ni=100, MC=3, 
+#                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+#                    plots=True, filters=False)
+#toymodel_simulation = models.toymodel.simple_macro_ABM(
+#                    Time=1000, Ni=100, MC=3, 
+#                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+#                    plots=True, filters=False)
 #print(toymodel_simulation)
 
 #################################################################################################
@@ -41,7 +48,29 @@ print(BAM_simulation)
 # Estimating the simple macro ABM
 #################################################################################################
 
-"""loading the data and plotting the data and its components"""
+"""
+First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
+The first mc simulation is used as the 'observed' dataset. 
+"""
+
+pseudo_empirical = models.toymodel.simple_macro_ABM(
+                    Time=1000, Ni=100, MC=1, 
+                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+                    plots=True, filters=False)
+
+# sample possible parameter values 
+
+# initialize mdn
+
+# 
+ 
+
+#print(toymodel_simulation)
+
+
+"""
+loading the data and plotting the data and its components
+"""
 #german_gdp = pd.read_csv("data/CLVMNACSCAB1GQDE.csv") # gdp 
 # Inflation
 # Unemployment100   

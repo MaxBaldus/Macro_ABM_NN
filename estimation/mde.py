@@ -21,6 +21,7 @@ class mdn_MHsampling:
     The code is mainly taken from: 
     Donovan Platt, Mathematical Institute, 
     University of Oxford Institute for New Economic Thinking at the Oxford Martin School
+    ALEEN package
     """
 
     def __init__(self, num_lags:int, num_mix:int, num_neurons:int, num_layers:int, batch_size:int, 
