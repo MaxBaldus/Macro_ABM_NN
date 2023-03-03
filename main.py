@@ -53,10 +53,10 @@ First the estimation method is tested by using pseudo-empirical data with a-prio
 The first mc simulation is used as the 'observed' dataset. 
 """
 
-pseudo_empirical = models.toymodel.simple_macro_ABM(
-                    Time=1000, Ni=100, MC=1, 
-                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
-                    plots=True, filters=False)
+#pseudo_empirical = models.toymodel.simple_macro_ABM(
+#                    Time=2000, Ni=100, MC=1, 
+#                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+#                   plots=True, filters=False)
 
 # sample possible parameter values 
 

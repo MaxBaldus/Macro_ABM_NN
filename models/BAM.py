@@ -160,7 +160,7 @@ class BAM_base:
             Lhat = np.zeros(self.Nf) # Labor whose contracts are expiring
             L = np.zeros(self.Nf)  # actual Labor Employed
             Lo = np.zeros(self.Nf) # actual workforce (L of last round - amount of just expired contracts)
-            vac = np.zeros(self.Nf, int) # Vacancy
+            vac = np.zeros(self.Nf) # Vacancy
             w_emp = [[] for _ in range(self.Nf)] # Ids of workers/household employed - each firm has a list with worker ids
             W = np.zeros(self.Nf) # aggregated Wage bills (wage payments to each Worker * employed workers)
             w_min_slice = np.repeat(np.arange(1,self.T,4), 4)  # array with values from 3 up to T-3 appearing 4 times in a row for slicing the minimum wage s.t. min. wage is revised every 4 periods
@@ -346,7 +346,8 @@ class BAM_base:
                     Lo[i] =  L[i] - Lhat[i]  # actual workforce
                     
                     # calcVacancies of firm i
-                    vac[i] = math.ceil(max((Ld[i] - Lo[i]) ,0)) # vacancies are always rounded to the next higher and cannot be negative
+                    # vac[i] = math.ceil(max((Ld[i] - Lo[i]) ,0)) # vacancies are always rounded to the next higher and cannot be negative
+                    vac[i] = np.around(max((Ld[i] - Lo[i]) ,0), decimals = 8)
                     if vac[i] > 0: 
                         f_empl.append(i+1) # if firm i has vacancies, then firm id i is saved to list 
 
@@ -1069,7 +1070,7 @@ class BAM_base:
                     writer.writerow(add_row)
 
                 # firm size distribution
-                if t in [499,599,699, 799, 899,999]:
+                if t in [self.T-499,self.T-599,self.T-699,self.T-799,self.T-899,self.T-999]:
                     
                     plt.clf()
                     plt.hist(L)
@@ -1101,6 +1102,9 @@ class BAM_base:
                 - initial entry: Ld = average ??!!
                 - resetting all key lists in beginning of each market ??
 
+                - vacancies not discrete -> look weird
+
+                Computationally more efficient
                 - using only numpy arrays: never use append and no for loops inside for loops
                 - rather: use 2-d numpy arrays: save values to initiazed list, then remove values not used .. 
                 """
@@ -1182,28 +1186,28 @@ class BAM_base:
                 """
                 # Log output
                 plt.clf()
-                plt.plot(np.log(self.production[499:,mc]))
+                plt.plot(np.log(self.production[self.T -499:,mc]))
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
                 plt.savefig("plots/cut/LogOutput_mc%s.png" %mc)
 
                 # inflation rate
                 plt.clf()
-                plt.plot(self.inflation[499:,mc])
+                plt.plot(self.inflation[self.T -499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("Inflation rate")
                 plt.savefig("plots/cut/Inflation_mc%s.png" %mc)
 
                 # unemployment 
                 plt.clf()
-                plt.plot(self.unemp_rate[499:,mc])
+                plt.plot(self.unemp_rate[self.T -499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("unemployment rate")
                 plt.savefig("plots/cut/unemployment_mc%s.png" %mc)
                 
                 # productivity/real wage
                 plt.clf()
-                plt.plot(self.product_to_real_wage[499:,mc])
+                plt.plot(self.product_to_real_wage[self.T -499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("Productivity-real wage")
                 plt.savefig("plots/cut/product_to_real_wage_mc%s.png" %mc)
@@ -1211,21 +1215,21 @@ class BAM_base:
 
                 # Philips curve
                 plt.clf()
-                plt.scatter(self.unemp_rate[499:,mc], self.wage_inflation[499:,mc])
+                plt.scatter(self.unemp_rate[self.T -499:,mc], self.wage_inflation[self.T -499:,mc])
                 plt.xlabel("Unemployment Rate")
                 plt.ylabel("Wage Inflation")
                 plt.savefig('plots/cut/philips_mc%s.png' %mc)
 
                 # Okuns law
                 plt.clf()
-                plt.scatter(self.unemp_growth_rate[499:,mc], self.output_growth_rate[499:,mc])
+                plt.scatter(self.unemp_growth_rate[self.T -499:,mc], self.output_growth_rate[self.T -499:,mc])
                 plt.xlabel("Unemployment growth rate")
                 plt.ylabel("Output growth rate")
                 plt.savefig('plots/cut/Okun_mc%s.png' %mc)
 
                 # Beveridge
                 plt.clf()
-                plt.scatter(self.unemp_rate[499:,mc], self.vac_rate[499:,mc])
+                plt.scatter(self.unemp_rate[self.T -499:,mc], self.vac_rate[self.T -499:,mc])
                 plt.xlabel("Unemployment rate")
                 plt.ylabel("Vacancy rate")
                 plt.savefig('plots/cut/Beveridge_mc%s.png' %mc)
@@ -1233,7 +1237,7 @@ class BAM_base:
 
                 # bankrutpcy
                 plt.clf()
-                plt.plot(self.bankrupt_firms_total[499:,mc])
+                plt.plot(self.bankrupt_firms_total[self.T -499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("bankruptcies")
                 plt.savefig("plots/cut/bankruptcies%s.png" %mc)
@@ -1241,7 +1245,7 @@ class BAM_base:
 
                 # mean HH Income
                 plt.clf()
-                plt.plot(self.aver_savings[499:,mc])
+                plt.plot(self.aver_savings[self.T -499:,mc])
                 plt.xlabel("Time")
                 plt.ylabel("average HH Income")
                 plt.savefig("plots/cut/HH_income_mc%s.png" %mc)
