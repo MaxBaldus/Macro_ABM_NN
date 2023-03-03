@@ -24,24 +24,23 @@ Simulating a simple macro model with 3 Monte carlo replications. Plots are saved
 #print(toymodel_simulation)
 
 #################################################################################################
-# Simulating the BAM base model by Delli Gatti (2011)
+# Simulating the BAM base model(s) by Delli Gatti (2011)
 #################################################################################################
 
-""" intial Parameters to be estimated later"""
-#parameters = {'Nh':500, 'Nf':100, 'Nb':10, 'T':4, 
-#              'Z':2, 'M':4, 'H':2, 'H_eta': 0.1, 'H_rho':0.1, 'H_phi':0.01, 'h_xi':0.05,
-#              'c_P':1, 'c_R':0.5}
-# 'Z':2 im Buch -> bei ihm 3 !!!
-#BAM_old = BAM_base_nonrobust(MC = 1, parameters=parameters, plots=True)
-#BAM_simulation = BAM_old.simulation()
-#print(BAM_simulation)
-
-""" simulate the base model"""
+""" 
+Simulating the base model and the plus version two times (MC = 2).
+Two different kind of plots are saved into plots/BAM and plots/BAM_plus respectively. 
+Once the entire simulation (here T = 1000) and once only the last 500 observations (T-500) s.t. 
+the model(s) have time to convergence to their statistical equilibria w.r.t. to the major 
+aggregate report variables (GDP, unemployment and inflation rate). 
+"""
 BAM = BAM_base(T=1000, MC = 1, plots=True,
                Nh=500, Nf=100, Nb=10,
                H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05) 
 BAM_simulation = BAM.simulation()
 print(BAM_simulation)
+
+# simulate plus version
 
 
 #################################################################################################
@@ -95,8 +94,10 @@ loading the data and plotting the data and its components
 # Estimating the BAM model(s)
 #################################################################################################
 
-""" Idee: extra class mit function für MC plots,
-=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)"""
+""" 
+Idee: extra class mit function für MC plots,
+=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
+"""
 
 
 #################################################################################################

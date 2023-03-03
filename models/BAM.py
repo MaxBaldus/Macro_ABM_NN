@@ -377,6 +377,7 @@ class BAM_base:
                 Because they can apply only to one firm per round (firm with highest) wage, they may remain unemployment although they are willing to work.
                 """ 
                 if len(f_empl) > 0: # if there are firms that have open vacancies, search and match begins
+                    vac_to_update = vac.copy() # initialize new numpy array in order to update vacancies of firms during the hiring process
 
                     """
                     Unemployed Households visit M random firms and try to sign a contract with the firm offering the highest wage out of the chosen subsample.
@@ -422,10 +423,10 @@ class BAM_base:
                             w_max = max(wages_chosen_firms)
                             f_max_id = appl_firm[wages_chosen_firms.index(w_max)] # id of the firm that offered highest wage
 
-                            current_vac = vac[f_max_id - 1] # extract current number of vacancies of firm that offers the highest wage
+                            current_vac = vac_to_update[f_max_id - 1] # extract current number of vacancies of firm that offers the highest wage
                             
                             if current_vac > 0:
-                                vac[f_max_id - 1] = current_vac - 1 # update vacancies of firm that just hired HH j
+                                vac_to_update[f_max_id - 1] = current_vac - 1 # update vacancies of firm that just hired HH j
                                 
                                 # update labor market variables
                                 is_employed[j-1] = True # updateEmploymentStatus
@@ -1083,26 +1084,10 @@ class BAM_base:
                 """ 
                 TO DO:
 
-                Consumption market
-                -  # NO UNEMPLYOMENT PAYMENT ??!!
-                - Qr set to 0 as soon everything is sold -> in the formulas !!!!
-                - if bankrupt, remove goods_purchased.. 
-                - firing worker if w_pay not enough
-                
-                Qs[f] = 0 # resetQtySold
-                Qr[f] = Qp[f] - Qs[f] # setQtyRemaining: Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
-                """
-
-                """
-                General:
-                - no HH income Y
-                - Y should be Qp, Q_des = Y_d and W_pay = W (book notation)
-                - when is wage bill subtracted ??!!
-                - in the end: check which "updating lists of each market" are really needed in the end ..  (go through everything step by step for t = 1 (&t=2))
-                - initial entry: Ld = average ??!!
-                - resetting all key lists in beginning of each market ??
-
-                - vacancies not discrete -> look weird
+                    
+                BAM plus:
+                -  build BAM_plus and see if more firms bankrupt then
+                -  dafür: class markets => each market as a function s.t. when fixing bugs in markets not have to do it twce for each model ..
 
                 Computationally more efficient
                 - using only numpy arrays: never use append and no for loops inside for loops
