@@ -2,26 +2,28 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-import models.toymodel
-#from models.toymodel import Toymodel # importing toy model (benchmark?)
-from models.BAM import BAM_base # BAM base model
+# import classes
+from models.toymodel import Toymodel
+from models.BAM import BAM 
 from estimation.data_prep import Filters
+from estimation.mde import mdn
+from estimation.sampling import sample_posterior
 
 #################################################################################################
 # Simulating a simple macro ABM
 #################################################################################################
 
 """
-Simulating a simple macro model with 3 Monte carlo replications. Plots are saved into plots/toymodel
+Simulating a simple macro model with 10 Monte carlo replications. 
+The plots are saved into plots/toymodel folder.
 """
-#toymodel = Toymodel(Time=1000, Ni=100, MC=3, 
-#                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
-#                    plots=True, filters=False)
-#toymodel_simulation = models.toymodel.simple_macro_ABM(
-#                    Time=1000, Ni=100, MC=3, 
-#                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
-#                    plots=True, filters=False)
-#print(toymodel_simulation)
+toymodel = Toymodel(Time=1000, Ni=100, MC=10, 
+                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+                    plots=True, filters=False)
+
+# simulate the toy model and create the plots 
+toy_simulations = toymodel.simulation_toy() 
+
 
 #################################################################################################
 # Simulating the BAM base model(s) by Delli Gatti (2011)
@@ -34,13 +36,13 @@ Once the entire simulation (here T = 1000) and once only the last 500 observatio
 the model(s) have time to convergence to their statistical equilibria w.r.t. to the major 
 aggregate report variables (GDP, unemployment and inflation rate). 
 """
-BAM = BAM_base(T=1000, MC = 1, plots=True,
+"""BAM = BAM(T=1000, MC = 1, plots=True,
                Nh=500, Nf=100, Nb=10,
                H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05) 
 BAM_simulation = BAM.simulation()
-print(BAM_simulation)
+print(BAM_simulation)"""
 
-# simulate plus version
+# simulate plus version by setting growth parameters not to 0 !!
 
 
 #################################################################################################
@@ -51,6 +53,16 @@ print(BAM_simulation)
 First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
 The first mc simulation is used as the 'observed' dataset. 
 """
+toymodel = Toymodel(Time=1000, Ni=100, MC=1, 
+                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+                    plots=False, filters=False)
+
+# simulate the toymodel 1 times with 1000 observations, treted as the 'observed' time series in the following.
+toy_data_obs = toymodel.simulation_toy() 
+
+grid_sampler = sample_posterior(toymodel)
+
+
 
 #pseudo_empirical = models.toymodel.simple_macro_ABM(
 #                    Time=2000, Ni=100, MC=1, 

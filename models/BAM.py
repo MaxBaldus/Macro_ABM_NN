@@ -12,7 +12,7 @@ The function BAM_estimate also simulates the model, but actually returns specifi
 without producing any plots. The actual code of the model is identical though. 
 """
 
-class BAM_base:
+class BAM:
 
     def __init__(self, T:int, MC:int, plots:bool, 
                  Nh:int, Nf:int, Nb:int, 
@@ -52,6 +52,8 @@ class BAM_base:
         self.H_rho = H_rho # Maximum growth rate of quantities (Wage increase parameter)
         self.H_phi = H_phi # Maximum amount of banks’ costs
         self.h_xi = h_xi # Maximum growth rate of wages (Wage increase parameter)
+
+        # growth plus parameters
         
         """
         ???
@@ -1098,6 +1100,10 @@ class BAM_base:
             Plotting main aggregate report variables if number of MC replications small enough and simulation ran through:
             The plots are saved in folder: 
             """
+            # if growth prameter != 0:
+                # path = plots/BAM_plus/
+            # else:
+                # path = plots/BAM/
             if self.plots and self.MC <= 2:
 
                 # Log output
