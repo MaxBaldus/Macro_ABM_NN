@@ -17,16 +17,18 @@ from estimation.sampling import sample_posterior
 Simulating a simple macro model with 10 Monte carlo replications. 
 The plots are saved into plots/toymodel folder.
 """
-toymodel = Toymodel(Time=1000, Ni=100, MC=10, 
-                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
+
+# instantiate the toymodel class
+toymodel = Toymodel(Time=1000, Ni=100, MC=10,  
                     plots=True, filters=False)
 
 # simulate the toy model and create the plots 
-toy_simulations = toymodel.simulation_toy() 
-
+# toy_simulations = toymodel.simulation(gamma=2, pbar=0.01, delta=0.05, rbar=0.075) 
+parameter = np.array([2, 0.01, 0.05, 0.075])
+toy_simulations = toymodel.simulation(parameter) 
 
 #################################################################################################
-# Simulating the BAM base model(s) by Delli Gatti (2011)
+# Simulating the BAM model(s) by Delli Gatti (2011)
 #################################################################################################
 
 """ 
@@ -43,7 +45,10 @@ BAM_simulation = BAM.simulation()
 print(BAM_simulation)"""
 
 # simulate plus version by setting growth parameters not to 0 !!
+# NO: use another function s.t. having specific bounds later .. !!
 
+# change parameter input to np.array 
+# ...
 
 #################################################################################################
 # Estimating the simple macro ABM
@@ -51,18 +56,29 @@ print(BAM_simulation)"""
 
 """
 First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
-The first mc simulation is used as the 'observed' dataset. 
+The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
-toymodel = Toymodel(Time=1000, Ni=100, MC=1, 
-                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
-                    plots=False, filters=False)
 
 # simulate the toymodel 1 times with 1000 observations, treted as the 'observed' time series in the following.
-toy_data_obs = toymodel.simulation_toy() 
+toy_data_obs = toy_simulations[:,0] # check again from above..  
 
-grid_sampler = sample_posterior(toymodel)
+# create new instance of the with 1000 ??? MC replications now
+toymodel = Toymodel(Time=1000, Ni=100, MC=100, 
+                    plots=False, filters=False)
+
+# define the upper and lower bound for each parameter value, packed into a 2x#free parameters matrix 
+# with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
+bounds_toy_para = np.transpose(np.array([ [1,5], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
+
+# initialize the sampling methods
+toy_posterior = sample_posterior(model = toymodel, bounds = bounds_toy_para)
+
+# initialize the likelihood approximation method used inside the sampling method
 
 
+# first use the plain grid search to compute the posterior estimates of each free parameter
+toy_posterior.grid_search(grid_size = 100, path = 'data/simulations/toymodel_simulations')
+print("blub")
 
 #pseudo_empirical = models.toymodel.simple_macro_ABM(
 #                    Time=2000, Ni=100, MC=1, 

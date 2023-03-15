@@ -3,6 +3,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import csv 
 import math
+import tqdm
 
 """
 Overall class structure: The class BAM_base contains the BAM model from Delli Gatti 2011. 
@@ -94,10 +95,8 @@ class BAM:
     
     def simulation(self):
 
-        for mc in range(self.MC):
-            print("MC run number: %s" %mc)
-            print("")
-            
+        for mc in tqdm(range(self.MC)):
+                        
             # set new seed each MC run to ensure different random numbers are sampled each simulation
             np.random.seed(mc)
 
