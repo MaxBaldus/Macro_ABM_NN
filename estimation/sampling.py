@@ -18,13 +18,19 @@ class sample_posterior:
     def __init__(self, model, bounds):
         
         """
-        Here the model class is loaded s.t. for each parameter value the likelihood is apprixmated using the specified mdn. 
+        Initiate the posterior sampling class by inputing the class of the agent based model and
+        the respective parameter bounds as a numpy array for the free parameters of the model 
+        (parameters to be estimated)
         """
 
         self.model = model
         self.bounds = bounds
 
     def grid_search(self, grid_size, path):
+
+        """
+        Simulation block
+        """
 
         # get the number of parameter
         number_para = self.bounds.shape[1] 
@@ -47,10 +53,16 @@ class sample_posterior:
             simulations[i] = self.model.simulation(theta[i])
 
         np.save(path, simulations)
-        print("blub")
+        # load the data 
 
- 
-        # do mdn (likelihood block) ll
+        """
+        Likelihood ll block 
+        """
+        # for each TxMC matrix (i.e. for each parameter combination)
+        # instantiate mde object by inputting data -> object = mdn(DATA)
+        # mixture_params = object.sample_mixture()
+        # ll = object.eval_mixture(mixture_params)
+
         # compute prior proba p(theta)
             
         # return ll + p(theta) and ll
@@ -65,10 +77,9 @@ class sample_posterior:
 
         print("blub")
         # output posterior estimates (mean of theta chain)
-        # plot the sampled posterios 
+        # plot the sampled posterior parameter values 
 
 
-    #-------------------------------------------------------------------------------------------------------------
     def prior(self):
         
         # use self.bounds to compute prior probabilities with bounds

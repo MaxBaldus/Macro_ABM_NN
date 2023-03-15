@@ -74,7 +74,7 @@ bounds_toy_para = np.transpose(np.array([ [1,5], [0.001, 0.1], [0.001, 0.1], [0.
 toy_posterior = sample_posterior(model = toymodel, bounds = bounds_toy_para)
 
 # initialize the likelihood approximation method used inside the sampling method
-
+# gleich in sampling rein ??!!
 
 # first use the plain grid search to compute the posterior estimates of each free parameter
 toy_posterior.grid_search(grid_size = 100, path = 'data/simulations/toymodel_simulations')

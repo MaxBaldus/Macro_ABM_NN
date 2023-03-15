@@ -1,5 +1,9 @@
+# libraries
 import numpy as np
 import matplotlib.pyplot as plt
+import tqdm
+
+# classes
 from estimation.data_prep import Filters
 
 """
@@ -29,8 +33,9 @@ class Toymodel:
 
         """
         The simulation of the toy base model is run with the simulation method
-        model parameters:
         
+        Inputs are the simulation hyper parameters and 1-d numpy array with the following model parameters:
+
         gamma = investment accelerator
         pbar = constant price part 
         delta = capital depreceation rate
@@ -53,14 +58,12 @@ class Toymodel:
         YY_cycle = np.zeros((self.Time,self.MC))
         YY_trend = np.zeros((self.Time,self.MC))
         
-        for mc in range(self.MC):
+        for mc in tqdm(range(self.MC)):
             
             """
             By setting a different seed for each mc run a different sequence of random numbers is sampled during each simulation.
             """
             np.random.seed(mc) 
-
-            print("MC run %s" %mc)
 
             """
             Initializing the individual report variables. Data is overwritten with each time period t (i.e. no tensors used here).
@@ -155,7 +158,7 @@ class Toymodel:
             if self.plots:
                 
                 """
-                Plotting logarithms of aggregate report variables
+                Plotting the aggregate report variables
                 """
                 # log GDP figure
                 plt.clf()
@@ -181,7 +184,6 @@ class Toymodel:
                     plt.savefig("plots/toymodel/??_mc%s.png" %mc)
                 
                 # plt.show() # show all figures
-        
         
         return YY
         # what if I use filter (what to return.. ??)
