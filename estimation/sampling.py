@@ -7,6 +7,7 @@ The second one is a metropolis hastings algorithm which explores the parameter s
 # libraries
 import numpy as np
 from tqdm import tqdm
+from itertools import product
 
 
 # classes
@@ -32,7 +33,7 @@ class sample_posterior:
         Simulation block
         """
 
-        # get the number of parameter
+        # get the number of parameter to be estimated
         number_para = self.bounds.shape[1] 
 
         # initialize matrix to store the grid as one column for each parameter
@@ -44,26 +45,57 @@ class sample_posterior:
             upper = self.bounds[1,b]
             theta[:,b] = np.linspace(lower, upper, num=grid_size)
         
-        # simulate the model MC times and store each TxMC matrix into 3-d array
-        simulations = np.zeros((grid_size, self.model.Time, self.model.MC))  # grid_size TxMC matrices
+        test = np.array(np.meshgrid(theta[:,0],theta[:,1], theta[:,2], theta[:,3])).T.reshape(-1,4)
+        unpack = [theta[:,i] for i in range(number_para)]
+        test2 = np.array(np.meshgrid(*unpack)).T.reshape(-1,number_para)
+
+        # create all possible theta combinations for the grid_size of each parameter
+        num_para_combinations = grid_size**number_para # total number of parameter combination
+        theta_combination = np.zeros((num_para_combinations, number_para))
+
+        for comb in range(num_para_combinations):
+            for row in range(theta.shape[0]):
+                theta_combination[comb,:] = theta[row,:]
+
+
+        # initialize 3-d array to store MC simulations (TxMC matrices) for each parameter combination
+        # uncomment this for creating new training and test samples 
+        num_para_combinations = grid_size**number_para # total number of parameter combination
+        para_combination = np.zeros((num_para_combinations, number_para))
+        # simulations = np.zeros((num_para_combinations, self.model.Time, self.model.MC))  # MC TxMC matrices for each para_combination
+
+        # initialie list of all possible parameter combinations
+        current_theta = [0 for x in range(number_para)]
+        for combination in product(theta[0]):
+            print(combination)
         
-        for i in tqdm(range(grid_size)):
+        print("blub")
+
+        
+        # simulate the model MC times for each parameter combination and store each TxMC matrix into a 3-d array
+        """for i in tqdm(range(grid_size)):
 
             # simulate the model grid_size times, each time with a new parameter combination from the grid
             simulations[i] = self.model.simulation(theta[i])
 
-        np.save(path, simulations)
-        # load the data 
+        # save simulated data 
+        np.save(path, simulations)"""
+
+        # load the 
+        load_path = path + '.npy'
+        simulations = np.load(load_path)
 
         """
         Likelihood ll block 
         """
         # for each TxMC matrix (i.e. for each parameter combination)
-        # instantiate mde object by inputting data -> object = mdn(DATA)
-        # mixture_params = object.sample_mixture()
-        # ll = object.eval_mixture(mixture_params)
+            # instantiate mde object by inputting data -> object = mdn(DATA)
+            # mixture_params = object.sample_mixture()
+            # ll = object.eval_mixture(mixture_params)
 
-        # compute prior proba p(theta)
+            # compute prior proba p(theta)
+
+            # store for each parameter combination 
             
         # return ll + p(theta) and ll
 
@@ -72,6 +104,11 @@ class sample_posterior:
         print("blub")
         # now mh sampling
         # 
+    
+    def hypercube_sampling(self):
+
+        print("blub")
+        # use scipy.stats.qmc.LatinHypercube instead of of equally spaced parameter values 
 
     def posterior_plots(self):
 

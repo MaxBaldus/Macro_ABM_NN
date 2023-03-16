@@ -19,7 +19,7 @@ The plots are saved into plots/toymodel folder.
 """
 
 # instantiate the toymodel class
-toymodel = Toymodel(Time=1000, Ni=100, MC=10,  
+toymodel = Toymodel(Time=1000, Ni=100, MC=2,  
                     plots=True, filters=False)
 
 # simulate the toy model and create the plots 
@@ -70,20 +70,15 @@ toymodel = Toymodel(Time=1000, Ni=100, MC=100,
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
 bounds_toy_para = np.transpose(np.array([ [1,5], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
 
-# initialize the sampling methods
+# initialize the sampling methods (grid search and MH algorithm)
 toy_posterior = sample_posterior(model = toymodel, bounds = bounds_toy_para)
 
 # initialize the likelihood approximation method used inside the sampling method
 # gleich in sampling rein ??!!
 
 # first use the plain grid search to compute the posterior estimates of each free parameter
-toy_posterior.grid_search(grid_size = 100, path = 'data/simulations/toymodel_simulations')
+toy_posterior.grid_search(grid_size = 5, path = 'data/simulations/toymodel_simulations')
 print("blub")
-
-#pseudo_empirical = models.toymodel.simple_macro_ABM(
-#                    Time=2000, Ni=100, MC=1, 
-#                    gamma=2, pbar=0.01, delta=0.05, rbar=0.075, 
-#                   plots=True, filters=False)
 
 # sample possible parameter values 
 
