@@ -48,15 +48,23 @@ class mdn:
         MC_replications = self.data_sim.shape[1] 
         T = self.data_sim.shape[0]
         
-        X_train = np.zeros((T)) # initialize regressor matrix ???
+        X_train_rows = MC_replications*(T-self.L)
+        X_train = np.zeros((X_train_rows, self.L)) # initialize regressor matrix 
         
-        for i in range(self.data_sim.shape[1]):
-            
+        # fill X_train according to rolling window of shape L
+        for i in range(MC_replications):
+
+            for j in range(T - self.L):
+
+                X_train[i, j : j + self.L] = self.data_sim # ??? 
+          
             print("blub")
 
-            X_train = 0
-            Y_train = 0
-        
+        # copying
+        # data_sim_tra = np.transpose(self.data_sim)
+        test = np.array([self.data_sim[i, j : j + self.L] for i in range(self.data_sim.shape[0]) for j in range(self.data_sim.shape[1] - self.L)])
+        MC_replications*(T-self.L)
+        test2 = np.array([np.transpose(self.data_sim)[i, j : j + self.L] for i in range(np.transpose(self.data_sim).shape[0]) for j in range(np.transpose(self.data_sim).shape[1] - self.L)])
 
         # split the combined large set of MC simulations again into feature data X and target data Y
 

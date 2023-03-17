@@ -48,6 +48,8 @@ class sample_posterior:
             lower = self.bounds[0,b]
             upper = self.bounds[1,b]
             theta[:,b] = np.linspace(lower, upper, num=grid_size)
+
+            # here do latin hypercube sampling instead !!
         
         # create all possible theta combinations for the grid_size of each parameter
         # test = np.array(np.meshgrid(theta[:,0],theta[:,1], theta[:,2], theta[:,3])).T.reshape(-1,4)
@@ -120,7 +122,7 @@ class sample_posterior:
         # return ll + p(theta) and ll
 
     def MH_sampling(self):
-
+        
         print("blub")
         # now mh sampling
         # 
