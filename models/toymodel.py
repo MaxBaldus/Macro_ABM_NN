@@ -58,6 +58,10 @@ class Toymodel:
         YY_cycle = np.zeros((self.Time,self.MC))
         YY_trend = np.zeros((self.Time,self.MC))
         
+        print("")
+        print('--------------------------------------')
+        print("Simulating the toy model %s times" %self.MC)
+        
         for mc in tqdm(range(self.MC)):
             
             """

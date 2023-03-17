@@ -1,13 +1,23 @@
+# libraries
 import numpy as np
 from scipy import stats
 import pandas as pd
+
+import os
+import logging
+
+# Disable Tensorflow Deprecation Warnings
+logging.disable(logging.WARNING)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # import classes
 from models.toymodel import Toymodel
 from models.BAM import BAM 
 from estimation.data_prep import Filters
-from estimation.mde import mdn
+# from estimation.mde import mdn
 from estimation.sampling import sample_posterior
+
+
 
 #################################################################################################
 # Simulating a simple macro ABM
@@ -55,51 +65,42 @@ print(BAM_simulation)"""
 #################################################################################################
 
 """
+1)
 First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 
-# simulate the toymodel 1 times with 1000 observations, treted as the 'observed' time series in the following.
+# pseudo empirical data
 toy_data_obs = toy_simulations[:,0] # check again from above..  
 
-# create new instance of the with 1000 ??? MC replications now
+# create new instance of the toy model with 100 MC replications 
 toymodel = Toymodel(Time=1000, Ni=100, MC=100, 
                     plots=False, filters=False)
 
-# define the upper and lower bound for each parameter value, packed into a 2x#free parameters matrix 
+# define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
 bounds_toy_para = np.transpose(np.array([ [1,5], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
 
 # initialize the sampling methods (grid search and MH algorithm)
-toy_posterior = sample_posterior(model = toymodel, bounds = bounds_toy_para)
-
-# initialize the likelihood approximation method used inside the sampling method
-# gleich in sampling rein ??!!
+toy_posterior = sample_posterior(model = toymodel, bounds = bounds_toy_para, data_obs=toy_data_obs)
 
 # first use the plain grid search to compute the posterior estimates of each free parameter
-toy_posterior.grid_search(grid_size = 5, path = 'data/simulations/toymodel_simulations')
+# the likelihood approximation method used inside the sampling method is set inside the sampling class
+toy_posterior.grid_search(grid_size = 10, path = 'data/simulations/toymodel_simulations')
 print("blub")
 
-# sample possible parameter values 
-
-# initialize mdn
-
-# 
- 
-
-#print(toymodel_simulation)
-
 
 """
-loading the data and plotting the data and its components
+2)
+Estimating the toy model using real data on US GDP 
 """
+# loading the data and plotting the data and its components
 #german_gdp = pd.read_csv("data/CLVMNACSCAB1GQDE.csv") # gdp 
 # Inflation
 # Unemployment100   
 #filters = Filters(german_gdp['CLVMNACSCAB1GQDE'], inflation=None, unemployment=None)
 #gdp_components = filters.HP_filter(empirical=True) # plots are saved in plots ..
 # print(component# s)
-
 
 
 # erstmal nur mit einer Zeitreihe

@@ -1,5 +1,6 @@
 # Libraries
-
+import tensorflow as tf
+import numpy as np
 
 
 class mdn:
@@ -10,43 +11,80 @@ class mdn:
     ???????? s.t. a MH-algorithm can be used later on to sample the posterior distribution. 
     """
 
-    def __init__(self, data_sim, data_obs):
+    def __init__(self, data_sim, data_obs,
+                 L:int, K:int,
+                 neurons:int, layers:int, batch_size:int, epochs:int
+                 ):
 
         """
         Initialise the class by storing simulated and observed data as inputs, which are used approximate the likelihood respectively.
         """
-        self.data_sim = data_sim # simulated data
-        self.data_obs = data_obs # observed data
+        self.data_sim = data_sim # simulated data: 2-d numpy array 
+        self.data_obs = data_obs # observed data: 1-d numpy array
 
-     
+        """
+        Hyper parameters of the mixture density network and gaussian mixture distribution
+        """
+        self.L = L # number of lags to be considered, which amounts to the number of input features of the mdn
+        self.K = K # number of mixture components
 
-    def set_mdn(self, num_lags:int, num_mix:int, num_neurons:int, num_layers:int, batch_size:int,
-                num_epochs:int, act_func:str, eta_x:float, eta_y:float,
-                univar_output:bool):
-        
+        self.neurons = neurons # number of neurons per hidden layer
+        self.layers = layers # number of hidden layers
+        self.batch_size = batch_size # size of the (random) sample used to update gradient once
+        self.epochs = epochs # final number of rounds for the entire training set used once for updating the gradient
+
+        """act_func:str, eta_x:float, eta_y:float,
+                univar_output:bool"""
+
+
+    def create_training_data(self):
+
         """
-        Here the mixture density network (mdn) is defined: 
-        
-        ???
-        The entire model needs to be python function, 
-        with the only input being calibrated parameter values (as a list).
-        In the univariat case the output is a 2-D numpy array with TxMC dimensions. 
-         
+        this function orders the simulated data (2d array) and prepares mixture density network inputs
         """
-        # return nn model 
-        # inside estimate_mixture!!
+
+        # order the simulated data with by splitting the observations into a train and test set 
+        # through a rolling window applied onto each mc simulation and then finally concatenated in the end
+        MC_replications = self.data_sim.shape[1] 
+        T = self.data_sim.shape[0]
+        
+        X_train = np.zeros((T)) # initialize regressor matrix ???
+        
+        for i in range(self.data_sim.shape[1]):
+            
+            print("blub")
+
+            X_train = 0
+            Y_train = 0
+        
+
+        # split the combined large set of MC simulations again into feature data X and target data Y
+
+
+        return X_train, Y_train
     
+           
     def estimate_mixture(self):
         
         """
         This method estimates the parameter of a gaussian mixture distribution with a
-        feed forward neural network, called mixture density network,
-        using simulated and real data as input and outputs the estimated parameter values. 
+        feed forward neural network, called mixture density network using simulated and real data as input 
+        - outputs the estimated parameter values. 
         """
-        
-        # order the data with rolling window function
+
+        # construct one large ordered training set 
+        mdn.create_training_data(self)
+        # X_train, Y_train = mdn.create_training_data()
+        print("blub")
+
+
+        # FOR EACH ORDERED MC ??!!
+
         # set_mdn : mdn object
+        # print "keras nn successfully created.. " ??
+
         # nn.estimate
+
         # nn.predict (params of gaussian)
 
         # return params (estimated mixture parameters now) ??? 
@@ -62,10 +100,13 @@ class mdn:
         # plot mixture distribution ???
         # return ll
 
-    def rolling_window(self):
+ 
+    
+    def rolling_window_sim(self):
 
         """
-        Order the data 
+        this function order the simulated data and prepare mixture density network inputs
+        1-d array
         """
 
 
