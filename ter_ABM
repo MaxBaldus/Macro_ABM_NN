@@ -1,0 +1,172 @@
+Help on class GaussianNoise in module keras.layers.regularization.gaussian_noise:
+
+class GGaauussssiiaannNNooiissee(keras.engine.base_layer.BaseRandomLayer)
+ |  GaussianNoise(stddev, seed=None, **kwargs)
+ |  
+ |  Apply additive zero-centered Gaussian noise.
+ |  
+ |  This is useful to mitigate overfitting
+ |  (you could see it as a form of random data augmentation).
+ |  Gaussian Noise (GS) is a natural choice as corruption process
+ |  for real valued inputs.
+ |  
+ |  As it is a regularization layer, it is only active at training time.
+ |  
+ |  Args:
+ |    stddev: Float, standard deviation of the noise distribution.
+ |    seed: Integer, optional random seed to enable deterministic behavior.
+ |  
+ |  Call arguments:
+ |    inputs: Input tensor (of any rank).
+ |    training: Python boolean indicating whether the layer should behave in
+ |      training mode (adding noise) or in inference mode (doing nothing).
+ |  
+ |  Input shape:
+ |    Arbitrary. Use the keyword argument `input_shape`
+ |    (tuple of integers, does not include the samples axis)
+ |    when using this layer as the first layer in a model.
+ |  
+ |  Output shape:
+ |    Same shape as input.
+ |  
+ |  Method resolution order:
+ |      GaussianNoise
+ |      keras.engine.base_layer.BaseRandomLayer
+ |      keras.engine.base_layer.Layer
+ |      tensorflow.python.module.module.Module
+ |      tensorflow.python.trackable.autotrackable.AutoTrackable
+ |      tensorflow.python.trackable.base.Trackable
+ |      keras.utils.version_utils.LayerVersionSelector
+ |      builtins.object
+ |  
+ |  Methods defined here:
+ |  
+ |  ____iinniitt____(self, stddev, seed=None, **kwargs)
+ |      Initialize the BaseRandomLayer.
+ |      
+ |      Note that the constructor is annotated with
+ |      @no_automatic_dependency_tracking. This is to skip the auto
+ |      tracking of self._random_generator instance, which is an AutoTrackable.
+ |      The backend.RandomGenerator could contain a tf.random.Generator instance
+ |      which will have tf.Variable as the internal state. We want to avoid
+ |      saving that state into model.weights and checkpoints for backward
+ |      compatibility reason. In the meantime, we still need to make them
+ |      visible to SavedModel when it is tracing the tf.function for the
+ |      `call()`.
+ |      See _list_extra_dependencies_for_serialization below for more details.
+ |      
+ |      Args:
+ |        seed: optional integer, used to create RandomGenerator.
+ |        force_generator: boolean, default to False, whether to force the
+ |          RandomGenerator to use the code branch of tf.random.Generator.
+ |        rng_type: string, the rng type that will be passed to backend
+ |          RandomGenerator. Default to `None`, which will allow RandomGenerator
+ |          to choose types by itself. Valid values are "stateful", "stateless",
+ |          "legacy_stateful".
+ |        **kwargs: other keyword arguments that will be passed to the parent
+ |          *class
+ |  
+ |  ccaallll(self, inputs, training=None)
+ |      This is where the layer's logic lives.
+ |      
+ |      The `call()` method may not create state (except in its first
+ |      invocation, wrapping the creation of variables or other resources in
+ |      `tf.init_scope()`).  It is recommended to create state, including
+ |      `tf.Variable` instances and nested `Layer` instances,
+ |       in `__init__()`, or in the `build()` method that is
+ |      called automatically before `call()` executes for the first time.
+ |      
+ |      Args:
+ |        inputs: Input tensor, or dict/list/tuple of input tensors.
+ |          The first positional `inputs` argument is subject to special rules:
+ |          - `inputs` must be explicitly passed. A layer cannot have zero
+ |            arguments, and `inputs` cannot be provided via the default value
+ |            of a keyword argument.
+ |          - NumPy array or Python scalar values in `inputs` get cast as
+ |            tensors.
+ |          - Keras mask metadata is only collected from `inputs`.
+ |          - Layers are built (`build(input_shape)` method)
+ |            using shape info from `inputs` only.
+ |          - `input_spec` compatibility is only checked against `inputs`.
+ |          - Mixed precision input casting is only applied to `inputs`.
+ |            If a layer has tensor arguments in `*args` or `**kwargs`, their
+ |            casting behavior in mixed precision should be handled manually.
+ |          - The SavedModel input specification is generated using `inputs`
+ |            only.
+ |          - Integration with various ecosystem packages like TFMOT, TFLite,
+ |            TF.js, etc is only supported for `inputs` and not for tensors in
+ |            positional and keyword arguments.
+ |        *args: Additional positional arguments. May contain tensors, although
+ |          this is not recommended, for the reasons above.
+ |        **kwargs: Additional keyword arguments. May contain tensors, although
+ |          this is not recommended, for the reasons above.
+ |          The following optional keyword arguments are reserved:
+ |          - `training`: Boolean scalar tensor of Python boolean indicating
+ |            whether the `call` is meant for training or inference.
+ |          - `mask`: Boolean input mask. If the layer's `call()` method takes a
+ |            `mask` argument, its default value will be set to the mask
+ |            generated for `inputs` by the previous layer (if `input` did come
+ |            from a layer that generated a corresponding mask, i.e. if it came
+ |            from a Keras layer with masking support).
+ |      
+ |      Returns:
+ |        A tensor or list/tuple of tensors.
+ |  
+ |  ccoommppuuttee__oouuttppuutt__sshhaappee = wrapper(instance, input_shape)
+ |  
+ |  ggeett__ccoonnffiigg(self)
+ |      Returns the config of the layer.
+ |      
+ |      A layer config is a Python dictionary (serializable)
+ |      containing the configuration of a layer.
+ |      The same layer can be reinstantiated later
+ |      (without its trained weights) from this configuration.
+ |      
+ |      The config of a layer does not include connectivity
+ |      information, nor the layer class name. These are handled
+ |      by `Network` (one layer of abstraction above).
+ |      
+ |      Note that `get_config()` does not guarantee to return a fresh copy of
+ |      dict every time it is called. The callers should make a copy of the
+ |      returned dict if they want to modify it.
+ |      
+ |      Returns:
+ |          Python dictionary.
+ |  
+ |  ----------------------------------------------------------------------
+ |  Methods inherited from keras.engine.base_layer.BaseRandomLayer:
+ |  
+ |  bbuuiilldd(self, input_shape)
+ |      Creates the variables of the layer (optional, for subclass implementers).
+ |      
+ |      This is a method that implementers of subclasses of `Layer` or `Model`
+ |      can override if they need a state-creation step in-between
+ |      layer instantiation and layer call. It is invoked automatically before
+ |      the first execution of `call()`.
+ |      
+ |      This is typically used to create the weights of `Layer` subclasses
+ |      (at the discretion of the subclass implementer).
+ |      
+ |      Args:
+ |        input_shape: Instance of `TensorShape`, or list of instances of
+ |          `TensorShape` if the layer expects a list of inputs
+ |          (one instance per input).
+ |  
+ |  ----------------------------------------------------------------------
+ |  Methods inherited from keras.engine.base_layer.Layer:
+ |  
+ |  ____ccaallll____(self, *args, **kwargs)
+ |      Wraps `call`, applying pre- and post-processing steps.
+ |      
+ |      Args:
+ |        *args: Positional arguments to be passed to `self.call`.
+ |        **kwargs: Keyword arguments to be passed to `self.call`.
+ |      
+ |      Returns:
+ |        Output tensor(s).
+ |      
+ |      Note:
+ |        - The following optional keyword arguments are reserved for specific
+ |          uses:
+ |          * `training`: Boolean scalar tensor of Python boolean indicating
+ |            whether the `call` is meant for training or inferenc

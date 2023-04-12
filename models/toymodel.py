@@ -34,7 +34,7 @@ class Toymodel:
         """
         The simulation of the toy base model is run with the simulation method
         
-        Inputs are the simulation hyper parameters and 1-d numpy array with the following model parameters:
+        Input is a 1-d numpy array with the following model parameters:
 
         gamma = investment accelerator
         pbar = constant price part 
@@ -54,9 +54,6 @@ class Toymodel:
         AA = np.zeros((self.Time,self.MC)) # aggregate net worth
         BB = np.zeros((self.Time,self.MC)) # aggregate debt
         LEV = np.zeros((self.Time,self.MC)) # leverage 
-
-        YY_cycle = np.zeros((self.Time,self.MC))
-        YY_trend = np.zeros((self.Time,self.MC))
         
         print("")
         print('--------------------------------------')
@@ -190,7 +187,6 @@ class Toymodel:
                 # plt.show() # show all figures
         
         return YY
-        # what if I use filter (what to return.. ??)
 
 
 

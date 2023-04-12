@@ -10,12 +10,14 @@ import logging
 logging.disable(logging.WARNING)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-# import classes
+# import model classes
 from models.toymodel import Toymodel
 from models.BAM import BAM 
+
+# import estimation classes
 from estimation.data_prep import Filters
-# from estimation.mde import mdn
-from estimation.sampling import sample_posterior
+from estimation.mdn import mdn
+from sampling import sample_posterior
 
 
 
@@ -29,13 +31,50 @@ The plots are saved into plots/toymodel folder.
 """
 
 # instantiate the toymodel class
-toymodel = Toymodel(Time=1000, Ni=100, MC=2,  
+toymodel = Toymodel(Time=1000, Ni=100, MC=5,  
                     plots=True, filters=False)
 
 # simulate the toy model and create the plots 
 # toy_simulations = toymodel.simulation(gamma=2, pbar=0.01, delta=0.05, rbar=0.075) 
 parameter = np.array([2, 0.01, 0.05, 0.075])
 toy_simulations = toymodel.simulation(parameter) 
+
+#################################################################################################
+# Estimating the simple macro ABM
+#################################################################################################
+
+"""
+1)
+First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
+The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
+"""
+
+# pseudo empirical data
+toy_data_obs = toy_simulations[:,0] 
+
+# create new instance of the toy model with 100 MC replications 
+toymodel_est = Toymodel(Time=1000, Ni=100, MC=20, 
+                    plots=False, filters=False)
+
+# define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
+# with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
+bounds_toy_para = np.transpose(np.array([ [1,3], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
+
+# initialize the sampling methods (grid search and MH algorithm)
+toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para, data_obs=toy_data_obs)
+
+# first use the plain grid search to compute the posterior estimates of each free parameter
+# the likelihood approximation method used inside the sampling method is set inside the sampling class
+toy_posterior.grid_search(grid_size = 100, path = 'data/simulations/toymodel_simulations/latin_hypercube')
+print("blub")
+
+# Gatti 2020
+# 5000 combinations
+# MC = 20 
+# T = 3000, discarding the first 2500
+
+# aleen
+# MC = 100 
 
 #################################################################################################
 # Simulating the BAM model(s) by Delli Gatti (2011)
@@ -60,34 +99,15 @@ print(BAM_simulation)"""
 # change parameter input to np.array 
 # ...
 
+
 #################################################################################################
-# Estimating the simple macro ABM
+# Estimating the BAM model(s)
 #################################################################################################
 
+""" 
+Idee: extra class mit function für MC plots,
+=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
 """
-1)
-First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
-The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
-"""
-
-# pseudo empirical data
-toy_data_obs = toy_simulations[:,0] # check again from above..  
-
-# create new instance of the toy model with 100 MC replications 
-toymodel = Toymodel(Time=1000, Ni=100, MC=100, 
-                    plots=False, filters=False)
-
-# define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
-# with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-bounds_toy_para = np.transpose(np.array([ [1,5], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
-
-# initialize the sampling methods (grid search and MH algorithm)
-toy_posterior = sample_posterior(model = toymodel, bounds = bounds_toy_para, data_obs=toy_data_obs)
-
-# first use the plain grid search to compute the posterior estimates of each free parameter
-# the likelihood approximation method used inside the sampling method is set inside the sampling class
-toy_posterior.grid_search(grid_size = 10, path = 'data/simulations/toymodel_simulations')
-print("blub")
 
 
 """
@@ -110,18 +130,6 @@ Estimating the toy model using real data on US GDP
 
 
 
-
-
-
-
-#################################################################################################
-# Estimating the BAM model(s)
-#################################################################################################
-
-""" 
-Idee: extra class mit function für MC plots,
-=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
-"""
 
 
 #################################################################################################
