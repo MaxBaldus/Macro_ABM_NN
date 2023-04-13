@@ -56,7 +56,7 @@ class sample_posterior:
         # test = np.array(np.meshgrid(theta[:,0],theta[:,1], theta[:,2], theta[:,3])).T.reshape(-1,4)
 
         # uncomment this section for creating new training and test samples for a different grid and combinations 
-        """
+        
         # simulate the model MC times for each parameter combination and save each TxMC matrix
         print("")
         print("Simulate the model MC times for each parameter combination:")
@@ -69,7 +69,7 @@ class sample_posterior:
             current_path = path + '_' + str(i)
 
             # save simulated data 
-            np.save(current_path, simulations)"""
+            np.save(current_path, simulations)
         
 
         """

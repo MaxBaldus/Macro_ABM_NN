@@ -53,7 +53,7 @@ The first mc simulation with the parameter configuration from above is used as t
 toy_data_obs = toy_simulations[:,0] 
 
 # create new instance of the toy model with 100 MC replications 
-toymodel_est = Toymodel(Time=1000, Ni=100, MC=20, 
+toymodel_est = Toymodel(Time=1200, Ni=100, MC=100, 
                     plots=False, filters=False)
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
@@ -65,7 +65,7 @@ toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para,
 
 # first use the plain grid search to compute the posterior estimates of each free parameter
 # the likelihood approximation method used inside the sampling method is set inside the sampling class
-toy_posterior.grid_search(grid_size = 100, path = 'data/simulations/toymodel_simulations/latin_hypercube')
+toy_posterior.grid_search(grid_size = 3000, path = 'data/simulations/toymodel_simulations/latin_hypercube')
 print("blub")
 
 # Gatti 2020
