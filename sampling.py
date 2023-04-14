@@ -71,6 +71,12 @@ class sample_posterior:
             # save simulated data 
             np.save(current_path, simulations)
         
+        
+        # apply filters later !!
+        # if filters=True:
+            # load data and apply filter to each column 
+            # save again filtered data.. 
+            
 
         """
         2) Likelihood ll block: compute the likelihood and the posterior probabily of each parameter combination.
@@ -86,7 +92,8 @@ class sample_posterior:
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
 
-            # neglect the first simlated values for each mc column !!
+            # neglect the first simlated values for each mc column to ensure convergence 
+            # of the major report variables
           
             # instantiate the likelihood approximation method
             ll_appro = mdn(data_sim = simulation, data_obs = self.data_obs,

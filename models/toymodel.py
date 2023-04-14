@@ -58,7 +58,6 @@ class Toymodel:
         print("")
         print('--------------------------------------')
         print("Simulating the toy model %s times" %self.MC)
-        
         for mc in tqdm(range(self.MC)):
             
             """
