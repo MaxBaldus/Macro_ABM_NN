@@ -53,7 +53,7 @@ The first mc simulation with the parameter configuration from above is used as t
 toy_data_obs = toy_simulations[:,0] 
 
 # create new instance of the toy model with 100 MC replications 
-toymodel_est = Toymodel(Time=1200, Ni=100, MC=100, 
+toymodel_est = Toymodel(Time=1500, Ni=100, MC=100, 
                     plots=False, filters=False)
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
