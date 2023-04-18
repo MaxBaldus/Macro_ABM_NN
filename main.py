@@ -18,8 +18,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # import model classes
 from models.toymodel import Toymodel
-from models.BAM import BAM 
-from models.BAM_mc import BAM_mc
+from models.BAM import BAM # BAM model parallized
+from models.BAM_mc import BAM_mc # regular mc loop
+from models.BAM_numba import BAM_simulation_numba # BAM as a function, exploiting numba
 
 # import estimation classes
 from estimation.data_prep import Filters
@@ -56,62 +57,72 @@ The plots of both models are saved into plots/BAM and plots/BAM_plus respectivel
 """
 
 # number of MC simulations
-MC = 5
-
-# initialize BAM_model
-BAM_model = BAM(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
-                plots=True, csv=False) 
+MC = 10
 
 # parameter values: H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05
 parameter = np.array([0.1, 0.1, 0.1, 0.05])
 
+"""# initialize BAM_model
+BAM_model_parallel = BAM(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+                plots=True, csv=False) 
+
 # simulate the model MC times using parallel computing
-num_cores = multiprocessing.cpu_count()
+num_cores = (multiprocessing.cpu_count()) - 10
 start_time = time.time()
 
 print("")
 print('--------------------------------------')
 print("Simulating BAM model %s times" %MC)
 
-BAM_simulations = Parallel(n_jobs=num_cores)(
-                        delayed(BAM_model.simulation)
+BAM_simulations_parallel = Parallel(n_jobs=num_cores)(
+                        delayed(BAM_model_parallel.simulation)
                         (parameter, mc) for mc in range(MC)
                         )
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # BAM_simulation =  BAM_model.simulation(theta=parameter)
-print(BAM_simulations)
+print(BAM_simulations_parallel)
+"""
 
-"""# simulation model MC times without parallising
-BAM_model_no_parallel = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+# simulation model MC times without parallising
+"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
 print("Simulating BAM model without parallising %s times" %MC)
 start_time = time.time()
-BAM_simulation_no_parallel =  BAM_model.simulation(theta=parameter)
+BAM_simulations =  BAM_model.simulation(theta=parameter)
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
 
+
+
+
+
+# simulation model MC times without parallising, but using numba
+print("")
+print('--------------------------------------')
+print("Simulating BAM model without parallising, using numba, %s times" %MC)
+start_time = time.time()
+BAM_simulations = BAM_simulation_numba(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+                                       plots=True, csv=False,
+                                       theta=parameter)
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
+
+
+print("blub")
+
+"""
 # simulate plus version by setting growth parameters not to 0 !!
 # NO: use another function s.t. having specific bounds later .. !!
 
-""" 
+
 Analyse:
 Idee: extra class mit function für MC plots,
 => MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
 """
-
-#################################################################################################
-# Estimating the BAM model(s)
-#################################################################################################
-
-
-
-
-# fct wrapping BAM_model.simulation into paralelizing
-
 
 #################################################################################################
 # Estimating the simple macro ABM
@@ -172,7 +183,14 @@ Estimating the toy model using real data on US GDP
 # MH sampling or grid-search ??!!
 
 
+#################################################################################################
+# Estimating the BAM model(s)
+#################################################################################################
 
+
+
+
+# fct wrapping BAM_model.simulation into paralelizing
 
 
 #################################################################################################

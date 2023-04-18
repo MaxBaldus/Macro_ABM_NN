@@ -5,12 +5,14 @@ import csv
 import math
 from tqdm import tqdm
 
+from numba import jit
 """
 Overall class structure: The class BAM_base contains the BAM model from Delli Gatti 2011. 
 The inputs are the the simulation parameters and some integer parameter values calibrated in advance.  
 """
 
 # stand: 14.04.2023
+
 class BAM_mc:
 
     def __init__(self, T:int, MC:int, plots:bool, csv:bool,
@@ -47,8 +49,8 @@ class BAM_mc:
         self.c_R = c_R # Propensity to consume of richest people
         """
 
-    
-    
+    @staticmethod
+    @jit(nopython=True)   
     def simulation(self, theta):
 
         """
@@ -91,7 +93,7 @@ class BAM_mc:
         aver_savings = np.zeros((self.T,self.MC)) # average HH income 
         vac_rate = np.zeros((self.T,self.MC)) # vacancy rate approximated by number of job openings and the labour force at the beginning of a period 
         bankrupt_firms_total = np.zeros((self.T,self.MC)) # number of bankrupt firms in current round
-
+        
         print("")
         print('--------------------------------------')
         print("Simulating BAM model %s times" %self.MC)

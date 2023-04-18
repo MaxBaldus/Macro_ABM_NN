@@ -55,7 +55,7 @@ class sample_posterior:
         # create all possible theta combinations for the grid_size of each parameter
         # test = np.array(np.meshgrid(theta[:,0],theta[:,1], theta[:,2], theta[:,3])).T.reshape(-1,4)
 
-        # uncomment this section for creating new training and test samples for a different grid and combinations 
+        """# uncomment this section for creating new training and test samples for a different grid and combinations 
         
         # simulate the model MC times for each parameter combination and save each TxMC matrix
         print("")
@@ -70,7 +70,7 @@ class sample_posterior:
 
             # save simulated data 
             np.save(current_path, simulations)
-        
+        """
         
         # apply filters later !!
         # if filters=True:
@@ -79,7 +79,7 @@ class sample_posterior:
             
 
         """
-        2) Likelihood ll block: compute the likelihood and the posterior probabily of each parameter combination.
+        2) Likelihood ll block: compute the likelihood and the posterior probability of each parameter combination.
         """
         print("")
         print('--------------------------------------')
@@ -120,6 +120,13 @@ class sample_posterior:
             # store posterior for each parameter combination !!!
             
         # return ll + p(theta) and ll
+
+
+
+
+
+
+
 
     def MH_sampling(self):
         
