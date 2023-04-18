@@ -6,6 +6,12 @@ import pandas as pd
 import os
 import logging
 
+import time
+
+from joblib import Parallel, delayed
+import multiprocessing
+
+
 # Disable Tensorflow Deprecation Warnings
 logging.disable(logging.WARNING)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -13,6 +19,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # import model classes
 from models.toymodel import Toymodel
 from models.BAM import BAM 
+from models.BAM_mc import BAM_mc
 
 # import estimation classes
 from estimation.data_prep import Filters
@@ -38,6 +45,73 @@ toymodel = Toymodel(Time=1000, Ni=100, MC=5,
 # toy_simulations = toymodel.simulation(gamma=2, pbar=0.01, delta=0.05, rbar=0.075) 
 parameter = np.array([2, 0.01, 0.05, 0.075])
 toy_simulations = toymodel.simulation(parameter) 
+
+#################################################################################################
+# Simulating the BAM model(s) by Delli Gatti (2011)
+#################################################################################################
+
+""" 
+Simulating the base model and the plus version MC times, using parallel computing.
+The plots of both models are saved into plots/BAM and plots/BAM_plus respectively.  
+"""
+
+# number of MC simulations
+MC = 5
+
+# initialize BAM_model
+BAM_model = BAM(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+                plots=True, csv=False) 
+
+# parameter values: H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05
+parameter = np.array([0.1, 0.1, 0.1, 0.05])
+
+# simulate the model MC times using parallel computing
+num_cores = multiprocessing.cpu_count()
+start_time = time.time()
+
+print("")
+print('--------------------------------------')
+print("Simulating BAM model %s times" %MC)
+
+BAM_simulations = Parallel(n_jobs=num_cores)(
+                        delayed(BAM_model.simulation)
+                        (parameter, mc) for mc in range(MC)
+                        )
+
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
+# BAM_simulation =  BAM_model.simulation(theta=parameter)
+print(BAM_simulations)
+
+"""# simulation model MC times without parallising
+BAM_model_no_parallel = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+                plots=True, csv=False) 
+print("")
+print('--------------------------------------')
+print("Simulating BAM model without parallising %s times" %MC)
+start_time = time.time()
+BAM_simulation_no_parallel =  BAM_model.simulation(theta=parameter)
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
+
+# simulate plus version by setting growth parameters not to 0 !!
+# NO: use another function s.t. having specific bounds later .. !!
+
+""" 
+Analyse:
+Idee: extra class mit function für MC plots,
+=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
+"""
+
+#################################################################################################
+# Estimating the BAM model(s)
+#################################################################################################
+
+
+
+
+# fct wrapping BAM_model.simulation into paralelizing
+
 
 #################################################################################################
 # Estimating the simple macro ABM
@@ -76,38 +150,7 @@ print("blub")
 # aleen
 # MC = 100 
 
-#################################################################################################
-# Simulating the BAM model(s) by Delli Gatti (2011)
-#################################################################################################
 
-""" 
-Simulating the base model and the plus version two times (MC = 2).
-Two different kind of plots are saved into plots/BAM and plots/BAM_plus respectively. 
-Once the entire simulation (here T = 1000) and once only the last 500 observations (T-500) s.t. 
-the model(s) have time to convergence to their statistical equilibria w.r.t. to the major 
-aggregate report variables (GDP, unemployment and inflation rate). 
-"""
-"""BAM = BAM(T=1000, MC = 1, plots=True,
-               Nh=500, Nf=100, Nb=10,
-               H_eta=0.1, H_rho=0.1, H_phi=0.01, h_xi=0.05) 
-BAM_simulation = BAM.simulation()
-print(BAM_simulation)"""
-
-# simulate plus version by setting growth parameters not to 0 !!
-# NO: use another function s.t. having specific bounds later .. !!
-
-# change parameter input to np.array 
-# ...
-
-
-#################################################################################################
-# Estimating the BAM model(s)
-#################################################################################################
-
-""" 
-Idee: extra class mit function für MC plots,
-=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
-"""
 
 
 """
