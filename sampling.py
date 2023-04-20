@@ -10,6 +10,9 @@ from tqdm import tqdm
 from itertools import product
 from scipy.stats import qmc
 
+from joblib import Parallel, delayed
+import multiprocessing
+
 # classes
 from estimation.mdn import mdn
 
@@ -48,30 +51,45 @@ class sample_posterior:
         latin_sampler = qmc.LatinHypercube(d=number_para)
 
         # sample theta values between 0 and 1 and scale to the given bounds (ranges)
+        np.random.seed(123)
         theta = latin_sampler.random(n=grid_size)
+
+        # scale parameters to the given bounds
         qmc.scale(theta, l_bounds, u_bounds)
        
         # ??? NECESSARY ???
         # create all possible theta combinations for the grid_size of each parameter
         # test = np.array(np.meshgrid(theta[:,0],theta[:,1], theta[:,2], theta[:,3])).T.reshape(-1,4)
 
-        """# uncomment this section for creating new training and test samples for a different grid and combinations 
-        
+        # uncomment this section for creating new training and test samples for a different grid and combinations 
+                
         # simulate the model MC times for each parameter combination and save each TxMC matrix
         print("")
         print("Simulate the model MC times for each parameter combination:")
-        for i in tqdm(range(grid_size)):
-            
-            # simulate the model each time with a new parameter combination from the grid
-            simulations = self.model.simulation(theta[i,:])
 
-            # current path to save the simulation to
-            current_path = path + '_' + str(i)
-
-            # save simulated data 
-            np.save(current_path, simulations)
-        """
+        num_cores = (multiprocessing.cpu_count()) - 1 
         
+        def grid_search(grid_size, theta, model, path, i):
+            
+            for i in range(grid_size):
+
+                # current parameter combination
+                theta_current = theta[i,:]
+                # simulate the model each time with a new parameter combination from the grid
+                simulations = model.simulation(theta_current)
+                # current path to save the simulation to
+                current_path = path + '_' + str(i)
+                # save simulated data 
+                np.save(current_path, simulations)
+        
+        # parallize the grid search
+        Parallel(n_jobs=num_cores)(
+                delayed(grid_search)
+                (grid_size, theta, self.model, path, i) for i in range(grid_size)
+                )
+
+        print("blub")
+
         # apply filters later !!
         # if filters=True:
             # load data and apply filter to each column 

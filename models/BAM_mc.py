@@ -5,7 +5,7 @@ import csv
 import math
 from tqdm import tqdm
 
-from numba import jit
+
 """
 Overall class structure: The class BAM_base contains the BAM model from Delli Gatti 2011. 
 The inputs are the the simulation parameters and some integer parameter values calibrated in advance.  
@@ -48,9 +48,7 @@ class BAM_mc:
         self.c_P = c_P # Propensity to consume of poorest people
         self.c_R = c_R # Propensity to consume of richest people
         """
-
-    @staticmethod
-    @jit(nopython=True)   
+  
     def simulation(self, theta):
 
         """
@@ -1244,5 +1242,4 @@ class BAM_mc:
                 plt.ylabel("average HH Income")
                 plt.savefig("plots/cut/HH_income_mc%s.png" %mc)
             
-
         return production
