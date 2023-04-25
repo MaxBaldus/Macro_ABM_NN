@@ -1,10 +1,14 @@
+"""
+BAM model from Delli Gatti 2011. 
+@author: maxbaldus
+"""
+
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 import csv 
 import math
 from tqdm import tqdm
-
 
 """
 Overall class structure: The class BAM_base contains the BAM model from Delli Gatti 2011. 
@@ -131,18 +135,18 @@ class BAM_mc:
 
             w = np.zeros(self.Nh) # wage of each HH
             w_last_round = np.zeros(self.Nh) # wage of round before 
-            unemp_benefit = np.zeros(self.Nh) # uneployment benefits in case HH has no employment
+            #unemp_benefit = np.zeros(self.Nh) # uneployment benefits in case HH has no employment
             div = np.zeros(self.Nh) # dividend payment to HH from profit of firm (new each round)
-            w_flag = np.zeros(self.Nh) # flag in case HH received wage in current t
-            div_flag = np.zeros(self.Nh) # flag in case HH received dividend payment in current t
+            #w_flag = np.zeros(self.Nh) # flag in case HH received wage in current t
+            #div_flag = np.zeros(self.Nh) # flag in case HH received dividend payment in current t
 
             is_employed = np.zeros(self.Nh, bool) # True if HH has job: e.g. array([False, False, False, False, False])
             d_employed = np.zeros(self.Nh) # counts the days a HH is employed
-            d_unemployed = np.zeros(self.Nh) # counts the days a HH is unemployed
+            #d_unemployed = np.zeros(self.Nh) # counts the days a HH is unemployed
             #firm_id = np.zeros(self.Nh) # firm_id where HH is employed
             prev_firm_id = np.zeros(self.Nh, int) # firm id HH was employed last
-            firms_applied =  [[] for _ in range(self.Nh)] # list of firm ids HH applied to 
-            job_offered_from_firm = [[] for _ in range(self.Nh)] # list of an offered job from firm i for each HH
+            #firms_applied =  [[] for _ in range(self.Nh)] # list of firm ids HH applied to 
+            #job_offered_from_firm = [[] for _ in range(self.Nh)] # list of an offered job from firm i for each HH
 
             #firm_went_bankrupt = np.zeros(self.Nh) # flag (value of 1) in case the firm HH was employed just went bankrupt 
             expired = np.zeros(self.Nh, bool) # flag in case contract of a HH expired, it is set to True 
@@ -165,10 +169,10 @@ class BAM_mc:
             vac = np.zeros(self.Nf) # Vacancy
             w_emp = [[] for _ in range(self.Nf)] # Ids of workers/household employed - each firm has a list with worker ids
             W = np.zeros(self.Nf) # aggregated Wage bills (wage payments to each Worker * employed workers)
-            w_min_slice = np.repeat(np.arange(1,self.T,4), 4)  # array with values from 3 up to T-3 appearing 4 times in a row for slicing the minimum wage s.t. min. wage is revised every 4 periods
+            #w_min_slice = np.repeat(np.arange(1,self.T,4), 4)  # array with values from 3 up to T-3 appearing 4 times in a row for slicing the minimum wage s.t. min. wage is revised every 4 periods
             time_stamp_wage_adjustment = np.arange(3,self.T,4)
             Wp = np.zeros(self.Nf) # Wage payments of firm this round
-            job_applicants = [[] for _ in range(self.Nf)] # Ids of Job applicants (HH that applied for job) -> Liste für each firm => array with [] entries for each i
+            #job_applicants = [[] for _ in range(self.Nf)] # Ids of Job applicants (HH that applied for job) -> Liste für each firm => array with [] entries for each i
            
             is_hiring = np.zeros(self.Nf, bool) # Flag to be activated when firm enters labor market to hire 
 
@@ -180,14 +184,14 @@ class BAM_mc:
 
             B = np.zeros(self.Nf) # amount of desired credit (total)
             lev = np.zeros(self.Nf) # invdivudal leverage (debt ratio)
-            loan_paid = np.zeros(self.Nf)
-            credit_appl = [[] for _ in range(self.Nf)] # list with bank ids each frim chooses randomly to apply for credit
+            #loan_paid = np.zeros(self.Nf)
+            #credit_appl = [[] for _ in range(self.Nf)] # list with bank ids each frim chooses randomly to apply for credit
             #loans_to_be_paid = np.zeros(self.Nf) # outstanding debt + interest rate firm has to pay back to bank 
 
-            outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
-            outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
-            outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
-            outstanding_r = [[] for _ in range(self.Nf)] # interest rate charged by bank where firm has outstanding credit
+            #outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
+            #outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
+            #outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
+            #outstanding_r = [[] for _ in range(self.Nf)] # interest rate charged by bank where firm has outstanding credit
 
             Qp_last = np.zeros(self.Nf) # variable to save quantity produced in round before 
             bankrupt_flag = np.zeros(self.Nf) # set entry to 1 in case firm went bankrupt 
@@ -195,16 +199,16 @@ class BAM_mc:
             # BANKS
             E = np.zeros(self.Nb) # equity base 
             phi = np.zeros(self.Nb)
-            tCr = np.zeros(self.Nb) # initial amount of Credit of all banks, filled with random numbers for t = 0
+            #tCr = np.zeros(self.Nb) # initial amount of Credit of all banks, filled with random numbers for t = 0
             Cr = np.zeros(self.Nb) # amount of credit supplied / "Credit vacancies"
-            Cr_a = np.zeros(self.Nb) # actual amount of credit supplied (after..)
+            #Cr_a = np.zeros(self.Nb) # actual amount of credit supplied (after..)
             Cr_rem = np.zeros(self.Nb) # credit remaining 
             # Cr_s = [[] for _ in range(self.Nb)] # amount of credit supplied 
             # r_s = [[] for _ in range(self.Nb)] # interest rate supplied 
             
-            firms_applied_b = [[] for _ in range(self.Nb)] 
+            #firms_applied_b = [[] for _ in range(self.Nb)] 
             # firms_loaned = [[] for _ in range(self.Nb)] 
-            Cr_p = np.zeros(self.Nb)
+            #Cr_p = np.zeros(self.Nb)
 
             Bad_debt = np.zeros(self.Nb)
 
@@ -232,7 +236,7 @@ class BAM_mc:
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
             # p_zero = np.around(np.random.uniform(low = 2, high = 2), decimals=2) # initial prices of firms 
-            p_zero = 2
+            #p_zero = 2
             w_min_zero = 0.95
             
             # BANKS
@@ -1061,24 +1065,24 @@ class BAM_mc:
 
                         E[b] = E_replacement
 
-               
-                """
-                Open csv file created and add data of the current round
-                """
-
-                add_row = [t, sum(Ld) / self.Nf, L_report, unemp_rate[t,mc] ,sum(C)/np.mean(p), sum(NW), bankrupt_firms, sum(P), len(f_cr) ,min(p), 
-                           max(p), sum(Qp), sum(S), sum(Qd), sum(Qr), sum(Qs), sum(C), wage_lvl[t,mc], sum(E), sum(Cr)]
-                with open('simulated_data.csv', 'a', encoding = 'UTF8') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(add_row)
+                if self.csv:
+                    """
+                    Open csv file created and add data of the current round
+                    """
+                    add_row = [t, sum(Ld) / self.Nf, L_report, unemp_rate[t,mc] ,sum(C)/np.mean(p), sum(NW), bankrupt_firms, sum(P), len(f_cr) ,min(p), 
+                            max(p), sum(Qp), sum(S), sum(Qd), sum(Qr), sum(Qs), sum(C), wage_lvl[t,mc], sum(E), sum(Cr)]
+                    with open('simulated_data.csv', 'a', encoding = 'UTF8') as f:
+                        writer = csv.writer(f)
+                        writer.writerow(add_row)
 
                 # firm size distribution
-                if t in [self.T-499,self.T-599,self.T-699,self.T-799,self.T-899,self.T-999]:
-                    
-                    plt.clf()
-                    plt.hist(L)
-                    plt.xlabel("Firm Size distribution by labor L")
-                    plt.savefig("plots/cut/firm_size/size_disribution_mc%s_t=%s.png" %(mc,t))
+                if self.plots:
+                    if t in [self.T-499,self.T-599,self.T-699,self.T-799,self.T-899,self.T-999]:
+                        
+                        plt.clf()
+                        plt.hist(L)
+                        plt.xlabel("Firm Size distribution by labor L")
+                        plt.savefig("plots/cut/firm_size/size_disribution_mc%s_t=%s.png" %(mc,t))
 
                     
 

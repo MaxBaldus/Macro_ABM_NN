@@ -1,3 +1,12 @@
+"""
+@author: maxbaldus
+
+Using the alenn package to estimate the posterior distribution of the abm model by delli gatti.
+This class implements the estimation of a gaussian mixture distribution using a mixture density network 
+in order to approximate the likelihood function ?of the agent based models
+???????? s.t. a MH-algorithm can be used later on to sample the posterior distribution. 
+"""
+
 import os
 import logging
 
@@ -12,11 +21,15 @@ from sklearn import preprocessing
 
 
 class mdn:
-    
+
     """
-    This class implements the estimation of a gaussian mixture distribution using a mixture density network 
-    in order to approximate the likelihood function ?of the agent based models
-    ???????? s.t. a MH-algorithm can be used later on to sample the posterior distribution. 
+    adapted code tailored to the BAM model using:
+    
+    Approximate Likelihood Estimation using Neural Networks (ALENN)
+    Donovan Platt
+    Mathematical Institute, University of Oxford
+    Institute for New Economic Thinking at the Oxford Martin School
+    Copyright (c) 2020, University of Oxford. All rights reserved.
     """
 
     def __init__(self, data_sim, data_obs,
@@ -150,7 +163,7 @@ class mdn:
         """
 
         # order the simulated data with by splitting the observations into a train and test set 
-        # each lag is one regressor or feature
+        # each lag is one regressor/feature
         MC_replications = self.data_sim.shape[1] 
         T = self.data_sim.shape[0]
  

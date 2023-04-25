@@ -1,7 +1,8 @@
 """
-Here two sampling algorithms are implemented which sample the posterior distribution and output the approximated densities.
-The first method simply employes latin hypercube sampling in order to obtain potential parameter values.
-The second one is a metropolis hastings algorithm which explores the parameter space dependent on the parameter value from before (MCMC).
+@author: maxbaldus
+
+Here a grid-search sampling algorithms is implemented which samples the posterior distribution 
+and outputs the approximated densities for each parameter.
 """
 
 # libraries
@@ -9,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from itertools import product
 from scipy.stats import qmc
+import matplotlib.pyplot as plt
 
 from joblib import Parallel, delayed
 import multiprocessing
@@ -56,20 +58,33 @@ class sample_posterior:
 
         # scale parameters to the given bounds
         qmc.scale(theta, l_bounds, u_bounds)
-       
-        # ??? NECESSARY ???
-        # create all possible theta combinations for the grid_size of each parameter
-        # test = np.array(np.meshgrid(theta[:,0],theta[:,1], theta[:,2], theta[:,3])).T.reshape(-1,4)
-
-        # uncomment this section for creating new training and test samples for a different grid and combinations 
-                
+                      
         # simulate the model MC times for each parameter combination and save each TxMC matrix
         print("")
         print("Simulate the model MC times for each parameter combination:")
 
-        num_cores = (multiprocessing.cpu_count()) - 1 
-        
-        def grid_search(grid_size, theta, model, path, i):
+        num_cores = (multiprocessing.cpu_count()) - 4 # lux working station  
+
+        """for i in range(grid_size):
+
+            # current parameter combination
+            theta_current = theta[i,:]
+            # simulate the model each time with a new parameter combination from the grid
+            simulations = self.model.simulation(theta_current)
+            # current path to save the simulation to
+            current_path = path + '_' + str(i)
+            # save simulated data 
+            np.save(current_path, simulations)
+            # plot the first mc simulation
+            plt.clf()
+            plt.plot(np.log(simulations[:,0]))
+            plt.xlabel("Time")
+            plt.ylabel("Log output")
+            plt.savefig(current_path + "png")"""
+
+
+       
+        def grid_search_parallel(grid_size, theta, model, path, i):
             
             for i in range(grid_size):
 
@@ -81,12 +96,18 @@ class sample_posterior:
                 current_path = path + '_' + str(i)
                 # save simulated data 
                 np.save(current_path, simulations)
+                # plot the first mc simulation
+                plt.clf()
+                plt.plot(np.log(simulations[:,0]))
+                plt.xlabel("Time")
+                plt.ylabel("Log output")
+                plt.savefig(current_path + "png")
         
         # parallize the grid search
-        Parallel(n_jobs=num_cores)(
-                delayed(grid_search)
+        """Parallel(n_jobs=num_cores)(
+                delayed(grid_search_parallel)
                 (grid_size, theta, self.model, path, i) for i in range(grid_size)
-                )
+                )"""
 
         print("blub")
 
@@ -105,16 +126,17 @@ class sample_posterior:
 
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         for i in tqdm(range(grid_size)):
-
+            i = i + 2
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
 
-            # neglect the first simlated values for each mc column to ensure convergence 
-            # of the major report variables
+            # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
+            # only use last observations with length of the observed ts
+            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
           
             # instantiate the likelihood approximation method
-            ll_appro = mdn(data_sim = simulation, data_obs = self.data_obs,
+            ll_appro = mdn(data_sim = simulation_short, data_obs = self.data_obs,
                            L = 3, K = 16, 
                            neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
                            eta_x=0.2, eta_y=0.2, act_fct="relu"
@@ -165,9 +187,3 @@ class sample_posterior:
         # use self.bounds to compute prior probabilities with bounds
         # use uniform priors (sample from uniform distribution for current theta, always with the same boundss)
         print("blub")
-    
-
-    def hypercube_sampling(self):
-
-        print("blub")
-        # use scipy.stats.qmc.LatinHypercube instead of of equally spaced parameter values (i.e. np.linspace)

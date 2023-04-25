@@ -1,3 +1,8 @@
+"""
+BAM model from Delli Gatti 2011. 
+@author: maxbaldus
+"""
+
 # libraries
 import numpy as np
 from scipy import stats
@@ -19,9 +24,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # import model classes
 from models.toymodel import Toymodel
-from models.BAM_parallel import BAM_parallel # BAM model parallized
 from models.BAM_mc import BAM_mc # BAM with regular mc loop
-from models.BAM import BAM # BAM using numba
+from models.BAM_parallel import BAM_parallel # BAM model parallized
 
 
 #from models.BAM_numba import BAM_simulation_numba # BAM as a function, exploiting numba
@@ -74,35 +78,8 @@ h_xi=0.05
 # parameter
 parameter = np.array([H_eta, H_rho, H_phi, h_xi])
 
-# simulation model MC times without parallising and using numba
-"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
-                plots=True, csv=False) 
-print("")
-print('--------------------------------------')
-print("Simulating BAM model without parallising %s times, using numba" %MC)
-start_time = time.time()
-
-BAM_simulations =  BAM_model.simulation(theta=parameter)
-
-print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
-
-# simulation model MC times exploiting numba inside class
-BAM_model = BAM(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, theta=parameter) 
-print("")
-print('--------------------------------------')
-print("Simulating BAM model without parallising %s times, using numba" %MC)
-start_time = time.time()
-
-BAM_simulations =  BAM_model.simulation()
-
-print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))
-
-print("blub")
-
-# simulate the model MC times using parallel computing
-"""BAM_model_parallel = BAM_parallel(T=1000, MC = 5, Nh=500, Nf=100, Nb=10,
+"""# simulate the model MC times using parallel computing
+BAM_model_parallel = BAM_parallel(T=1000, MC = 5, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 
 num_cores = (multiprocessing.cpu_count()) 
@@ -110,7 +87,7 @@ start_time = time.time()
 
 print("")
 print('--------------------------------------')
-print("Simulating BAM model %s times" %MC)
+print("Simulating BAM model %s times in parallel" %MC)
 
 BAM_simulations_parallel = Parallel(n_jobs=num_cores)(
                         delayed(BAM_model_parallel.simulation)
@@ -119,22 +96,24 @@ BAM_simulations_parallel = Parallel(n_jobs=num_cores)(
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
-# np.save('data/simulations/BAM_10MC', BAM_simulations_parallel)
-"""
+# np.save('data/simulations/BAM_10MC', BAM_simulations_parallel) # save the 10 simulations"""
 
 
-# simulation model MC times using numba parallising.. 
-"""print("")
+# simulate model 1 time without parallising 
+"""BAM_model = BAM_mc(T=1000, MC = 1, Nh=500, Nf=100, Nb=10,
+                plots=True, csv=False) 
+print("")
 print('--------------------------------------')
-print("Simulating BAM model without parallising, using numba, %s times" %MC)
+print("Simulating BAM model without parallising %s times" %MC)
 start_time = time.time()
-BAM_simulations = BAM_simulation_numba(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
-                                       plots=True, csv=False,
-                                       theta=parameter)
+
+BAM_simulations =  BAM_model.simulation(theta=parameter)
+
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
+# 2:11 minutes for one 1 run
 
-
+BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) 
 """
 # simulate plus version by setting growth parameters not to 0 !!
 # NO: use another function s.t. having specific bounds later .. !!
@@ -154,12 +133,11 @@ Idee: extra class mit function für MC plots,
 First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
-# number of MC simulations
+# number of MC simulations per parameter combination
 MC = 5
 
 # pseudo empirical data
-BAM_10MC = np.load('data/simulations/BAM_10MC.npy').transpose() # load the 10 MC simulations from above
-BAM_obs = BAM_10MC[:,0] 
+BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]
 
 # create new instance of the BAM model with 100 MC replications 
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
@@ -167,14 +145,16 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-bounds_BAM = np.transpose(np.array([ [0.1,0.101], [0.1,0.101], [0.1,0.101], [0.05,0.0501] ]))
+bounds_BAM = np.transpose(np.array([ [0.08,0.12], [0.08,0.12], [0.08,0.12], [0.03,0.07] ]))
 
-# initialize the sampling methods (grid search and MH algorithm)
+# initialize the sampling methods 
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs)
 
-# first use the plain grid search to compute the posterior estimates of each free parameter,
-# the likelihood approximation method used inside the sampling method is set inside the sampling class
-BAM_posterior.grid_search(grid_size = 10, path = 'data/simulations/BAM_simulations/latin_hypercube')
+# Use a plain grid search to compute the posterior estimates of each free parameter.
+# The likelihood approximation method used inside the sampling method is set inside the sampling class
+BAM_posterior.grid_search(grid_size = 300, path = 'data/simulations/toymodel_simulations/latin_hypercube')
+# path = 'data/simulations/BAM_simulations/latin_hypercube'
+# path = 'data/simulations/toymodel_simulations/latin_hypercube'
 print("blub")
 
 # Gatti 2020
