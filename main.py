@@ -114,6 +114,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
 # 2:11 minutes for one 1 run
 
 BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) 
+
 """
 # simulate plus version by setting growth parameters not to 0 !!
 # NO: use another function s.t. having specific bounds later .. !!
