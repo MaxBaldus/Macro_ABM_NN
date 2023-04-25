@@ -101,7 +101,7 @@ class sample_posterior:
                 plt.plot(np.log(simulations[:,0]))
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
-                plt.savefig(current_path + "png")
+                plt.savefig(current_path + ".png")
         
         # parallize the grid search
         """Parallel(n_jobs=num_cores)(
