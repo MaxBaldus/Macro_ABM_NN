@@ -1,6 +1,14 @@
 Estimating different agent-based economic simulation model via the MDN (mixture density network) approach by Platt (2022):
 Platt, D. (2022). Bayesian estimation of economic simulation models using neural networks. Computational Economics, 59(2), 599-650.
 
+partially updated code tailored to the BAM model using the package:
+
+Approximate Likelihood Estimation using Neural Networks (ALENN)
+Donovan Platt
+Mathematical Institute, University of Oxford
+Institute for New Economic Thinking at the Oxford Martin School
+Copyright (c) 2020, University of Oxford. All rights reserved.
+
 Then forecasts of GDP are done according to:
 
 

@@ -19,8 +19,8 @@ import multiprocessing
 
 
 # Disable Tensorflow Deprecation Warnings
-logging.disable(logging.WARNING)
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+#logging.disable(logging.WARNING)
+#os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # import model classes
 from models.toymodel import Toymodel
@@ -151,11 +151,14 @@ bounds_BAM = np.transpose(np.array([ [0.08,0.12], [0.08,0.12], [0.08,0.12], [0.0
 # initialize the sampling methods 
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs)
 
+grid_size = 300
+
 # Use a plain grid search to compute the posterior estimates of each free parameter.
 # The likelihood approximation method used inside the sampling method is set inside the sampling class
-BAM_posterior.grid_search(grid_size = 300, path = 'data/simulations/toymodel_simulations/latin_hypercube')
-# path = 'data/simulations/BAM_simulations/latin_hypercube'
+BAM_posterior.grid_search(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
+BAM_posterior.approximate_posterior(grid_size, path = 'data/simulations/toymodel_simulations/latin_hypercube')
 print("blub")
 
 # Gatti 2020

@@ -33,11 +33,11 @@ class sample_posterior:
         self.bounds = bounds # upper lower parameter bounds (2d numpy array) with two rows for each parameter
         self.data_obs = data_obs # observed data: 1-d numpy array
 
+    """
+    1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
+    """
     def grid_search(self, grid_size, path):
 
-        """
-        1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
-        """
         print("")
         print('--------------------------------------')
         print("Simulation Block")
@@ -111,15 +111,12 @@ class sample_posterior:
 
         print("blub")
 
-        # apply filters later !!
-        # if filters=True:
-            # load data and apply filter to each column 
-            # save again filtered data.. 
-            
 
-        """
-        2) Likelihood ll block: compute the likelihood and the posterior probability of each parameter combination.
-        """
+    """
+    2) Likelihood ll block: compute the likelihood and the posterior probability of each parameter combination.
+    """
+    def approximate_posterior(self, grid_size, path):
+            
         print("")
         print('--------------------------------------')
         print("Likelihood block and evaluating the posterior for each parameter")
