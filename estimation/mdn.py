@@ -17,12 +17,14 @@ from keras.layers import Input, Dense, GaussianNoise , Lambda # import the diffe
 from keras.models import Model  # group the layers into a model that can be estimated
 
 # TEST LOSS
-from keras import backend as K
+#from keras import backend as K
 
+# scaling the data
+from sklearn.preprocessing import MinMaxScaler
 
 import numpy as np
-from sklearn import preprocessing
 import random as rn
+from scipy import stats
 
 
 class mdn:
@@ -66,14 +68,15 @@ class mdn:
                 univar_output:bool"""
 
        
-    def approximate_likelihood(self):
+    def approximate_posterior(self):
         
         """
-        This method estimates the parameter of a gaussian mixture distribution with a
-        feed forward neural network, called mixture density network, using simulated data as input/training data.
-        Output is the likelihood of the certain parameter combination, given the (pseudo) empirical data. 
+        This method estimates the posterior of a parameter combination by, 
+        approximating the likelihood of the empirical data via estimating the parameter of a gaussian mixture distribution 
+        with a feed forward neural network, called mixture density network, using simulated data as input/training data.
+        Multiplying (summing log) with the prior probability returns the (approximated) posterior distribution.
 
-        The entire procedure is split into 3 parts:
+        The entire procedure is split into ? parts:
 
         1) The distribution of simulated (artificial) data is estimated:
         Distribution is a gaussian mixture, its parameters result from a feed-foward, artifical neural network: mdn 
@@ -81,17 +84,24 @@ class mdn:
 
         # construct one large ordered training set with self.L number of features and 1-d target,
         # being the value that follows each window of lagged observations of length self.L
-        # X_train, y_train = mdn.create_training_data(self)
-        X_train, y_train = mdn.order_data(self.data_sim, self.L)
+        X_train, y_train = mdn.order_data(np.transpose(self.data_sim), self.L)
+
+        # standardize training data
+        scaler = MinMaxScaler() # Transform features by scaling each feature to a given range.
+        X_train = scaler.fit_transform(X_train) 
+        y_train= scaler.fit_transform(y_train.reshape(-1,1))
         
-        # standardize training data by subtracting the means and dividing by std
+        """# standardize training data by subtracting the means and dividing by std
         X_means = X_train.mean(axis = 0)
         X_std = X_train.std(axis = 0)
         y_mean = y_train.mean(axis = 0)
         y_std = y_train.std(axis = 0)
 
-        X_train  = (X_train - X_means) / X_std
-        y_train = (y_train - y_mean) / y_std
+        # (X_std==0).any()
+        if 0 not in X_std:
+            X_train  = (X_train - X_means) / X_std
+        if y_std != 0:
+            y_train = (y_train - y_mean) / y_std"""
 
         # not needed in tf2 ??
         """# Initiate the network graph
@@ -137,7 +147,7 @@ class mdn:
 
         # add the loss fct (likelihood function) used to estimate the mdn (minimizing using a gradient descent/back propagation)
         nn.add_loss(self.loss_fct(y_reg, pi, mu, sigma_sqr))    
-        # mdn.add_loss(self._TEST(y_reg, pi, mu, sigma_sqr))    
+        # nn.add_loss(self._TEST(y_reg, pi, mu, sigma_sqr))   # LOSS NOCHMAL KONTROLLIEREN 
 
         # compile model by setting optimizer
         nn.compile(optimizer = 'adam')
@@ -146,16 +156,49 @@ class mdn:
         nn.fit([X_train, y_train],
                 batch_size = self.batch_size,
                 epochs = self.epochs,
-                verbose = False)
+                verbose = True)
                 
         """
         2) Computing density of observed (empirical) data under the estimated mixture distribution (using the fitted mdn)
         """
 
         # order empirical data
-        X_obs, y_obs = mdn.order_data(self.data_obs.reshape(1, self.T), self.L)
-        # test = np.array([data[i, j : j + l] for i in range(data.shape[0]) for j in range(data.shape[1] - l)])
-        print("blub")
+        T_tilde = len(self.data_obs) # length of empirical data 
+        X_obs, y_obs = mdn.order_data(self.data_obs.reshape(1, T_tilde), self.L)
+
+        # scaling empirical data 
+        scaler = MinMaxScaler() # Transform features by scaling each feature to a given range.
+        X_obs = scaler.fit_transform(X_obs) 
+        y_obs = scaler.fit_transform(y_obs.reshape(-1,1))
+
+        """# scaling empirical data 
+        X_obs_mean = X_obs.mean(axis = 0)
+        X_obs_sd = X_obs.std(axis = 0)
+        y_obs_mean = y_obs.mean(axis = 0)
+        y_obs_sd = y_obs.std(axis = 0)
+        
+        if 0 not in X_obs_sd:
+            X_obs  = (X_obs - X_obs_mean) / X_obs_sd
+        if y_obs_sd != 0:
+            y_obs = (y_obs - y_obs_mean) / y_obs_sd"""
+
+        # Create Data Structure to Store Likelihood Values
+        likelihood = np.zeros(T_tilde)
+
+        # compute likelihood of each empirical observation for the given parameter combination
+        # since rolling window on 1 ts, loosing the last L observations => hence T_tilde - L = len(y_obs)
+        for i in range(len(y_obs)):
+
+            # 1) prediciting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
+            mu, pi, sigma_sqrd = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = True) # using - mean / sd
+
+            # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood
+            likelihood[i] = mdn.gmm_likelihood(y_obs[i], mu, pi, sigma_sqrd)
+            # scale likelihood by std of training target 
+            
+            # likelihood[i] = (1 / y_std.prod()) * self.__gmm_univar((self.y_empirical[i] - y_mean) / y_std, self.num_mix, alpha.flatten(), mean.flatten(), log_var.flatten())
+            # print("blub")
+        
         print("blub")
 
         # 2) compute density of each observed data point (y_sim) 
@@ -163,25 +206,19 @@ class mdn:
         # b) compute density of each y_emp (numerically evaluating the density function)
         # plot mixture distribution ???
         
-        # 3a) Likelihood = product of the densities 
-        # 3b) ll = sum of log(densities)
-
+        """
+        3) The computed likelihood of the observed data is now used to finally compute the posterior probability of theta, given the prior probability
+        """
         # close everything in order to ensure using same network for each parameter combination s
         # tf.keras.backend.clear_session # reset everything and close session
         # np.random.seed()
         # rn.seed()
-
-
-        # return likelihood for the parameter combination
-
-    
-    def evaluate_posterior(self, ll):
-
-        """
-        The computed likelihood of theta is now used to finally compute the posterior probability of theta, given its prior 
-        """
+        
+        # 3a) Likelihood = product of the densities 
+        # 3b) ll = sum of log(densities)
 
         # compute prior probability of theta
+        # ??? each theta has prior probabilty => same likelihood for each parameter * prior probability of each parameter => get array of posteriors: one for each param??
         # ll + log(prior) = posterior
         
 
@@ -192,24 +229,26 @@ class mdn:
     def order_data(data, L):
 
         """
-        This function orders the simulated data (2d array) and prepares mixture density network inputs
+        This function orders either the simulated or empirical data (2d array) and prepares mixture density network inputs
         """
 
         # order the simulated data with by splitting the observations into a train and test set 
         # each lag is one regressor/feature
-        MC_replications = data.shape[1] 
-        T = data.shape[0]
+        """MC_replications = data.shape[1] 
+        T = data.shape[0]"""
  
-        data_sim_trans = np.transpose(data) # transport the simulated df
+        # data_sim_trans = np.transpose(data) # transport the simulated df
         
         # Input features
-        X = np.array([data_sim_trans[i, j : j + L] for i in range(MC_replications) for j in range(T - L)])
+        # X = np.array([data[i, j : j + L] for i in range(MC_replications) for j in range(T - L)])
+        X = np.array([data[i, j : j + L] for i in range(data.shape[0]) for j in range(data.shape[1] - L)])
         
-        # training targets are observations that appear after each self.L
-        y = np.array([data_sim_trans[i, j] for i in range(MC_replications) for j in range(L, T)])
-        
-        return X, y
+        # targets are observations that appear after each self.L
+        # y = np.array([data[i, j] for i in range(MC_replications) for j in range(L, T)])
+        y = np.array([data[i, j] for i in range(data.shape[0]) for j in range(L, data.shape[1])])
 
+        return X, y
+    
 
     def loss_fct(self, y, pi, mu, sigma_sqr): 
 
@@ -224,9 +263,9 @@ class mdn:
         p_mix = tf.reduce_sum(tf.multiply(p,pi), axis = 1, keepdims=True)
         
         # negative (log) likelihood function
-        log_likelihood = - tf.reduce_sum(tf.math.log(p_mix), axis = 0)
+        log_likelihood_fct = - tf.reduce_sum(tf.math.log(p_mix), axis = 0)
 
-        return  log_likelihood
+        return  log_likelihood_fct
 
         """# univariat gaussian likelihood of each y_reg (element-wise for each training observation)
         diff = tf.subtract(y, mu)**2 # subtracting the mean of each component from each observation (nx1 array - mu of each component): output is nxK matrix
@@ -244,8 +283,24 @@ class mdn:
         out = -tf.keras.backend.sum(tf.keras.backend.log(out))
 
         return out"""
+    
+    def gmm_likelihood(y, mu, pi, sigma_sqrd):
+        
+        print("blub")
 
-    def _TEST(self, y, k, alpha, m, log_var):
+        # compute likelihood of each component
+        individual_likelihoods = stats.norm.pdf(y[0], loc = mu, scale = sigma_sqrd) # using minmax scaler
+        # individual_likelihoods = stats.norm.pdf(y, loc = mu, scale = sigma_sqrd) # using mean / std scaling
+
+        
+        # weight the likelihood value from each normal component by its corresponding weight and sum
+        mixture_likelihood = np.sum(pi * individual_likelihoods)
+        
+        # return (np.array([stats.norm.pdf(y, loc = m[i], scale = s[i]) for i in range(k)]) * alpha).sum()
+
+        return mixture_likelihood 
+
+    """def _TEST(y, alpha, m, log_var):
         '''
         Maximum likelihood-based Loss function used to train the MDN.
         '''
@@ -261,30 +316,7 @@ class mdn:
         exponent = -K.square(y - m) / (2 * K.square(s))
         
         # Return the Loss Function
-        return -K.sum(K.log(K.sum(alpha * coeff * K.exp(exponent), axis = 1)), axis = 0)
-    
-    
-    # not needed !!
-    def create_training_data(self):
-
-        """
-        This function orders the simulated data (2d array) and prepares mixture density network inputs
-        """
-
-        # order the simulated data with by splitting the observations into a train and test set 
-        # each lag is one regressor/feature
-        MC_replications = self.data_sim.shape[1] 
-        T = self.data_sim.shape[0]
- 
-        data_sim_trans = np.transpose(self.data_sim) # transport the simulated df
-        
-        # training features
-        X_train = np.array([data_sim_trans[i, j : j + self.L] for i in range(MC_replications) for j in range(T - self.L)])
-        
-        # training targets are observations that appear after each self.L
-        y_train = np.array([data_sim_trans[i, j] for i in range(MC_replications) for j in range(self.L, T)])
-        
-        return X_train, y_train
+        return -K.sum(K.log(K.sum(alpha * coeff * K.exp(exponent), axis = 1)), axis = 0)"""
 
 
 

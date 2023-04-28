@@ -1,8 +1,6 @@
 """
 @author: maxbaldus
 
-Here a grid-search sampling algorithms is implemented which samples the posterior distribution 
-and outputs the approximated densities for each parameter.
 """
 
 # libraries
@@ -19,6 +17,11 @@ import multiprocessing
 from estimation.mdn import mdn
 
 class sample_posterior:
+
+    """
+    Here a grid-search sampling algorithms is implemented which samples the posterior distribution 
+    and outputs the approximated densities for each parameter.
+    """
 
     def __init__(self, model, bounds, data_obs):
         
@@ -113,13 +116,16 @@ class sample_posterior:
 
 
     """
-    2) Likelihood ll block: compute the likelihood and the posterior probability of each parameter combination.
+    2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination).
     """
     def approximate_posterior(self, grid_size, path):
             
         print("")
         print('--------------------------------------')
         print("Likelihood block and evaluating the posterior for each parameter")
+
+        # initiate the posterior probability values for each parameter combination
+        # posterior_probability = np.zeros([number of cominations, number of parameters]) # joint, for all parameter together ??!!
 
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         for i in tqdm(range(grid_size)):
@@ -133,18 +139,19 @@ class sample_posterior:
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
           
             # instantiate the likelihood approximation method
-            ll_appro = mdn(data_sim = simulation_short, data_obs = self.data_obs,
-                           L = 3, K = 16, 
+            posterior_appro = mdn(data_sim = simulation_short, data_obs = self.data_obs,
+                           L = 3, K = 2, 
                            neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
                            eta_x=0.2, eta_y=0.2, act_fct="relu"
                            ) 
             
-            # approximate the likelihood of the observed data, given the current parameter combination
-            ll = ll_appro.approximate_likelihood()
+            # approximate the posterior probablity of the given parameter combination
+            posterior_probability = posterior_appro.approximate_posterior()
+            # posterior_probability[i,:] = posterior_appro.approximate_posterior()
             print("blub")
 
             # evaluate the posterior
-            posterior_value = ll_appro.estimate_mixture(ll)
+            # posterior_value = ll_appro.estimate_mixture(ll)
 
         # for each TxMC matrix (i.e. for each parameter combination)
 
