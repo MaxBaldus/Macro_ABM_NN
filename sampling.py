@@ -21,12 +21,13 @@ class sample_posterior:
     """
     Here a grid-search sampling algorithms is implemented which samples the posterior distribution 
     and outputs the approximated densities for each parameter.
+    The entire sampling routine is split into 2 blocks: A simulation and an estimation block.
     """
 
     def __init__(self, model, bounds, data_obs):
         
         """
-        Initiate the posterior sampling class by inputing 
+        Initiating the posterior sampling class by inputing 
         - observed data
         - the class of the agent based model 
         - the respective parameter bounds as a 1-d numpy array for the free parameters of the model (parameters to be estimated)
@@ -86,7 +87,7 @@ class sample_posterior:
             plt.savefig(current_path + "png")"""
 
 
-       
+        # parallized grid search
         def grid_search_parallel(grid_size, theta, model, path, i):
             
             for i in range(grid_size):
@@ -124,6 +125,8 @@ class sample_posterior:
         print('--------------------------------------')
         print("Likelihood block and evaluating the posterior for each parameter")
 
+        # instantiate the likelihood approximation method!!
+
         # initiate the posterior probability values for each parameter combination
         # posterior_probability = np.zeros([number of cominations, number of parameters]) # joint, for all parameter together ??!!
 
@@ -139,14 +142,19 @@ class sample_posterior:
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
           
             # instantiate the likelihood approximation method
-            posterior_appro = mdn(data_sim = simulation_short, data_obs = self.data_obs,
+            likelihood_appro = mdn(data_sim = simulation_short, data_obs = self.data_obs,
                            L = 3, K = 2, 
                            neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
                            eta_x=0.2, eta_y=0.2, act_fct="relu"
                            ) 
             
             # approximate the posterior probablity of the given parameter combination
-            posterior_probability = posterior_appro.approximate_posterior()
+            likelihood = likelihood_appro.approximate_likelihood()
+            # likelihood = likelihood_appro.approximate_likelihood(simulation_short, data_obs)
+            
+            # ll = np.log(likelihood).sum() ....
+            # prior * ll = posterior_probability
+            
             # posterior_probability[i,:] = posterior_appro.approximate_posterior()
             print("blub")
 

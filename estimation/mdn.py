@@ -68,13 +68,12 @@ class mdn:
                 univar_output:bool"""
 
        
-    def approximate_posterior(self):
+    def approximate_likelihood(self):
+        # arguments here instead self : data_sim, data_obs
         
         """
-        This method estimates the posterior of a parameter combination by, 
-        approximating the likelihood of the empirical data via estimating the parameter of a gaussian mixture distribution 
+        This method approximates the likelihood of the empirical data via estimating the parameter of a gaussian mixture distribution 
         with a feed forward neural network, called mixture density network, using simulated data as input/training data.
-        Multiplying (summing log) with the prior probability returns the (approximated) posterior distribution.
 
         The entire procedure is split into ? parts:
 
@@ -205,14 +204,19 @@ class mdn:
         # i.e. a) PREDICT gaussian mixture parameters using y_sim :  nn.predict (params of gaussian) 
         # b) compute density of each y_emp (numerically evaluating the density function)
         # plot mixture distribution ???
-        
-        """
-        3) The computed likelihood of the observed data is now used to finally compute the posterior probability of theta, given the prior probability
-        """
+
         # close everything in order to ensure using same network for each parameter combination s
         # tf.keras.backend.clear_session # reset everything and close session
         # np.random.seed()
         # rn.seed()
+        
+        return likelihood
+        
+        """
+        3) The computed likelihood of the observed data is now used to finally compute the posterior probability of theta, given the prior probability
+        Multiplying (summing log) with the prior probability returns the (approximated) posterior distribution.
+        """
+        # -> into sampling.py
         
         # 3a) Likelihood = product of the densities 
         # 3b) ll = sum of log(densities)
