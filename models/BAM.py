@@ -735,9 +735,13 @@ class BAM_mc:
                     else:
                         Z = self.Z
                     
-                    
-                    random_firms = list(np.random.choice(f_produced_current, Z, replace = False)) # HH randomly chooses Z firms
-                    appl_firms.extend(random_firms) # add chosen banks to list of banks firm will apply for credit
+                    if len(f_produced_current) > Z:
+                        random_firms = list(np.random.choice(f_produced_current, Z, replace = False)) # HH randomly chooses Z firms
+                        appl_firms.extend(random_firms) # add chosen banks to list of banks firm will apply for credit
+                    else:
+                        random_firms = f_produced_current
+                        appl_firms.extend(random_firms)
+
 
                     # extract the specific prices of each firm
                     prices_chosen_firms = []  # initialize list with the prices of the chosen firms 

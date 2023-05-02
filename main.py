@@ -137,7 +137,7 @@ First the estimation method is tested by using pseudo-empirical data with a-prio
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 # number of MC simulations per parameter combination
-MC = 20
+MC = 2
 
 # pseudo empirical data
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]
@@ -153,10 +153,14 @@ bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.0
 # initialize the sampling methods 
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
-grid_size = 500
+grid_size = 100
 
 # Use a plain grid to compute MC simulations of length T for each parameter combination
+start_time = time.time()
 BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
+
 print("blub")
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn.
