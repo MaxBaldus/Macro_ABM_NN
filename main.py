@@ -153,7 +153,7 @@ bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.0
 # initialize the sampling methods 
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
-grid_size = 100
+grid_size = 10
 
 # Use a plain grid to compute MC simulations of length T for each parameter combination
 start_time = time.time()

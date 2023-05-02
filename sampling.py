@@ -69,7 +69,7 @@ class sample_posterior:
         print("Simulate the model MC times for each parameter combination:")
 
         # num_cores = (multiprocessing.cpu_count()) - 4 
-        num_cores = 59 # lux working station  
+        num_cores = 4 # lux working station  
 
         """for i in tqdm(range(grid_size)):
 

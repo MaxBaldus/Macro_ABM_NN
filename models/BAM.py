@@ -98,8 +98,9 @@ class BAM_mc:
         print("")
         print('--------------------------------------')
         print("Simulating BAM model %s times" %self.MC)
-        for mc in tqdm(range(self.MC)):
-                        
+        #for mc in tqdm(range(self.MC)):
+        for mc in range(self.MC):
+
             # set new seed each MC run to ensure different random numbers are sampled each simulation
             np.random.seed(mc)
 
@@ -751,8 +752,8 @@ class BAM_mc:
 
                     if len(prices_chosen_firms) > 0:
                         goods_visited[c-1] = int(appl_firms[prices_chosen_firms.index(min(prices_chosen_firms))]) # save firm id out of firms she visits with lowest price
-                    else:
-                        goods_visited[c-1] = appl_firms
+                    #else:
+                    #    goods_visited[c-1] = appl_firms
 
                     # HH start to pay firms, starting with lowest price
                     while len(appl_firms) > 0:
