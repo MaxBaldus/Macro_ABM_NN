@@ -30,22 +30,16 @@ from scipy import stats
 class mdn:
 
     """
-    Using the alenn package to estimate the posterior distribution of the abm model by delli gatti.
-    This class implements the estimation of a gaussian mixture distribution using a mixture density network 
-    in order to approximate the likelihood function ?of the agent based models
-    ???????? s.t. a MH-algorithm can be used later on to sample the posterior distribution. 
+    Using the alenn package, this class implements the estimation of a gaussian mixture distribution using a mixture density network 
+    in order to approximate the likelihood function of the agent based model.
     """
 
-    def __init__(self, data_sim, data_obs,
-                 L:int, K:int,
+    def __init__(self, data_obs, L:int, K:int,
                  neurons:int, layers:int, batch_size:int, epochs:int, eta_y:float, eta_x:float, act_fct:str
                  ):
-
-        """
-        Initialise the class by storing simulated and observed data as inputs, which are used approximate the likelihood respectively.
-        """
-        self.data_sim = data_sim # simulated data: 2-d numpy array (matrix)
-        self.data_obs = data_obs # observed data: 1-d numpy array (vector)
+        
+        # data_obs: observed data - 1-d numpy array (vector)
+        self.data_obs = data_obs
 
         """
         Hyper parameters of the mixture density network and gaussian mixture distribution
@@ -68,22 +62,24 @@ class mdn:
                 univar_output:bool"""
 
        
-    def approximate_likelihood(self):
-        # arguments here instead self : data_sim, data_obs
+    def approximate_likelihood(self, data_sim):
+        # data_sim: simulated data - 2-d numpy array (matrix), 
+        # 
         
         """
-        This method approximates the likelihood of the empirical data via estimating the parameter of a gaussian mixture distribution 
-        with a feed forward neural network, called mixture density network, using simulated data as input/training data.
+        This method approximates the likelihood of the empirical data, for the parameter values through using their associated simulated time series
+        (MC simulations) via estimating the parameter of a gaussian mixture distribution,
+        with a feed forward neural network, called mixture density network (mdn), using simulated data as input/training data.
 
-        The entire procedure is split into ? parts:
+        The entire procedure is split into 2 parts:
 
         1) The distribution of simulated (artificial) data is estimated:
-        Distribution is a gaussian mixture, its parameters result from a feed-foward, artifical neural network: mdn 
+        The distribution is a gaussian mixture, its parameters result from a feed-foward, artifical neural network: mdn 
         """
 
         # construct one large ordered training set with self.L number of features and 1-d target,
         # being the value that follows each window of lagged observations of length self.L
-        X_train, y_train = mdn.order_data(np.transpose(self.data_sim), self.L)
+        X_train, y_train = mdn.order_data(np.transpose(data_sim), self.L)
 
         # standardize training data
         scaler = MinMaxScaler() # Transform features by scaling each feature to a given range.
@@ -196,6 +192,7 @@ class mdn:
             # scale likelihood by std of training target 
             
             # likelihood[i] = (1 / y_std.prod()) * self.__gmm_univar((self.y_empirical[i] - y_mean) / y_std, self.num_mix, alpha.flatten(), mean.flatten(), log_var.flatten())
+            # TEST HIS GMM_UNIV
             # print("blub")
         
         print("blub")

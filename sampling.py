@@ -24,7 +24,7 @@ class sample_posterior:
     The entire sampling routine is split into 2 blocks: A simulation and an estimation block.
     """
 
-    def __init__(self, model, bounds, data_obs):
+    def __init__(self, model, bounds, data_obs, filter):
         
         """
         Initiating the posterior sampling class by inputing 
@@ -36,11 +36,12 @@ class sample_posterior:
         self.model = model # agent based model class with a simulation function
         self.bounds = bounds # upper lower parameter bounds (2d numpy array) with two rows for each parameter
         self.data_obs = data_obs # observed data: 1-d numpy array
+        self.plots = filter
 
     """
     1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
     """
-    def grid_search(self, grid_size, path):
+    def simulation_block(self, grid_size, path):
 
         print("")
         print('--------------------------------------')
@@ -67,7 +68,8 @@ class sample_posterior:
         print("")
         print("Simulate the model MC times for each parameter combination:")
 
-        num_cores = (multiprocessing.cpu_count()) - 4 # lux working station  
+        # num_cores = (multiprocessing.cpu_count()) - 4 
+        num_cores = 59 # lux working station  
 
         """for i in range(grid_size):
 
@@ -96,10 +98,12 @@ class sample_posterior:
                 theta_current = theta[i,:]
                 # simulate the model each time with a new parameter combination from the grid
                 simulations = model.simulation(theta_current)
+                
                 # current path to save the simulation to
                 current_path = path + '_' + str(i)
                 # save simulated data 
                 np.save(current_path, simulations)
+                
                 # plot the first mc simulation
                 plt.clf()
                 plt.plot(np.log(simulations[:,0]))
@@ -107,17 +111,15 @@ class sample_posterior:
                 plt.ylabel("Log output")
                 plt.savefig(current_path + ".png")
         
+
         # parallize the grid search
-        """Parallel(n_jobs=num_cores)(
+        Parallel(n_jobs=num_cores)(
                 delayed(grid_search_parallel)
                 (grid_size, theta, self.model, path, i) for i in range(grid_size)
-                )"""
-
-        print("blub")
-
+                )
 
     """
-    2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination).
+    2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination) of the abm model by delli gatti.
     """
     def approximate_posterior(self, grid_size, path):
             
@@ -125,10 +127,15 @@ class sample_posterior:
         print('--------------------------------------')
         print("Likelihood block and evaluating the posterior for each parameter")
 
-        # instantiate the likelihood approximation method!!
+        # instantiate the likelihood approximation method
+        likelihood_appro = mdn(self.data_obs, L = 3, K = 2, 
+                           neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
+                           eta_x=0.2, eta_y=0.2, act_fct="relu"
+                           ) 
 
-        # initiate the posterior probability values for each parameter combination
-        # posterior_probability = np.zeros([number of cominations, number of parameters]) # joint, for all parameter together ??!!
+        # initiate the vector with likelihood values for each parameter combination
+        # likelihood = np.zeros([number of cominations, number of parameters]) # joint, for all parameter together ??!!
+        # likelihood.sum() ??
 
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         for i in tqdm(range(grid_size)):
@@ -140,17 +147,12 @@ class sample_posterior:
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
-          
-            # instantiate the likelihood approximation method
-            likelihood_appro = mdn(data_sim = simulation_short, data_obs = self.data_obs,
-                           L = 3, K = 2, 
-                           neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
-                           eta_x=0.2, eta_y=0.2, act_fct="relu"
-                           ) 
+
+            # if self.filter:
+                # filter
             
             # approximate the posterior probablity of the given parameter combination
-            likelihood = likelihood_appro.approximate_likelihood()
-            # likelihood = likelihood_appro.approximate_likelihood(simulation_short, data_obs)
+            likelihood = likelihood_appro.approximate_likelihood(simulation_short)
             
             # ll = np.log(likelihood).sum() ....
             # prior * ll = posterior_probability

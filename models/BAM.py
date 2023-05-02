@@ -63,7 +63,6 @@ class BAM_mc:
         H_eta = maximum growth rate of prices (upper bound of price updates) 
         H_rho = maximum growth rate of quantities (upper bound of wage updates)
         H_phi = Maximum amount of banks' costs (upper bound of interest rate shock)
-        
         h_xi = Maximum growth rate of wages (upper bound of random wage shock)
         """
         

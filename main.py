@@ -24,7 +24,7 @@ import multiprocessing
 
 # import model classes
 from models.toymodel import Toymodel
-from models.BAM_mc import BAM_mc # BAM with regular mc loop
+from models.BAM import BAM_mc # BAM with regular mc loop
 from models.BAM_parallel import BAM_parallel # BAM model parallized
 
 
@@ -60,7 +60,7 @@ toy_simulations = toymodel.simulation(parameter)
 #################################################################################################
 
 """ 
-Simulating the base model and the plus version MC times, using parallel computing.
+Simulating the base model and the plus version MC times, with and without parallel computing.
 The plots of both models are saved into plots/BAM and plots/BAM_plus respectively.  
 """
 
@@ -99,7 +99,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # np.save('data/simulations/BAM_10MC', BAM_simulations_parallel) # save the 10 simulations"""
 
 
-# simulate model 1 time without parallising 
+# simulating model 1 time without parallising 
 """BAM_model = BAM_mc(T=1000, MC = 1, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
@@ -130,12 +130,14 @@ Idee: extra class mit function für MC plots,
 #################################################################################################
 
 """
+Generate MC simluations of the model, ech with length T, for each parameter combination.
+
 1)
 First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 # number of MC simulations per parameter combination
-MC = 5
+MC = 20
 
 # pseudo empirical data
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]
@@ -146,19 +148,20 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-bounds_BAM = np.transpose(np.array([ [0.08,0.12], [0.08,0.12], [0.08,0.12], [0.03,0.07] ]))
+bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 
 # initialize the sampling methods 
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs)
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
-grid_size = 300
+grid_size = 500
 
-# Use a plain grid search to compute the posterior estimates of each free parameter.
-# The likelihood approximation method used inside the sampling method is set inside the sampling class
-BAM_posterior.grid_search(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+# Use a plain grid to compute MC simulations of length T for each parameter combination
+BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+print("blub")
 
-# path = 'data/simulations/toymodel_simulations/latin_hypercube'
+# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn.
 BAM_posterior.approximate_posterior(grid_size, path = 'data/simulations/toymodel_simulations/latin_hypercube')
+# path = 'data/simulations/toymodel_simulations/latin_hypercube'
 print("blub")
 
 # Gatti 2020
@@ -170,15 +173,30 @@ print("blub")
 # MC = 100 
 
 
-# fct wrapping BAM_model.simulation into paralelizing
+
+
+"""
+2) Estimating the BAM model using real data on US GDP ??, using the same artificial data generated above. 
+"""
+
+
+
+
+
+
+
+
+
+
+
 
 #################################################################################################
 # Estimating the simple macro ABM
 #################################################################################################
 
 """
-1)
-First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
+...
+1) First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 
@@ -194,9 +212,9 @@ toymodel_est = Toymodel(Time=1500, Ni=100, MC=100,
 bounds_toy_para = np.transpose(np.array([ [1,3], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
 
 # initialize the sampling methods (grid search and MH algorithm)
-toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para, data_obs=toy_data_obs)
+toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para, data_obs=toy_data_obs, filter=False)
 
-# first use the plain grid search to compute the posterior estimates of each free parameter
+# Use the plain grid search to compute the posterior estimates of each free parameter
 # the likelihood approximation method used inside the sampling method is set inside the sampling class
 toy_posterior.grid_search(grid_size = 3000, path = 'data/simulations/toymodel_simulations/latin_hypercube')
 print("blub")
@@ -212,10 +230,7 @@ print("blub")
 
 
 
-"""
-2)
-Estimating the toy model using real data on US GDP 
-"""
+# Estimating the TOY model using real data on US GDP ??
 # loading the data and plotting the data and its components
 #german_gdp = pd.read_csv("data/CLVMNACSCAB1GQDE.csv") # gdp 
 # Inflation
