@@ -748,8 +748,11 @@ class BAM_mc:
                     for ii in appl_firms: 
                             p_current = p[ii-1] # interest rate of the current firm (first slice list of all r of bank ii, then r for firm actually applying)
                             prices_chosen_firms.append(p_current) # extract the interest rateS of the chosen banks
-                
-                    goods_visited[c-1] = int(appl_firms[prices_chosen_firms.index(min(prices_chosen_firms))]) # save firm id out of firms she visits with lowest price
+
+                    if len(prices_chosen_firms) > 0:
+                        goods_visited[c-1] = int(appl_firms[prices_chosen_firms.index(min(prices_chosen_firms))]) # save firm id out of firms she visits with lowest price
+                    else:
+                        goods_visited[c-1] = appl_firms
 
                     # HH start to pay firms, starting with lowest price
                     while len(appl_firms) > 0:

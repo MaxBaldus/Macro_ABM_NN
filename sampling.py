@@ -71,7 +71,7 @@ class sample_posterior:
         # num_cores = (multiprocessing.cpu_count()) - 4 
         num_cores = 59 # lux working station  
 
-        for i in tqdm(range(grid_size)):
+        """for i in tqdm(range(grid_size)):
 
             # current parameter combination
             theta_current = theta[i,:]
@@ -86,11 +86,11 @@ class sample_posterior:
             plt.plot(np.log(simulations[:,0]))
             plt.xlabel("Time")
             plt.ylabel("Log output")
-            plt.savefig(current_path + "png")
+            plt.savefig(current_path + "png")"""
 
 
         # parallized grid search
-        """def grid_search_parallel(grid_size, theta, model, path, i):
+        def grid_search_parallel(grid_size, theta, model, path, i):
             
             for i in range(grid_size):
 
@@ -116,7 +116,7 @@ class sample_posterior:
         Parallel(n_jobs=num_cores)(
                 delayed(grid_search_parallel)
                 (grid_size, theta, self.model, path, i) for i in range(grid_size)
-                )"""
+                )
         # min() arg is an empty sequence
 
 
