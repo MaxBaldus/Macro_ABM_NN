@@ -143,7 +143,7 @@ MC = 2
 BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]
 
-# create new instance of the BAM model with 100 MC replications 
+# create new instance of the BAM model 
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=False, csv=False) 
 
@@ -152,16 +152,22 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 
 # initialize the sampling methods 
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filters=False)
 
+"""
+1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
+"""
+
+# number of parameter combinations
 grid_size = 5
 
-# Use a plain grid to compute MC simulations of length T for each parameter combination
 start_time = time.time()
+
 
 args = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
 
-def grid_search_parallel(args):
+# Use a plain grid to compute MC simulations of length T for each parameter combination, on parallel
+"""def grid_simulations_parallel(args):
             
     # current parameter combination
     theta_current = args['theta']
@@ -180,9 +186,12 @@ def grid_search_parallel(args):
     plt.ylabel("Log output")
     plt.savefig(current_path + ".png")
 
-pool = multiprocessing.Pool(processes=4)
-pool.map_async(grid_search_parallel, args)
-pool.close()
+# num_cores = (multiprocessing.cpu_count()) - 4 
+num_cores = 4 
+
+pool = multiprocessing.Pool(processes=num_cores)
+pool.map_async(grid_simulations_parallel, args)
+pool.close()"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -191,7 +200,12 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 print("blub")
 
-# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn.
+
+"""
+2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination) of the abm model by delli gatti.
+"""
+
+# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
 BAM_posterior.approximate_posterior(grid_size, path = 'data/simulations/toymodel_simulations/latin_hypercube')
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
 print("blub")

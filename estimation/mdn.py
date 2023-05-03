@@ -42,7 +42,7 @@ class mdn:
         self.data_obs = data_obs
 
         """
-        Hyper parameters of the mixture density network and gaussian mixture distribution
+        Hyper parameters of the mixture density network 
         """
         self.L = L # number of lags to be considered, which amounts to the number of input features for the mdn
         self.K = K # number of mixture components
@@ -57,19 +57,15 @@ class mdn:
         self.eta_x = eta_x # standard deviation of the gaussian noise distribution to avoid overfitting applied onto feature matrix X
 
         self.act_fct = act_fct # activation function in the hidden layers
-
-        """act_func:str, eta_x:float, eta_y:float,
-                univar_output:bool"""
-
        
     def approximate_likelihood(self, data_sim):
-        # data_sim: simulated data - 2-d numpy array (matrix), 
-        # 
         
         """
-        This method approximates the likelihood of the empirical data, for the parameter values through using their associated simulated time series
-        (MC simulations) via estimating the parameter of a gaussian mixture distribution,
-        with a feed forward neural network, called mixture density network (mdn), using simulated data as input/training data.
+        This method approximates the likelihood of the empirical data for the parameter values through using their associated simulated time series 
+        as input/training data (MC simulations) via estimating the parameter of a gaussian mixture distribution,
+        with a feed forward neural network, called mixture density network (mdn).
+
+        Input: simulated data - 2d numpy array (matrix)
 
         The entire procedure is split into 2 parts:
 
@@ -80,6 +76,9 @@ class mdn:
         # construct one large ordered training set with self.L number of features and 1-d target,
         # being the value that follows each window of lagged observations of length self.L
         X_train, y_train = mdn.order_data(np.transpose(data_sim), self.L)
+
+        # sd of y
+        y_train_std = y_train.std(axis = 0)
 
         # standardize training data
         scaler = MinMaxScaler() # Transform features by scaling each feature to a given range.
@@ -124,7 +123,7 @@ class mdn:
         for i in range(1, self.layers):
             h = Dense(self.neurons, activation=self.act_fct)(h)
 
-        # Output layers:
+        # Fully connected output layers:
         # Mean: directly represented by the last hidden activations
         mu = Dense(units = self.K, activation=None, name = "mean_layer")(h) # since univariate target y, the number of means of each component amounts to 1*K
         
@@ -177,37 +176,28 @@ class mdn:
         if y_obs_sd != 0:
             y_obs = (y_obs - y_obs_mean) / y_obs_sd"""
 
-        # Create Data Structure to Store Likelihood Values
-        likelihood = np.zeros(T_tilde)
+        # Create Data Structure to store the densities
+        densities = np.zeros(len(y_obs))
 
         # compute likelihood of each empirical observation for the given parameter combination
         # since rolling window on 1 ts, loosing the last L observations => hence T_tilde - L = len(y_obs)
         for i in range(len(y_obs)):
 
-            # 1) prediciting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
+            # 1) predicting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
             mu, pi, sigma_sqrd = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = True) # using - mean / sd
 
-            # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood
-            likelihood[i] = mdn.gmm_likelihood(y_obs[i], mu, pi, sigma_sqrd)
-            # scale likelihood by std of training target 
+            # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
+            # of each observed value, scaled by std of empirical data
+            densities[i] = (mdn.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else mdn.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
             
-            # likelihood[i] = (1 / y_std.prod()) * self.__gmm_univar((self.y_empirical[i] - y_mean) / y_std, self.num_mix, alpha.flatten(), mean.flatten(), log_var.flatten())
-            # TEST HIS GMM_UNIV
-            # print("blub")
-        
-        print("blub")
-
-        # 2) compute density of each observed data point (y_sim) 
-        # i.e. a) PREDICT gaussian mixture parameters using y_sim :  nn.predict (params of gaussian) 
-        # b) compute density of each y_emp (numerically evaluating the density function)
         # plot mixture distribution ???
 
-        # close everything in order to ensure using same network for each parameter combination s
-        # tf.keras.backend.clear_session # reset everything and close session
-        # np.random.seed()
-        # rn.seed()
+        # reset everything and close session 
+        tf.keras.backend.clear_session() 
+        np.random.seed()
+        rn.seed()
         
-        return likelihood
+        return densities
         
         """
         3) The computed likelihood of the observed data is now used to finally compute the posterior probability of theta, given the prior probability
@@ -285,10 +275,8 @@ class mdn:
 
         return out"""
     
-    def gmm_likelihood(y, mu, pi, sigma_sqrd):
+    def gmm_density(y, mu, pi, sigma_sqrd):
         
-        print("blub")
-
         # compute likelihood of each component
         individual_likelihoods = stats.norm.pdf(y[0], loc = mu, scale = sigma_sqrd) # using minmax scaler
         # individual_likelihoods = stats.norm.pdf(y, loc = mu, scale = sigma_sqrd) # using mean / std scaling
@@ -298,6 +286,8 @@ class mdn:
         mixture_likelihood = np.sum(pi * individual_likelihoods)
         
         # return (np.array([stats.norm.pdf(y, loc = m[i], scale = s[i]) for i in range(k)]) * alpha).sum()
+        # (np.array([stats.norm.pdf(y[0], loc = mu[0][i], scale = sigma_sqrd[0][i]) for i in range(self.K)]) * pi[0]).sum()
+        # (np.array([stats.norm.pdf(y[0], loc = mu, scale = sigma_sqrd) for i in range(self.K)]) * pi).sum()
 
         return mixture_likelihood 
 

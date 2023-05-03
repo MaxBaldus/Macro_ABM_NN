@@ -24,7 +24,7 @@ class sample_posterior:
     The entire sampling routine is split into 2 blocks: A simulation and an estimation block.
     """
 
-    def __init__(self, model, bounds, data_obs, filter):
+    def __init__(self, model, bounds, data_obs, filters):
         
         """
         Initiating the posterior sampling class by inputing 
@@ -36,7 +36,7 @@ class sample_posterior:
         self.model = model # agent based model class with a simulation function
         self.bounds = bounds # upper lower parameter bounds (2d numpy array) with two rows for each parameter
         self.data_obs = data_obs # observed data: 1-d numpy array
-        self.plots = filter
+        self.filters = filters
 
     """
     1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
@@ -160,11 +160,17 @@ class sample_posterior:
             # if self.filter:
                 # filter
             
-            # approximate the posterior probablity of the given parameter combination
-            likelihood = likelihood_appro.approximate_likelihood(simulation_short)
+            # approximate the posterior probabIlity of the given parameter combination
+            densities = likelihood_appro.approximate_likelihood(simulation_short)
             
-            # ll = np.log(likelihood).sum() ....
-            # prior * ll = posterior_probability
+            # compute likelihood of the observed data for the given parameter combination
+            # likelihood = np.prod(densities)
+            ll = np.log(densities).sum() 
+            
+            # compute log posterior
+            log_posterior = ll + np.log()
+            # one ll value * each prior value for the marginal posterior ???????
+            # prior.prod for the joint posterior ??!!  JA ?!
             
             # posterior_probability[i,:] = posterior_appro.approximate_posterior()
             print("blub")
