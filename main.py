@@ -5,6 +5,7 @@ BAM model from Delli Gatti 2011.
 
 # libraries
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy import stats
 import pandas as pd
 
@@ -65,7 +66,7 @@ The plots of both models are saved into plots/BAM and plots/BAM_plus respectivel
 """
 
 # number of MC simulations
-MC = 5
+MC = 2
 
 # upper bound of price growth rate
 H_eta=0.1
@@ -100,7 +101,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 
 # simulating model 1 time without parallising 
-"""BAM_model = BAM_mc(T=1000, MC = 1, Nh=500, Nf=100, Nb=10,
+"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
@@ -111,9 +112,8 @@ BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
-# 2:11 minutes for one 1 run
+# approximately 2 minutes for one 1 run
 
-BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) 
 
 """
 # simulate plus version by setting growth parameters not to 0 !!
@@ -140,6 +140,7 @@ The first mc simulation with the parameter configuration from above is used as t
 MC = 2
 
 # pseudo empirical data
+BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]
 
 # create new instance of the BAM model with 100 MC replications 
@@ -153,13 +154,40 @@ bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.0
 # initialize the sampling methods 
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
-grid_size = 10
+grid_size = 5
 
 # Use a plain grid to compute MC simulations of length T for each parameter combination
 start_time = time.time()
-BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+
+args = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+
+def grid_search_parallel(args):
+            
+    # current parameter combination
+    theta_current = args['theta']
+    # simulate the model each time with a new parameter combination from the grid
+    simulations = BAM_model.simulation(theta_current)
+    
+    # current path to save the simulation to
+    current_path = args['path']
+    # save simulated data 
+    np.save(current_path, simulations)
+    
+    # plot the first mc simulation
+    plt.clf()
+    plt.plot(np.log(simulations[:,0]))
+    plt.xlabel("Time")
+    plt.ylabel("Log output")
+    plt.savefig(current_path + ".png")
+
+pool = multiprocessing.Pool(processes=4)
+pool.map_async(grid_search_parallel, args)
+pool.close()
+
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
+# without parallising: 2MC=5 minutes * 5thetas = 25 minutes
+# parallel with 4 cores: 2MC=5 minutes * 5thetas = 25 /4 = 7 minutes
 
 print("blub")
 

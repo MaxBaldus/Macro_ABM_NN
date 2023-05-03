@@ -89,8 +89,8 @@ class sample_posterior:
             plt.savefig(current_path + "png")"""
 
 
-        # parallized grid search
-        def grid_search_parallel(grid_size, theta, model, path, i):
+        # parallize the grid search: using joblib
+        """def grid_search_parallel(grid_size, theta, model, path, i):
             
             for i in range(grid_size):
 
@@ -110,14 +110,21 @@ class sample_posterior:
                 plt.xlabel("Time")
                 plt.ylabel("Log output")
                 plt.savefig(current_path + ".png")
-        
 
-        # parallize the grid search
         Parallel(n_jobs=num_cores)(
                 delayed(grid_search_parallel)
                 (grid_size, theta, self.model, path, i) for i in range(grid_size)
-                )
-        # min() arg is an empty sequence
+                )"""
+
+
+        # parallize the grid search: muliprocessing librarys
+        args = []
+        for i in range(grid_size):
+            # args.append([theta[i,:], path + '_' + str(i)])
+            args.append({'theta': theta[i,:], 'path': path + '_' + str(i)})
+        
+        return args
+
 
 
     """
