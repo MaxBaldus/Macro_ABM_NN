@@ -202,7 +202,7 @@ print("blub")
 
 
 """
-2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination) of the abm model by delli gatti.
+2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's

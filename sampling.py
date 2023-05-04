@@ -143,8 +143,11 @@ class sample_posterior:
                            ) 
 
         # initiate the vector with likelihood values for each parameter combination
-        # likelihood = np.zeros([number of cominations, number of parameters]) # joint, for all parameter together ??!!
-        # likelihood.sum() ??
+        ll = np.zeros(grid_size)
+        
+        # initiate the matrix with marginal posterior probablities
+        number_parameter = np.shape(self.bounds)[1]
+        log_posterior = np.zeros((grid_size, number_parameter))
 
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         for i in tqdm(range(grid_size)):
@@ -160,15 +163,21 @@ class sample_posterior:
             # if self.filter:
                 # filter
             
-            # approximate the posterior probabIlity of the given parameter combination
+            # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
             
             # compute likelihood of the observed data for the given parameter combination
             # likelihood = np.prod(densities)
-            ll = np.log(densities).sum() 
+            ll = np.sum(np.log(densities))
+
+            # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
+            np.random.seed(i)
+            marginal_priors = self.sample_prior() 
+
+            # compute marginal log posteriors
+            log_posterior[i,:] = ll + np.log(marginal_priors)
             
-            # compute log posterior
-            log_posterior = ll + np.log()
+            # QUESTIONS:
             # one ll value * each prior value for the marginal posterior ???????
             # prior.prod for the joint posterior ??!!  JA ?!
             # if having marcov chain => each theta candidat is vector (one value for each parameter in vector)
@@ -176,47 +185,30 @@ class sample_posterior:
             # -inf ??!! -> - inf to 0 .. : just discard when plotting ??!!
             # likelihood value positive ??!!
             
-            # posterior_probability[i,:] = posterior_appro.approximate_posterior()
             print("blub")
-
-            # evaluate the posterior
-            # posterior_value = ll_appro.estimate_mixture(ll)
-
-        # for each TxMC matrix (i.e. for each parameter combination)
-
-            # instantiate mde object by inputting data -> object = mdn(DATA)
-            # mixture_params = object.sample_mixture(NN PARAMETER)
-            # ll = object.eval_mixture(mixture_params)
-
-            # compute prior proba p(theta)
-
-            # store posterior for each parameter combination !!!
-            
-        # return ll + p(theta) and ll
+            # 12th loss : -96.4340
 
 
-
-
-
-
-
-
-    def MH_sampling(self):
-        
-        print("blub")
-        # now mh sampling
-        # 
 #################################################################################################
+
+    def sample_prior(self):
+
+        """
+        Sample uniform prior probabilities for each theta, according to its bounds
+        """
+
+        # use self.bounds to compute prior probabilities with the the respective bounds
+        number_parameter = np.shape(self.bounds)[1]
+        prior_probabilities = np.zeros(number_parameter)
+        
+        for i in range(number_parameter):
+            prior_probabilities[i] = np.random.uniform(low=self.bounds[0,i], high=self.bounds[1,i])
+        
+        return prior_probabilities
+
 
     def posterior_plots(self):
 
         print("blub")
         # output posterior estimates (mean of theta chain)
         # plot the sampled posterior parameter values 
-
-
-    def prior(self):
-        
-        # use self.bounds to compute prior probabilities with bounds
-        # use uniform priors (sample from uniform distribution for current theta, always with the same boundss)
-        print("blub")
