@@ -171,6 +171,10 @@ class sample_posterior:
             log_posterior = ll + np.log()
             # one ll value * each prior value for the marginal posterior ???????
             # prior.prod for the joint posterior ??!!  JA ?!
+            # if having marcov chain => each theta candidat is vector (one value for each parameter in vector)
+            # => computing likelihood * prior.product() to evaluate candidate (JOINTLY for all candidates)
+            # -inf ??!! -> - inf to 0 .. : just discard when plotting ??!!
+            # likelihood value positive ??!!
             
             # posterior_probability[i,:] = posterior_appro.approximate_posterior()
             print("blub")
