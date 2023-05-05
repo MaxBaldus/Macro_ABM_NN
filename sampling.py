@@ -162,6 +162,7 @@ class sample_posterior:
 
             # if self.filter:
                 # filter
+            # LOG FILTER ??!!
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
