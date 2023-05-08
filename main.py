@@ -16,8 +16,8 @@ import time
 
 # parallel computing
 from joblib import Parallel, delayed
-import multiprocessing
-
+# import multiprocessing
+import multiprocess as mp
 
 # Disable Tensorflow Deprecation Warnings
 #logging.disable(logging.WARNING)
@@ -48,13 +48,13 @@ The plots are saved into plots/toymodel folder.
 """
 
 # instantiate the toymodel class
-toymodel = Toymodel(Time=1000, Ni=100, MC=5,  
+"""toymodel = Toymodel(Time=1000, Ni=100, MC=5,  
                     plots=True, filters=False)
 
 # simulate the toy model and create the plots 
 # toy_simulations = toymodel.simulation(gamma=2, pbar=0.01, delta=0.05, rbar=0.075) 
 parameter = np.array([2, 0.01, 0.05, 0.075])
-toy_simulations = toymodel.simulation(parameter) 
+toy_simulations = toymodel.simulation(parameter)""" 
 
 #################################################################################################
 # Simulating the BAM model(s) by Delli Gatti (2011)
@@ -132,12 +132,12 @@ Idee: extra class mit function für MC plots,
 """
 Generate MC simluations of the model, ech with length T, for each parameter combination.
 
-1)
+A)
 First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 # number of MC simulations per parameter combination
-MC = 2
+MC = 10
 
 # pseudo empirical data
 BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data
@@ -151,7 +151,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
 bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 
-# initialize the sampling methods 
+# initialize the estimation methods
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filters=False)
 
 """
@@ -159,14 +159,50 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 """
 
 # number of parameter combinations
-grid_size = 5
+grid_size = 500
 
 start_time = time.time()
 
-
-args = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+np.random.seed(123)
+theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+path = 'data/simulations/BAM_simulations/latin_hypercube'
+#args = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
 
 # Use a plain grid to compute MC simulations of length T for each parameter combination, on parallel
+
+# parallize the grid search: using joblib
+def grid_search_parallel(theta, model, path, i):
+
+    # current parameter combination
+    # theta_current = theta[i,:]
+    
+    # simulate the model each time with a new parameter combination from the grid
+    simulations = model.simulation(theta[i,:])
+    
+    # current path to save the simulation to
+    # current_path = path + '_' + str(i)
+    
+    # save simulated data 
+    np.save(path + '_' + str(i), simulations)
+    
+    # plot the first mc simulation
+    plt.clf()
+    plt.plot(np.log(simulations[:,0]))
+    plt.xlabel("Time")
+    plt.ylabel("Log output")
+    plt.savefig( path + '_' + str(i) + ".png")
+
+    return
+
+"""def grid_search_parallel(grid_size, theta, model, path, i):
+    current_path = path + '_' + str(i)
+    return np.save(current_path, model.simulation(theta[i]))"""
+
+Parallel(n_jobs=10, verbose=50)(
+        delayed(grid_search_parallel)
+        (theta, BAM_model, path, i) for i in range(grid_size)
+        )
+
 """def grid_simulations_parallel(args):
             
     # current parameter combination
@@ -189,17 +225,22 @@ args = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_si
 # num_cores = (multiprocessing.cpu_count()) - 4 
 num_cores = 4 
 
-pool = multiprocessing.Pool(processes=num_cores)
+if __name__ == '__main__':
+    with mp.Pool(4) as pool:
+        print(pool.map(grid_simulations_parallel, args))"""
+
+"""pool = mp.Pool(processes=num_cores)
 pool.map_async(grid_simulations_parallel, args)
 pool.close()"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # without parallising: 2MC=5 minutes * 5thetas = 25 minutes
-# parallel with 4 cores: 2MC=5 minutes * 5thetas = 25 /4 = 7 minutes
+# parallel with 4 cores, without plots: 2MC=5 minutes * 5thetas = 25 /4 = 7 minutes (5.571771335601807)
+# parallel with 4 cores, with plots: (5.985158399740855)
 
 print("blub")
-
+# np.load(path + '_' + '3.npy')
 
 """
 2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
@@ -222,7 +263,7 @@ print("blub")
 
 
 """
-2) Estimating the BAM model using real data on US GDP ??, using the same artificial data generated above. 
+B) Estimating the BAM model using real data on US GDP ??, using the same artificial data generated above. 
 """
 
 
@@ -247,7 +288,7 @@ The first mc simulation with the parameter configuration from above is used as t
 """
 
 # pseudo empirical data
-toy_data_obs = toy_simulations[:,0] 
+"""toy_data_obs = toy_simulations[:,0] 
 
 # create new instance of the toy model with 100 MC replications 
 toymodel_est = Toymodel(Time=1500, Ni=100, MC=100, 
@@ -263,7 +304,7 @@ toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para,
 # Use the plain grid search to compute the posterior estimates of each free parameter
 # the likelihood approximation method used inside the sampling method is set inside the sampling class
 toy_posterior.grid_search(grid_size = 3000, path = 'data/simulations/toymodel_simulations/latin_hypercube')
-print("blub")
+print("blub")"""
 
 # Gatti 2020
 # 5000 combinations

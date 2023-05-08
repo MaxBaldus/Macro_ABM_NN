@@ -55,10 +55,9 @@ class sample_posterior:
         u_bounds = list(self.bounds[1,:])
 
         # create latin hypercube sampler
-        latin_sampler = qmc.LatinHypercube(d=number_para)
+        latin_sampler = qmc.LatinHypercube(d=number_para, seed=123)
 
         # sample theta values between 0 and 1 and scale to the given bounds (ranges)
-        np.random.seed(123)
         theta = latin_sampler.random(n=grid_size)
 
         # scale parameters to the given bounds
@@ -118,12 +117,12 @@ class sample_posterior:
 
 
         # parallize the grid search: muliprocessing librarys
-        args = []
+        """args = []
         for i in range(grid_size):
             # args.append([theta[i,:], path + '_' + str(i)])
-            args.append({'theta': theta[i,:], 'path': path + '_' + str(i)})
+            args.append({'theta': theta[i,:], 'path': path + '_' + str(i)})"""
         
-        return args
+        return theta
 
 
 

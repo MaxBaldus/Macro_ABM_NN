@@ -10,3 +10,4 @@ tqdm==4.65.0
 scikit-learn==1.2.2
 numba==0.56.4
 joblib==1.2.0
+multiprocess==0.70.14
