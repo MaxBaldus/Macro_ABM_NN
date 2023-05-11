@@ -198,11 +198,15 @@ def grid_search_parallel(theta, model, path, i):
     current_path = path + '_' + str(i)
     return np.save(current_path, model.simulation(theta[i]))"""
 
-Parallel(n_jobs=10, verbose=50)(
+# num_cores = (multiprocessing.cpu_count()) - 4 
+num_cores = 56 
+
+"""Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (theta, BAM_model, path, i) for i in range(grid_size)
-        )
+        )"""
 
+# multiprocessing attempt
 """def grid_simulations_parallel(args):
             
     # current parameter combination
