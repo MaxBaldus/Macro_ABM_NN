@@ -170,6 +170,8 @@ class sample_posterior:
             # likelihood = np.prod(densities)
             ll = np.sum(np.log(densities))
 
+            # check likelhihood with same values !?!
+
             # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
             np.random.seed(i)
             marginal_priors = self.sample_prior() 
