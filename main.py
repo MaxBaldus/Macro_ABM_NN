@@ -161,6 +161,7 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 # number of parameter combinations
 grid_size = 500
 
+# save start time
 start_time = time.time()
 
 np.random.seed(123)
@@ -243,7 +244,6 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # parallel with 4 cores, without plots: 2MC=5 minutes * 5thetas = 25 /4 = 7 minutes (5.571771335601807)
 # parallel with 4 cores, with plots: (5.985158399740855)
 
-print("blub")
 # np.load(path + '_' + '3.npy')
 
 """
@@ -251,8 +251,9 @@ print("blub")
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-BAM_posterior.approximate_posterior(grid_size, path = 'data/simulations/toymodel_simulations/latin_hypercube')
+BAM_posterior.approximate_posterior(grid_size, path = path)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
+
 print("blub")
 
 # Gatti 2020

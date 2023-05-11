@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 import multiprocessing
 
+import time
+
 # classes
 from estimation.mdn import mdn
 
@@ -148,9 +150,12 @@ class sample_posterior:
         number_parameter = np.shape(self.bounds)[1]
         log_posterior = np.zeros((grid_size, number_parameter))
 
+        # save start time
+        start_time = time.time()
+        
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         for i in tqdm(range(grid_size)):
-            i = i + 2
+           
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
@@ -184,9 +189,14 @@ class sample_posterior:
             # => computing likelihood * prior.product() to evaluate candidate (JOINTLY for all candidates)
             # -inf ??!! -> - inf to 0 .. : just discard when plotting ??!!
             # likelihood value positive ??!!
-            
-            print("blub")
+    
             # 12th loss : -96.4340
+            # 500 run: -84.1205
+
+        
+        np.save('data/simulations/log_posterior', log_posterior)
+        print("")
+        print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 
 #################################################################################################
