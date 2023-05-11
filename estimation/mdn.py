@@ -184,7 +184,7 @@ class mdn:
         for i in range(len(y_obs)):
 
             # 1) predicting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
-            mu, pi, sigma_sqrd = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = True) # using - mean / sd
+            mu, pi, sigma_sqrd = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
@@ -245,7 +245,6 @@ class mdn:
 
         # using eager mode from tf2 
         # tf.executing_eagerly()
-        print("blub")
         
         # gaussian pdf
         p = (1/(tf.math.sqrt(2* np.pi *sigma_sqr))) * tf.math.exp( (-1/(2*sigma_sqr))*(tf.subtract(y, mu)**2) ) # probaility of one gaussian component
