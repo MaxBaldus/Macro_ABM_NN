@@ -26,7 +26,7 @@ class sample_posterior:
     The entire sampling routine is split into 2 blocks: A simulation and an estimation block.
     """
 
-    def __init__(self, model, bounds, data_obs, filters):
+    def __init__(self, model, bounds, data_obs, filter):
         
         """
         Initiating the posterior sampling class by inputing 
@@ -38,7 +38,7 @@ class sample_posterior:
         self.model = model # agent based model class with a simulation function
         self.bounds = bounds # upper lower parameter bounds (2d numpy array) with two rows for each parameter
         self.data_obs = data_obs # observed data: 1-d numpy array
-        self.filters = filters
+        self.filter = filter
 
     """
     1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
@@ -135,8 +135,11 @@ class sample_posterior:
         print('--------------------------------------')
         print("Likelihood block and evaluating the posterior for each parameter")
 
+        # apply filter or transformation to observed time series
+        data_obs_log = np.log(self.data_obs)
+
         # instantiate the likelihood approximation method
-        likelihood_appro = mdn(self.data_obs, L = 3, K = 2, 
+        likelihood_appro = mdn(data_obs_log, L = 3, K = 16, 
                            neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
                            eta_x=0.2, eta_y=0.2, act_fct="relu"
                            ) 
@@ -146,6 +149,7 @@ class sample_posterior:
         
         # initiate the matrix with marginal posterior probablities
         number_parameter = np.shape(self.bounds)[1]
+        posterior = np.zeros((grid_size, number_parameter))
         log_posterior = np.zeros((grid_size, number_parameter))
 
         # save start time
@@ -163,22 +167,31 @@ class sample_posterior:
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
 
-            # if self.filter:
+            if self.filter:
                 # filter
-            # LOG FILTER ??!!
+                print("blub")
+            else:
+                # log transformation
+                simulation_short = np.log(simulation_short)
+
+            # TEST!! same data -> apply single column filter !!
+            # simulation_short = data_obs_log
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
+
+            # USE HIS SCALING => otherwise ll huge and negative (hence really small probabilities)
             
             # compute likelihood of the observed data for the given parameter combination
-            # likelihood = np.prod(densities)
+            L = np.prod(densities)
             ll = np.sum(np.log(densities))
 
             # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
             np.random.seed(i)
             marginal_priors = self.sample_prior() 
 
-            # compute marginal log posteriors
+            # compute marginal (log) posteriors
+            posterior[i,:] = L * marginal_priors
             log_posterior[i,:] = ll + np.log(marginal_priors)
 
         print("blub")
@@ -186,6 +199,8 @@ class sample_posterior:
         # using parallel computing
         def approximate_parallel(path, i):
            
+           # COPY AGAIN !!
+
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
@@ -194,16 +209,24 @@ class sample_posterior:
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
 
-            # if self.filter:
+            if self.filter:
                 # filter
-            # LOG FILTER ??!!
+                print("blub")
+            else:
+                # log transformation
+                simulation_short = np.log(simulation_short)
             
-            # approximate the posterior probability of the given parameter combination
-            densities = likelihood_appro.approximate_likelihood(simulation_short)
+            # approximate the likelihood of the observed data (likelihood of each observation), given the simulated data (given theta)
+            likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
             
             # compute likelihood of the observed data for the given parameter combination
-            # likelihood = np.prod(densities)
-            ll = np.sum(np.log(densities))
+            # likelihood = np.prod(likelihoods)
+            ll = np.sum(np.log(likelihoods))
+
+            """
+            3) The computed likelihood of the observed data is now used to finally compute the posterior probability of theta, given the prior probability.
+            Multiplying (summing log) with the prior probability returns the (approximated) posterior probability for the current combinations.
+            """
 
             # check likelhihood with same values !?!
 
@@ -228,7 +251,7 @@ class sample_posterior:
 
         # parallel: 10 theta with 5 MC => 3.6551249821980796 minutes
 
-        # Problem 
+        # Problem: WITHOUT using log transformation
         # - densities <= 1 , hence np.log(densities) < 0  => large negative number for ll
         # - also np.log(marginal_priors) < 0 
         # => hence large negative number for ll + np.log(marginal_priors) 
@@ -245,7 +268,9 @@ class sample_posterior:
         # likelihood value positive ??!!
         # WHAT IS THE POSTERIOR PARAMETER ESTIMATOR NOW: 
         # since having grid: use value with highest proba as estimator (not mean of the parameter values, since no MC chain)
-
+        
+        # ISSUES
+        # Influence of prior rather small: array([-2.34817589, -2.12968255, -2.17047113, -2.629976  ]) vs ll = -750.96674469632
 
         # check losses:
         # 12th loss : -96.4340
