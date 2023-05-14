@@ -60,10 +60,10 @@ class sample_posterior:
         latin_sampler = qmc.LatinHypercube(d=number_para, seed=123)
 
         # sample theta values between 0 and 1 and scale to the given bounds (ranges)
-        theta = latin_sampler.random(n=grid_size)
+        Theta = latin_sampler.random(n=grid_size)
 
         # scale parameters to the given bounds
-        qmc.scale(theta, l_bounds, u_bounds)
+        qmc.scale(Theta, l_bounds, u_bounds)
                       
         # simulate the model MC times for each parameter combination and save each TxMC matrix
         print("")
@@ -122,7 +122,7 @@ class sample_posterior:
                 (grid_size, theta, self.model, path, i) for i in range(grid_size)
                 )"""
         
-        return theta
+        return Theta
 
 
 
@@ -237,14 +237,15 @@ class sample_posterior:
             # compute marginal log posteriors
             log_posterior[i,:] = ll + np.log(marginal_priors)
 
-            return log_posterior
+            return log_posterior # posterior
             
         """log_posterior = Parallel(n_jobs=4)(
         delayed(approximate_parallel)
         (path, i) for i in range(10)
         )"""
 
-        # np.save('data/simulations/log_posterior', log_posterior)
+        # np.save('estimation/BAM/log_posterior', log_posterior)
+        # np.save('estimation/BAM/posterior', posterior)
         
         print("")
         print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -279,7 +280,7 @@ class sample_posterior:
         # good simulations: 27, 31, 45, 49, 
         # CHECK WHETHER log_posterior values large (large negative values?!)
 
-        return log_posterior
+        return log_posterior, posterior
 
 
 #################################################################################################
