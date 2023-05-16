@@ -154,6 +154,8 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 # number of parameter combinations
 grid_size = 500
 
+# REMOVE 500 matrices to test folder on working station !!!
+
 # save start time
 start_time = time.time()
 
@@ -191,6 +193,7 @@ def grid_search_parallel(theta, model, path, i):
 # num_cores = (multiprocessing.cpu_count()) - 4 
 num_cores = 56 
 
+# uncomment for running the 20MC simulations per theta in parallel
 """Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (theta, BAM_model, path, i) for i in range(grid_size)

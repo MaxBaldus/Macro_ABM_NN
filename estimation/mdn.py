@@ -80,7 +80,7 @@ class mdn:
         # sd of y
         y_train_std = y_train.std(axis = 0)
 
-        # standardize training data
+        """# standardize training data
         X_scaler = MinMaxScaler() 
         y_scaler = MinMaxScaler() 
         # X_train = scaler.fit_transform(X_train) 
@@ -88,9 +88,9 @@ class mdn:
         X_train = X_scaler.transform(X_train)
         # y_train= scaler.fit_transform(y_train.reshape(-1,1))
         y_scaler.fit(y_train.reshape(-1,1))
-        y_train= y_scaler.transform(y_train.reshape(-1,1))
+        y_train= y_scaler.transform(y_train.reshape(-1,1))"""
         
-        """# standardize training data by subtracting the means and dividing by std
+        # standardize training data by subtracting the means and dividing by std
         X_means = X_train.mean(axis = 0)
         X_std = X_train.std(axis = 0)
         y_mean = y_train.mean(axis = 0)
@@ -100,7 +100,7 @@ class mdn:
         if 0 not in X_std:
             X_train  = (X_train - X_means) / X_std
         if y_std != 0:
-            y_train = (y_train - y_mean) / y_std"""
+            y_train = (y_train - y_mean) / y_std
 
         # not needed in tf2 ??
         """# Initiate the network graph
@@ -165,13 +165,13 @@ class mdn:
         T_tilde = len(self.data_obs) # length of empirical data 
         X_obs, y_obs = mdn.order_data(self.data_obs.reshape(1, T_tilde), self.L)
 
-        # scaling empirical data 
+        """# scaling empirical data 
         # X_obs = scaler.fit_transform(X_obs) 
         X_obs = X_scaler.transform(X_obs) 
         # y_obs = scaler.fit_transform(y_obs.reshape(-1,1))
-        y_obs = y_scaler.transform(y_obs.reshape(-1,1))
+        y_obs = y_scaler.transform(y_obs.reshape(-1,1))"""
         
-        """# scaling empirical data 
+        # scaling empirical data 
         X_obs_mean = X_obs.mean(axis = 0)
         X_obs_sd = X_obs.std(axis = 0)
         y_obs_mean = y_obs.mean(axis = 0)
@@ -180,7 +180,7 @@ class mdn:
         if 0 not in X_obs_sd:
             X_obs  = (X_obs - X_obs_mean) / X_obs_sd
         if y_obs_sd != 0:
-            y_obs = (y_obs - y_obs_mean) / y_obs_sd"""
+            y_obs = (y_obs - y_obs_mean) / y_obs_sd
 
         # Create Data Structure to store the likelihood values for each observation
         likelihoods = np.zeros(len(y_obs))
@@ -194,8 +194,8 @@ class mdn:
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else mdn.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
-            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd))
+            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else mdn.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
+            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd))
 
         # plot mixture distribution ???
 

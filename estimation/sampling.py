@@ -70,7 +70,7 @@ class sample_posterior:
         print("Simulate the model MC times for each parameter combination:")
 
         # num_cores = (multiprocessing.cpu_count()) - 4 
-        num_cores = 4 # lux working station  
+        num_cores = 56 # lux working station  
 
         # 1) Simulation block (outsourced to main.py)
         # simulation and storing the TxMC matrix for each parameter combination
@@ -157,7 +157,7 @@ class sample_posterior:
         
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         # for i in tqdm(range(grid_size)):
-        for i in [27, 31, 45, 49]:
+        """for i in [27, 31, 45, 49]:
            
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
@@ -192,15 +192,11 @@ class sample_posterior:
 
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors
-            log_posterior[i,:] = ll + np.log(marginal_priors)
-
-        print("blub")
+            log_posterior[i,:] = ll + np.log(marginal_priors)"""
 
         # using parallel computing
         def approximate_parallel(path, i):
            
-           # COPY AGAIN !!
-
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
@@ -215,37 +211,35 @@ class sample_posterior:
             else:
                 # log transformation
                 simulation_short = np.log(simulation_short)
-            
-            # approximate the likelihood of the observed data (likelihood of each observation), given the simulated data (given theta)
-            likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
+           
+            # approximate the posterior probability of the given parameter combination
+            densities = likelihood_appro.approximate_likelihood(simulation_short)
+
+            # USE HIS SCALING => otherwise ll huge and negative (hence really small probabilities)
             
             # compute likelihood of the observed data for the given parameter combination
-            # likelihood = np.prod(likelihoods)
-            ll = np.sum(np.log(likelihoods))
-
-            """
-            3) The computed likelihood of the observed data is now used to finally compute the posterior probability of theta, given the prior probability.
-            Multiplying (summing log) with the prior probability returns the (approximated) posterior probability for the current combinations.
-            """
-
-            # check likelhihood with same values !?!
+            L = np.prod(densities)
+            ll = np.sum(np.log(densities))
 
             # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
             np.random.seed(i)
             marginal_priors = self.sample_prior() 
 
-            # compute marginal log posteriors
+            # compute marginal (log) posteriors
+            posterior[i,:] = L * marginal_priors
             log_posterior[i,:] = ll + np.log(marginal_priors)
 
-            return log_posterior # posterior
+            return posterior, log_posterior 
             
-        """log_posterior = Parallel(n_jobs=4)(
+        """posterior, log_posterior = Parallel(n_jobs=4)(
         delayed(approximate_parallel)
-        (path, i) for i in range(10)
+        (path, i) for i in range(70)
         )"""
 
-        # np.save('estimation/BAM/log_posterior', log_posterior)
-        # np.save('estimation/BAM/posterior', posterior)
+        np.save('estimation/BAM/log_posterior', log_posterior)
+        np.save('estimation/BAM/posterior', posterior)
+
+        # test with range = 70
         
         print("")
         print("--- %s minutes ---" % ((time.time() - start_time)/60))
