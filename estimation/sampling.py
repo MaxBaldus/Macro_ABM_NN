@@ -193,7 +193,11 @@ class sample_posterior:
 
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors
-            log_posterior[i,:] = ll + np.log(marginal_priors)"""
+            log_posterior[i,:] = ll + np.log(marginal_priors)
+        
+        np.save('estimation/BAM/log_posterior', log_posterior)
+        np.save('estimation/BAM/posterior', posterior)
+        """
 
         # using parallel computing
         def approximate_parallel(path, i):
@@ -230,21 +234,18 @@ class sample_posterior:
             marginal_priors = self.sample_prior() 
 
             # compute marginal (log) posteriors
-            posterior[i,:] = L * marginal_priors
-            log_posterior[i,:] = ll + np.log(marginal_priors)
+            # posterior[i,:] = L * marginal_priors
+            # log_posterior[i,:] = ll + np.log(marginal_priors)
 
-            return posterior, log_posterior 
+            return  ll + np.log(marginal_priors), L * marginal_priors
         
         # posterior, log_posterior
-        test = Parallel(n_jobs=4)(
+        log_and_posterior  = Parallel(n_jobs=20)(
         delayed(approximate_parallel)
-        (path, i) for i in range(10)
+        (path, i) for i in range(grid_size)
         )
 
-        np.save('estimation/BAM/log_posterior', log_posterior)
-        np.save('estimation/BAM/posterior', posterior)
-
-        # test with range = 70
+        np.save('estimation/BAM/log_posterior', log_and_posterior)
         
         print("")
         print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -279,7 +280,7 @@ class sample_posterior:
         # good simulations: 27, 31, 45, 49, 
         # CHECK WHETHER log_posterior values large (large negative values?!)
 
-        return log_posterior, posterior
+        return log_and_posterior
 
 
 #################################################################################################

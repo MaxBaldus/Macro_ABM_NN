@@ -211,7 +211,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-log_posterior, posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
+log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
 
 # np.load('estimation/BAM/log_posterior.npy)
