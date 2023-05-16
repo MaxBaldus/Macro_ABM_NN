@@ -80,6 +80,8 @@ class mdn:
         # sd of y
         y_train_std = y_train.std(axis = 0)
 
+        # deal with -inf values (0 or close to 0 output values)
+
         """# standardize training data
         X_scaler = MinMaxScaler() 
         y_scaler = MinMaxScaler() 
@@ -194,7 +196,7 @@ class mdn:
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else mdn.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
+            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
             # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd))
 
         # plot mixture distribution ???

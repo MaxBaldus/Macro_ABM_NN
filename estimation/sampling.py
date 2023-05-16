@@ -157,8 +157,8 @@ class sample_posterior:
         start_time = time.time()
         
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        # for i in tqdm(range(grid_size)):
-        """for i in [27, 31, 45, 49]:
+        """for i in tqdm(range(grid_size)):
+        # for i in [27, 31, 45, 49]:
            
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
@@ -198,7 +198,7 @@ class sample_posterior:
         # using parallel computing
         def approximate_parallel(path, i):
            
-            # load the simulated data for the current parameter combination
+             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
 
@@ -212,7 +212,10 @@ class sample_posterior:
             else:
                 # log transformation
                 simulation_short = np.log(simulation_short)
-           
+
+            # TEST!! same data -> apply single column filter !!
+            # simulation_short = data_obs_log
+            
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
 
@@ -231,10 +234,11 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors)
 
             return posterior, log_posterior 
-            
-        posterior, log_posterior = Parallel(n_jobs=56)(
+        
+        # posterior, log_posterior
+        test = Parallel(n_jobs=4)(
         delayed(approximate_parallel)
-        (path, i) for i in range(70)
+        (path, i) for i in range(10)
         )
 
         np.save('estimation/BAM/log_posterior', log_posterior)
