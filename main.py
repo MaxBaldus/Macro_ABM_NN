@@ -9,19 +9,12 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import pandas as pd
 
-import os
-import logging
-
 import time
 
 # parallel computing
 from joblib import Parallel, delayed
 # import multiprocessing
 import multiprocess as mp
-
-# Disable Tensorflow Deprecation Warnings
-#logging.disable(logging.WARNING)
-#os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # import model classes
 from models.toymodel import Toymodel
@@ -34,7 +27,7 @@ from models.BAM_parallel import BAM_parallel # BAM model parallized
 # import estimation classes
 from estimation.data_prep import Filters
 from estimation.mdn import mdn
-from sampling import sample_posterior
+from estimation.sampling import sample_posterior
 
 
 
@@ -79,7 +72,7 @@ h_xi=0.05
 # parameter
 parameter = np.array([H_eta, H_rho, H_phi, h_xi])
 
-"""# simulate the model MC times using parallel computing
+"""# simulate the base BAM model MC times using parallel computing
 BAM_model_parallel = BAM_parallel(T=1000, MC = 5, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 
@@ -100,7 +93,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # np.save('data/simulations/BAM_10MC', BAM_simulations_parallel) # save the 10 simulations"""
 
 
-# simulating model 1 time without parallising 
+# simulating BAM model 1 time without parallising 
 """BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
@@ -126,7 +119,7 @@ Idee: extra class mit function für MC plots,
 """
 
 #################################################################################################
-# Estimating the BAM model(s)
+# Estimating the BAM model
 #################################################################################################
 
 """
@@ -152,7 +145,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 
 # initialize the estimation methods
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filters=False)
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
 """
 1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
@@ -161,15 +154,17 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 # number of parameter combinations
 grid_size = 500
 
+# REMOVE 500 matrices to test folder on working station !!!
+
 # save start time
 start_time = time.time()
 
+# generate grid with parameter values
 np.random.seed(123)
-theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
-path = 'data/simulations/BAM_simulations/latin_hypercube'
-#args = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+Theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
+np.save('estimation/BAM/Theta', Theta)
 
-# Use a plain grid to compute MC simulations of length T for each parameter combination, on parallel
+path = 'data/simulations/BAM_simulations/latin_hypercube'
 
 # parallize the grid search: using joblib
 def grid_search_parallel(theta, model, path, i):
@@ -195,48 +190,14 @@ def grid_search_parallel(theta, model, path, i):
 
     return
 
-"""def grid_search_parallel(grid_size, theta, model, path, i):
-    current_path = path + '_' + str(i)
-    return np.save(current_path, model.simulation(theta[i]))"""
-
 # num_cores = (multiprocessing.cpu_count()) - 4 
 num_cores = 56 
 
+# uncomment for running the 20MC simulations per theta in parallel
 """Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (theta, BAM_model, path, i) for i in range(grid_size)
         )"""
-
-# multiprocessing attempt
-"""def grid_simulations_parallel(args):
-            
-    # current parameter combination
-    theta_current = args['theta']
-    # simulate the model each time with a new parameter combination from the grid
-    simulations = BAM_model.simulation(theta_current)
-    
-    # current path to save the simulation to
-    current_path = args['path']
-    # save simulated data 
-    np.save(current_path, simulations)
-    
-    # plot the first mc simulation
-    plt.clf()
-    plt.plot(np.log(simulations[:,0]))
-    plt.xlabel("Time")
-    plt.ylabel("Log output")
-    plt.savefig(current_path + ".png")
-
-# num_cores = (multiprocessing.cpu_count()) - 4 
-num_cores = 4 
-
-if __name__ == '__main__':
-    with mp.Pool(4) as pool:
-        print(pool.map(grid_simulations_parallel, args))"""
-
-"""pool = mp.Pool(processes=num_cores)
-pool.map_async(grid_simulations_parallel, args)
-pool.close()"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -244,18 +205,25 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # parallel with 4 cores, without plots: 2MC=5 minutes * 5thetas = 25 /4 = 7 minutes (5.571771335601807)
 # parallel with 4 cores, with plots: (5.985158399740855)
 
-# np.load(path + '_' + '3.npy')
 
 """
 2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-BAM_posterior.approximate_posterior(grid_size, path = path)
+log_posterior, posterior = log_posterior_BAM = BAM_posterior.approximate_posterior(grid_size, path = path)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
+
+# np.load('estimation/BAM/log_posterior.npy)
+# np.load('estimation/BAM/posterior.npy)
+
 
 print("blub")
 
+# plots
+# path = 'plots/posterior/BAM'
+
+# Simulation hyperparameters:
 # Gatti 2020
 # 5000 combinations
 # MC = 20 
@@ -274,7 +242,9 @@ B) Estimating the BAM model using real data on US GDP ??, using the same artific
 
 
 
-
+#################################################################################################
+# Estimating the BAM plus model
+#################################################################################################
 
 
 
