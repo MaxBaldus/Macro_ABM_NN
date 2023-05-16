@@ -137,6 +137,11 @@ class sample_posterior:
 
         # apply filter or transformation to observed time series
         data_obs_log = np.log(self.data_obs)
+        """if self.filter:
+                # filter
+                print("blub")
+            else:
+                # log transformation"""
 
         # instantiate the likelihood approximation method
         likelihood_appro = mdn(data_obs_log, L = 3, K = 16, 
@@ -157,9 +162,10 @@ class sample_posterior:
         start_time = time.time()
         
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        """for i in tqdm(range(grid_size)):
+        for i in tqdm(range(grid_size)):
         # for i in [27, 31, 45, 49]:
-           
+
+            i = 27 
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
@@ -194,10 +200,6 @@ class sample_posterior:
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors
             log_posterior[i,:] = ll + np.log(marginal_priors)
-        
-        np.save('estimation/BAM/log_posterior', log_posterior)
-        np.save('estimation/BAM/posterior', posterior)
-        """
 
         # using parallel computing
         def approximate_parallel(path, i):
@@ -234,18 +236,23 @@ class sample_posterior:
             marginal_priors = self.sample_prior() 
 
             # compute marginal (log) posteriors
-            # posterior[i,:] = L * marginal_priors
-            # log_posterior[i,:] = ll + np.log(marginal_priors)
+            #posterior[i,:] = L * marginal_priors
+            #log_posterior[i,:] = ll + np.log(marginal_priors)
 
-            return  ll + np.log(marginal_priors), L * marginal_priors
+            return  L * marginal_priors, ll + np.log(marginal_priors)
         
-        # posterior, log_posterior
-        log_and_posterior  = Parallel(n_jobs=35)(
+        posteriors = Parallel(n_jobs=3)(
         delayed(approximate_parallel)
         (path, i) for i in range(grid_size)
         )
 
-        np.save('estimation/BAM/log_and_posterior', log_and_posterior)
+        # unpack and save the parallel computed posterior probabilities
+        for i in range(len(posteriors)):
+            posterior[i,:] = posteriors[i][0]
+            log_posterior[i,:] = posteriors[i][1]
+        
+        np.save('estimation/BAM/log_posterior', log_posterior)
+        np.save('estimation/BAM/posterior', posterior)
         
         print("")
         print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -268,19 +275,19 @@ class sample_posterior:
         # -inf ??!! -> - inf to 0 .. : just discard when plotting ??!!
         # likelihood value positive ??!!
         # WHAT IS THE POSTERIOR PARAMETER ESTIMATOR NOW: 
-        # since having grid: use value with highest proba as estimator (not mean of the parameter values, since no MC chain)
+        # since having grid: use value with highest proba as estimator, i.e. mode (not mean of the parameter values, since no MC chain)
         
         # ISSUES
         # Influence of prior rather small: array([-2.34817589, -2.12968255, -2.17047113, -2.629976  ]) vs ll = -750.96674469632
 
-        # check losses:
-        # 12th loss : -96.4340
-        # 500 run: -84.1205
+        # huge posterior values (positive log values) when using 1/std in mdn 
+        # without 1/std => posterior values are 0 now 
+        # scale values down?!?!?!?!
 
         # good simulations: 27, 31, 45, 49, 
         # CHECK WHETHER log_posterior values large (large negative values?!)
 
-        return log_and_posterior
+        return posterior, log_posterior
 
 
 #################################################################################################

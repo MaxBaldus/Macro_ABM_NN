@@ -162,9 +162,11 @@ start_time = time.time()
 # generate grid with parameter values
 np.random.seed(123)
 Theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
-np.save('estimation/BAM/Theta', Theta)
+# np.save('estimation/BAM/Theta', Theta)
 
-path = 'data/simulations/BAM_simulations/latin_hypercube'
+# path = 'data/simulations/BAM_simulations/latin_hypercube'
+path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
+
 
 # parallize the grid search: using joblib
 def grid_search_parallel(theta, model, path, i):
@@ -211,13 +213,17 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
+posterior, log_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
+
+# TEST check with log values ??
+# np.save('estimation/BAM/log_posterior_loggdpvalues', log_posterior)
+# np.save('estimation/BAM/posterior_loggdpvalues', posterior)
 
 # np.load('estimation/BAM/log_posterior.npy)
 # np.load('estimation/BAM/posterior.npy)
 
-
+print("blub")
 # plots
 # path = 'plots/posterior/BAM'
 
