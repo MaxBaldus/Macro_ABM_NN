@@ -218,8 +218,6 @@ log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
 # np.load('estimation/BAM/posterior.npy)
 
 
-print("blub")
-
 # plots
 # path = 'plots/posterior/BAM'
 
