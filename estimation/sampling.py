@@ -240,12 +240,12 @@ class sample_posterior:
             return  ll + np.log(marginal_priors), L * marginal_priors
         
         # posterior, log_posterior
-        log_and_posterior  = Parallel(n_jobs=20)(
+        log_and_posterior  = Parallel(n_jobs=35)(
         delayed(approximate_parallel)
         (path, i) for i in range(grid_size)
         )
 
-        np.save('estimation/BAM/log_posterior', log_and_posterior)
+        np.save('estimation/BAM/log_and_posterior', log_and_posterior)
         
         print("")
         print("--- %s minutes ---" % ((time.time() - start_time)/60))
