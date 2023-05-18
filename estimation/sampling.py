@@ -162,7 +162,7 @@ class sample_posterior:
         start_time = time.time()
         
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        for i in tqdm(range(grid_size)):
+        """for i in tqdm(range(grid_size)):
         # for i in [27, 31, 45, 49]:
 
             i = 27 
@@ -199,7 +199,7 @@ class sample_posterior:
 
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors
-            log_posterior[i,:] = ll + np.log(marginal_priors)
+            log_posterior[i,:] = ll + np.log(marginal_priors)"""
 
         # using parallel computing
         def approximate_parallel(path, i):
@@ -241,7 +241,7 @@ class sample_posterior:
 
             return  L * marginal_priors, ll + np.log(marginal_priors)
         
-        posteriors = Parallel(n_jobs=3)(
+        posteriors = Parallel(n_jobs=2)(
         delayed(approximate_parallel)
         (path, i) for i in range(grid_size)
         )
