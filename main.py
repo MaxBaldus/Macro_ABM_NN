@@ -130,7 +130,7 @@ First the estimation method is tested by using pseudo-empirical data with a-prio
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 # number of MC simulations per parameter combination
-MC = 10
+MC = 20
 
 # pseudo empirical data
 BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data
@@ -142,7 +142,8 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
+# bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
+bounds_BAM = np.transpose(np.array([ [0.0001,5], [0.0001,5], [0.0001,5], [0.0001,2] ]))
 
 # initialize the estimation methods
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
@@ -152,7 +153,7 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 """
 
 # number of parameter combinations
-grid_size = 500
+grid_size = 5000
 
 # REMOVE 500 matrices to test folder on working station !!!
 
@@ -182,11 +183,11 @@ def grid_search_parallel(theta, model, path, i):
     np.save(path + '_' + str(i), simulations)
     
     # plot the first mc simulation
-    plt.clf()
+    """plt.clf()
     plt.plot(np.log(simulations[:,0]))
     plt.xlabel("Time")
     plt.ylabel("Log output")
-    plt.savefig( path + '_' + str(i) + ".png")
+    plt.savefig( path + '_' + str(i) + ".png")"""
 
     return
 
@@ -194,10 +195,10 @@ def grid_search_parallel(theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 20MC simulations per theta in parallel
-"""Parallel(n_jobs=num_cores, verbose=50)(
+Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
-        (theta, BAM_model, path, i) for i in range(grid_size)
-        )"""
+        (Theta, BAM_model, path, i) for i in range(grid_size)
+        )
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -211,7 +212,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
+"""log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)"""
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
 
 # np.load('estimation/BAM/log_posterior.npy)
@@ -311,4 +312,4 @@ print("blub")"""
 # Forecasting
 #################################################################################################
 
-
+print("DONE")
