@@ -94,7 +94,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 
 # simulating BAM model MC times without parallising 
-BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
@@ -104,7 +104,7 @@ start_time = time.time()
 BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))
+print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
 # approximately 2 minutes for one 1 run
 
 
@@ -143,7 +143,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
 # bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
-bounds_BAM = np.transpose(np.array([ [0,1], [0,1], [0,1], [0,0.5] ]))
+bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.1] ]))
 
 # initialize the estimation methods
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
