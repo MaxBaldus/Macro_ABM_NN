@@ -76,22 +76,22 @@ class BAM_mc:
         """
         Aggregate report variables: dimension = Time x MC (1 time series for each MC run)
         """
-        unemp_rate = np.zeros((self.T,self.MC)) # unemployment rate
+        unemp_rate = np.zeros((self.T,self.MC)) # unemployment rate U
         unemp_growth_rate = np.zeros((self.T,self.MC)) # unemployment growth rate 
         
-        P_lvl = np.zeros((self.T,self.MC)) # price level
-        inflation = np.zeros((self.T,self.MC)) # price inflation
+        P_lvl = np.zeros((self.T,self.MC)) # price level P^lvl
+        inflation = np.zeros((self.T,self.MC)) # price inflation pi
 
-        wage_lvl = np.zeros((self.T,self.MC)) # wage level
+        wage_lvl = np.zeros((self.T,self.MC)) # wage level W^lvl
         real_wage_lvl = np.zeros((self.T,self.MC)) # real wage
         wage_inflation = np.zeros((self.T,self.MC)) # wage inflation (not in %)
         avg_prod = np.zeros((self.T,self.MC)) # average productivity of labor 
         product_to_real_wage = np.zeros((self.T,self.MC)) # productivity/real wage ratio
         
-        production = np.zeros((self.T,self.MC)) # nominal gdp (quantities produced)
+        production = np.zeros((self.T,self.MC)) # nominal gdp (quantities produced) Y
         output_growth_rate = np.zeros((self.T,self.MC)) # output growth rate 
     
-        aver_savings = np.zeros((self.T,self.MC)) # average HH income 
+        aver_savings = np.zeros((self.T,self.MC)) # average HH income S^lvl
         vac_rate = np.zeros((self.T,self.MC)) # vacancy rate approximated by number of job openings and the labour force at the beginning of a period 
         bankrupt_firms_total = np.zeros((self.T,self.MC)) # number of bankrupt firms in current round
         
@@ -269,13 +269,6 @@ class BAM_mc:
                 for i in range(self.Nf):
                     if t == 0: # set labor demand and price of each firm in t = 0 
                         Ld[i] = Ld_zero
-                        
-                        """elif bankrupt_flag[i] == 1: 
-                        # in case firm went bankrupt in round before, initial labor demand of new firm is average labor demand of last round
-                        Ld[i] = np.around(np.mean(Ld), decimals=2)
-                        # Ld[i] = L_zero # ?? 
-                        """
-
                     # otherwise: each firm decides output and price depending on last round s.t. it can actually determine its labor demand for this round
                     else: # if t > 0, price and quantity demanded (Y^D_it = D_ie^e) are to be adjusted 
                         prev_avg_p = P_lvl[t-1,mc] # extract (current) average previous price 
@@ -284,7 +277,8 @@ class BAM_mc:
                         if p_d >= 0: # in case firm charged higher price than average price (price difference positive)
                             if Qr[i] > 0: # and firm had positive inventories, firm should reduce price to sell more and leave quantity unchanged
                                 # a)
-                                p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p ), decimals=4) # max of previous average price or previous firm price  * 1-eta (price reduction) 
+                                p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p), decimals=4) # max of previous average price or previous firm price  * 1-eta (price reduction) 
+                                #  P_lvl[t-4,mc] if t >= 3 else P_lvl[0,mc]
                                 Qd[i] = np.around(Qp[i]) #if Qs[i] > 0 else Qs_last_round # use average of quantity demanded last round in case Qd were non positive last round
                             else: # firm sold all products, i.e. had negative inventories: firm should increase quantity since it expects higher demand
                                 # d)
@@ -297,7 +291,7 @@ class BAM_mc:
                                 Qd[i] = np.around(Qp[i]*(1-rho[i]),decimals=4) #if Qs[i] > 0 else Qs_last_round
                             else: # excess demand (zero or negative inventories): price is increased
                                 # b)
-                                p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p),decimals=4)
+                                p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p ),decimals=4)
                                 Qd[i] = np.around(Qp[i],decimals=4) #if Qs[i] > 0 else Qs_last_round
                         # setRequiredLabor: alpha is constant in the base version
                         Ld[i] = np.around(Qd[i] / alpha[i], decimals = 4) # labor demand of current round
@@ -1082,9 +1076,9 @@ class BAM_mc:
                         writer = csv.writer(f)
                         writer.writerow(add_row)
 
-                # firm size distribution
+                # firm size distribution of t = 500,600,700,800,900,T
                 if self.plots:
-                    if t in [self.T-499,self.T-599,self.T-699,self.T-799,self.T-899,self.T-999]:
+                    if t in [self.T-499,self.T-399,self.T-299,self.T-199,self.T-99,self.T-1]:
                         
                         plt.clf()
                         plt.hist(L)

@@ -66,7 +66,7 @@ H_eta=0.1
 # upper bound of quantity growth rate
 H_rho=0.1
 # upper bound bank costs 
-H_phi=0.01
+H_phi=0.1 # 0.01
 # upper bound growth rate of wages
 h_xi=0.05
 # parameter
@@ -93,8 +93,8 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # np.save('data/simulations/BAM_10MC', BAM_simulations_parallel) # save the 10 simulations"""
 
 
-# simulating BAM model 1 time without parallising 
-"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+# simulating BAM model MC times without parallising 
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
@@ -104,7 +104,7 @@ start_time = time.time()
 BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # approximately 2 minutes for one 1 run
 
 
@@ -134,7 +134,7 @@ MC = 20
 
 # pseudo empirical data
 BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data
-BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]
+BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0] # use only last 500 observations
 
 # create new instance of the BAM model 
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
@@ -142,8 +142,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-# bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
-bounds_BAM = np.transpose(np.array([ [0.0001,5], [0.0001,5], [0.0001,5], [0.0001,2] ]))
+bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 
 # initialize the estimation methods
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
@@ -163,9 +162,12 @@ start_time = time.time()
 # generate grid with parameter values
 np.random.seed(123)
 Theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
-np.save('estimation/BAM/Theta', Theta)
+# np.save('estimation/BAM/Theta', Theta)
+# Theta = np.load() # load parameter combinations
 
-path = 'data/simulations/BAM_simulations/latin_hypercube'
+# path = 'data/simulations/BAM_simulations/latin_hypercube'
+path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
+
 
 # parallize the grid search: using joblib
 def grid_search_parallel(theta, model, path, i):
@@ -212,13 +214,17 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-"""log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)"""
+log_and_posterior = BAM_posterior.approximate_posterior(grid_size, path = path)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
+
+# TEST check with log values ??
+np.save('estimation/BAM/log_posterior_loggdpvalues_500', log_posterior)
+np.save('estimation/BAM/posterior_loggdpvalues_500', posterior)
 
 # np.load('estimation/BAM/log_posterior.npy)
 # np.load('estimation/BAM/posterior.npy)
 
-
+print("blub")
 # plots
 # path = 'plots/posterior/BAM'
 
