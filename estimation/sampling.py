@@ -63,15 +63,8 @@ class sample_posterior:
         Theta = latin_sampler.random(n=grid_size)
 
         # scale parameters to the given bounds
-        qmc.scale(Theta, l_bounds, u_bounds)
+        Theta = qmc.scale(Theta, l_bounds, u_bounds)
                       
-        # simulate the model MC times for each parameter combination and save each TxMC matrix
-        print("")
-        print("Simulate the model MC times for each parameter combination:")
-
-        # num_cores = (multiprocessing.cpu_count()) - 4 
-        num_cores = 56 # lux working station  
-
         # 1) Simulation block (outsourced to main.py)
         # simulation and storing the TxMC matrix for each parameter combination
         
@@ -129,7 +122,7 @@ class sample_posterior:
     """
     2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination) of the abm model by delli gatti.
     """
-    def approximate_posterior(self, grid_size, path):
+    def approximate_posterior(self, grid_size, path, Theta):
             
         print("")
         print('--------------------------------------')
@@ -158,12 +151,18 @@ class sample_posterior:
         posterior = np.zeros((grid_size, number_parameter))
         log_posterior = np.zeros((grid_size, number_parameter))
 
+        # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
+        marginal_priors = np.zeros((grid_size, number_parameter))
+        for i in range(grid_size):
+            marginal_priors[i,:] = self.sample_prior() 
+        
+
         # save start time
         start_time = time.time()
         
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        """for i in tqdm(range(grid_size)):
-        # for i in [27, 31, 45, 49]:
+        """# for i in tqdm(range(grid_size)):
+        for i in [27, 31, 45, 49]:
 
             i = 27 
             # load the simulated data for the current parameter combination
@@ -191,18 +190,14 @@ class sample_posterior:
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
-            ll = np.sum(np.log(densities))
-
-            # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
-            np.random.seed(i)
-            marginal_priors = self.sample_prior() 
+            ll = np.sum(np.log(densities)) 
 
             # compute marginal (log) posteriors
-            posterior[i,:] = L * marginal_priors
-            log_posterior[i,:] = ll + np.log(marginal_priors)"""
+            posterior[i,:] = L * marginal_priors[i,:]
+            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])"""
 
         # using parallel computing
-        def approximate_parallel(path, i):
+        def approximate_parallel(path, marginal_priors, i):
            
              # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
@@ -218,38 +213,28 @@ class sample_posterior:
             else:
                 # log transformation
                 simulation_short = np.log(simulation_short)
-
-            # TEST!! same data -> apply single column filter !!
-            # simulation_short = data_obs_log
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
-
-            # USE HIS SCALING => otherwise ll huge and negative (hence really small probabilities)
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
             ll = np.sum(np.log(densities))
 
-            # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
-            np.random.seed(i)
-            marginal_priors = self.sample_prior() 
+            priors = marginal_priors[i,:]
 
-            # compute marginal (log) posteriors
-            #posterior[i,:] = L * marginal_priors
-            #log_posterior[i,:] = ll + np.log(marginal_priors)
-
-            return  L * marginal_priors, ll + np.log(marginal_priors)
+            return  L * priors, ll + np.log(priors) 
         
-        posteriors = Parallel(n_jobs=2)(
+        posteriors = Parallel(n_jobs=28)(
         delayed(approximate_parallel)
-        (path, i) for i in range(grid_size)
+        (path, marginal_priors, i) for i in range(grid_size)
         )
 
         # unpack and save the parallel computed posterior probabilities
         for i in range(len(posteriors)):
             posterior[i,:] = posteriors[i][0]
             log_posterior[i,:] = posteriors[i][1]
+            # marginal_priors[i,:] = posteriors[i][1]
         
         np.save('estimation/BAM/log_posterior', log_posterior)
         np.save('estimation/BAM/posterior', posterior)
@@ -287,7 +272,7 @@ class sample_posterior:
         # good simulations: 27, 31, 45, 49, 
         # CHECK WHETHER log_posterior values large (large negative values?!)
 
-        return posterior, log_posterior
+        return posterior, log_posterior, marginal_priors
 
 
 #################################################################################################
@@ -308,9 +293,20 @@ class sample_posterior:
         return prior_probabilities
 
 
-    def posterior_plots(self, log_posterior):
+    def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors):
+        
+        number_parameter = np.shape(self.bounds)[1]
 
-        print("blub")
+        # plotting posterior values
+        for i in range(number_parameter):
+
+            plt.subplot(1, number_parameter, i + 1)
+            plt.plot(Theta[:,i], posterior[:,i])
+
+
+        
+        
+            print("blub")
         # output posterior estimates (mean of theta chain)
         # plot the sampled posterior parameter values 
 
