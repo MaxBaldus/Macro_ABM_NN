@@ -277,7 +277,8 @@ class BAM_mc:
                         if p_d >= 0: # in case firm charged higher price than average price (price difference positive)
                             if Qr[i] > 0: # and firm had positive inventories, firm should reduce price to sell more and leave quantity unchanged
                                 # a)
-                                p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p ), decimals=4) # max of previous average price or previous firm price  * 1-eta (price reduction) 
+                                p[i] = np.around(max(p[i]*(1-eta[i]), prev_avg_p), decimals=4) # max of previous average price or previous firm price  * 1-eta (price reduction) 
+                                #  P_lvl[t-4,mc] if t >= 3 else P_lvl[0,mc]
                                 Qd[i] = np.around(Qp[i]) #if Qs[i] > 0 else Qs_last_round # use average of quantity demanded last round in case Qd were non positive last round
                             else: # firm sold all products, i.e. had negative inventories: firm should increase quantity since it expects higher demand
                                 # d)
@@ -290,7 +291,7 @@ class BAM_mc:
                                 Qd[i] = np.around(Qp[i]*(1-rho[i]),decimals=4) #if Qs[i] > 0 else Qs_last_round
                             else: # excess demand (zero or negative inventories): price is increased
                                 # b)
-                                p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p),decimals=4)
+                                p[i] = np.around(max(p[i]*(1+eta[i]), prev_avg_p ),decimals=4)
                                 Qd[i] = np.around(Qp[i],decimals=4) #if Qs[i] > 0 else Qs_last_round
                         # setRequiredLabor: alpha is constant in the base version
                         Ld[i] = np.around(Qd[i] / alpha[i], decimals = 4) # labor demand of current round

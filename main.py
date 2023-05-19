@@ -59,7 +59,7 @@ The plots of both models are saved into plots/BAM and plots/BAM_plus respectivel
 """
 
 # number of MC simulations
-MC = 1
+MC = 2
 
 # upper bound of price growth rate
 H_eta=0.1
