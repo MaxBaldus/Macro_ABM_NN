@@ -43,13 +43,8 @@ class BAM_mc:
         self.theta = 8 # Duration of individual contract
         self.r_bar = 0.01 # Base interest rate set by central bank (exogenous in this model)
         self.delta = 0.2 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
-        self.capital_requirement_coef = 0.1 # capital requirement coefficients uniform across banks 
-
-        """
-        ???
-        self.c_P = c_P # Propensity to consume of poorest people
-        self.c_R = c_R # Propensity to consume of richest people
-        """
+        self.capital_requirement_coef = 0.1 # capital requirement coefficients uniform across banks (nu)
+        
   
     def simulation(self, theta):
 
@@ -411,12 +406,9 @@ class BAM_mc:
                                 
                                 # update labor market variables
                                 is_employed[j-1] = True # updateEmploymentStatus
-                                #firm_id[j-1] = f_max_id # save the firm id where HH is employed (add one since Python starts counting at 0)
                                 w[j-1] = np.around(w_max,decimals=2) # save wage HH l is earning
                                 hired = hired + 1 # counter for #HH increases by 1
                                 w_emp[f_max_id - 1].append(j) # employHousehold: save HH id to list of firm that is employing
-                                #L[f_max_id - 1] = len(w_emp[f_max_id - 1]) # updateTotalEmployees: update number of HH employed 
-                                #firm_went_bankrupt[j-1] = 0 # reset flag for employed worker in case she became unemployed because his previous firm went bankrupt
 
                                 break
 
@@ -426,16 +418,7 @@ class BAM_mc:
 
                         # labor market closes in case no more open vacancies (i.e. no more firms employing) 
                         #if sum(vac) == 0:
-                        #    break"
-                    
-                    """
-                    labor market issues:
-                    - min_wage: use wage_level or P_lvl ??
-                    - is_hiring needed ? 
-                    - vac = int(..) => because then ??
-                    - with coordination failure: Ld_zero = 16.5 (hence each firm 16 vacancies) s.t. sum(L) =  46 (u = 8)
-                    => 2.4782608695652173 , too high ? but only in t = 0 .. 
-                    """                
+                        #    break"              
     
                 #else:
                     #print("No Firm with open vacancies")
@@ -614,10 +597,7 @@ class BAM_mc:
                                 
                             L[f-1] = len(w_emp[f-1]) # update labour employed at firm f
                             W[f-1] = np.around(Wp[f-1] * L[f-1], decimals=4)  # update (total wage bills = wages * labour employed
-                    """
-                    Issues:
-                    - interest rate differences really small, since mark up so small !! 
-                    """                    
+
                 #else: 
                     #print("No credit requirement in the economy")
                     #print("")            
@@ -658,10 +638,7 @@ class BAM_mc:
                         f_produced.append(f+1) # append firm id if firm produced anything 
                     
                     Qs[f] = 0 # resetQtySold
-                    Qr[f] = Qp[f] # Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
-                """
-                - subtracting W from NW ??
-                """    
+                    Qr[f] = Qp[f] # Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)  
 
                 #print("Wage payments and Production done!!!")
                 #print("")
