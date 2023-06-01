@@ -15,8 +15,6 @@ Overall class structure: The class BAM_base contains the BAM model from Delli Ga
 The inputs are the the simulation parameters and some integer parameter values calibrated in advance.  
 """
 
-# stand: 14.04.2023
-
 class BAM_mc:
 
     def __init__(self, T:int, MC:int, plots:bool, csv:bool,
@@ -45,13 +43,8 @@ class BAM_mc:
         self.theta = 8 # Duration of individual contract
         self.r_bar = 0.01 # Base interest rate set by central bank (exogenous in this model)
         self.delta = 0.2 # Dividend payments parameter (fraction of net profits firm have to pay to the shareholders)
-        self.capital_requirement_coef = 0.1 # capital requirement coefficients uniform across banks 
-
-        """
-        ???
-        self.c_P = c_P # Propensity to consume of poorest people
-        self.c_R = c_R # Propensity to consume of richest people
-        """
+        self.capital_requirement_coef = 0.1 # capital requirement coefficients uniform across banks (nu)
+        
   
     def simulation(self, theta):
 
@@ -77,22 +70,22 @@ class BAM_mc:
         Aggregate report variables: dimension = Time x MC (1 time series for each MC run)
         """
         unemp_rate = np.zeros((self.T,self.MC)) # unemployment rate U
-        unemp_growth_rate = np.zeros((self.T,self.MC)) # unemployment growth rate 
+        unemp_growth_rate = np.zeros((self.T,self.MC)) # unemployment growth rate U^tilde
         
         P_lvl = np.zeros((self.T,self.MC)) # price level P^lvl
         inflation = np.zeros((self.T,self.MC)) # price inflation pi
 
         wage_lvl = np.zeros((self.T,self.MC)) # wage level W^lvl
         real_wage_lvl = np.zeros((self.T,self.MC)) # real wage
-        wage_inflation = np.zeros((self.T,self.MC)) # wage inflation (not in %)
-        avg_prod = np.zeros((self.T,self.MC)) # average productivity of labor 
-        product_to_real_wage = np.zeros((self.T,self.MC)) # productivity/real wage ratio
+        wage_inflation = np.zeros((self.T,self.MC)) # wage inflation (not in %) W^pi
+        avg_prod = np.zeros((self.T,self.MC)) # average productivity of labor alpha^L
+        product_to_real_wage = np.zeros((self.T,self.MC)) # productivity/real wage ratio Alpha^L/R
         
         production = np.zeros((self.T,self.MC)) # nominal gdp (quantities produced) Y
         output_growth_rate = np.zeros((self.T,self.MC)) # output growth rate 
     
         aver_savings = np.zeros((self.T,self.MC)) # average HH income S^lvl
-        vac_rate = np.zeros((self.T,self.MC)) # vacancy rate approximated by number of job openings and the labour force at the beginning of a period 
+        vac_rate = np.zeros((self.T,self.MC)) # vacancy rate approximated by number of job openings and the labour force at the beginning of a period vac^lvl
         bankrupt_firms_total = np.zeros((self.T,self.MC)) # number of bankrupt firms in current round
         
         print("")
@@ -127,7 +120,6 @@ class BAM_mc:
             """
 
             # HOUSEHOLDS
-            # Y = np.zeros(self.Nh) # income of HH
             S = np.zeros(self.Nh) # savings
             C = np.zeros(self.Nh) # (actual) consumption
             C_d = np.zeros(self.Nh) # desired / demanded consumption
@@ -157,9 +149,10 @@ class BAM_mc:
             Qp = np.zeros(self.Nf) # Actual Qty produced: Y_it
             Qs = np.zeros(self.Nf) # Qty sold
             Qr = np.zeros(self.Nf) # Qty Remaining
-            rho = np.zeros(self.Nf) # intiaize Qty update parameter
             
+            rho = np.zeros(self.Nf) # intiaize Qty update parameter
             eta = np.zeros(self.Nf) # Price update random number to be sampled later
+            
             p = np.zeros(self.Nf) # price
             
             Ld = np.zeros(self.Nf) # Desired Labor to be employed
@@ -167,14 +160,13 @@ class BAM_mc:
             L = np.zeros(self.Nf)  # actual Labor Employed
             Lo = np.zeros(self.Nf) # actual workforce (L of last round - amount of just expired contracts)
             vac = np.zeros(self.Nf) # Vacancy
-            w_emp = [[] for _ in range(self.Nf)] # Ids of workers/household employed - each firm has a list with worker ids
+            w_emp = [[] for _ in range(self.Nf)] # Ids of workers/household employed - each firm has a list with worker ids w^emp
             W = np.zeros(self.Nf) # aggregated Wage bills (wage payments to each Worker * employed workers)
-            #w_min_slice = np.repeat(np.arange(1,self.T,4), 4)  # array with values from 3 up to T-3 appearing 4 times in a row for slicing the minimum wage s.t. min. wage is revised every 4 periods
             time_stamp_wage_adjustment = np.arange(3,self.T,4)
             Wp = np.zeros(self.Nf) # Wage payments of firm this round
-            #job_applicants = [[] for _ in range(self.Nf)] # Ids of Job applicants (HH that applied for job) -> Liste für each firm => array with [] entries for each i
            
-            is_hiring = np.zeros(self.Nf, bool) # Flag to be activated when firm enters labor market to hire 
+            #is_hiring = np.zeros(self.Nf, bool) # Flag to be activated when firm enters labor market to hire 
+            # NEEDED ?!
 
             P = np.zeros(self.Nf) # net Profits
             NW = np.ones(self.Nf)  # initial Net worth
@@ -184,15 +176,6 @@ class BAM_mc:
 
             B = np.zeros(self.Nf) # amount of desired credit (total)
             lev = np.zeros(self.Nf) # invdivudal leverage (debt ratio)
-            #loan_paid = np.zeros(self.Nf)
-            #credit_appl = [[] for _ in range(self.Nf)] # list with bank ids each frim chooses randomly to apply for credit
-            #loans_to_be_paid = np.zeros(self.Nf) # outstanding debt + interest rate firm has to pay back to bank 
-
-            #outstanding = [[] for _ in range(self.Nf)] # under 6) if firm cannot pay back entire loan(s), amount outstanding for each bank (not paid back) is saved here
-            #outstanding_flag = np.zeros(self.Nf) # under 6), set to 1 if firm cannot pay back entire amount of loans
-            #outstanding_to_bank = [[] for _ in range(self.Nf)] # save the bank ids each firm has outstanding amount to 
-            #outstanding_r = [[] for _ in range(self.Nf)] # interest rate charged by bank where firm has outstanding credit
-
             Qp_last = np.zeros(self.Nf) # variable to save quantity produced in round before 
             bankrupt_flag = np.zeros(self.Nf) # set entry to 1 in case firm went bankrupt 
 
@@ -316,7 +299,7 @@ class BAM_mc:
                     w_min = w_min_zero
                 elif t in time_stamp_wage_adjustment:
                     w_min = w_min *(1 + inflation[t-1,mc])
-                # w_min = w_min_zero if t in range(3) else wage_lvl[w_min_slice[t-3],mc] # minimum wage is the average price level 4 rounds before
+
                 """
                 Firms determine Vacancies. 
                 After 8 rounds the contract of a worker expires. In that case the worker will apply to the firm first she workerd at before. 
@@ -335,18 +318,11 @@ class BAM_mc:
                             d_employed[j-1] = 0 # 0 days employed from now on
                             w_emp[i].remove(j) # delete the current HH id in the current firm array 
                             prev_firm_id[j-1] = i # add firm id to list of expired contract s.t. HH directly adds firm to her list for applications
-                            
-                            """
-                            
-                            
-                            firm_id[j-1] = 0 # setEmployedFirmId: 0 now, because no employed firm
-                            w[j-1] = 0 # setWage: HH receives no wage now """
-                    
+                                                
                     Lhat[i] = n # number of just expired contracts
                     Lo[i] =  L[i] - Lhat[i]  # actual workforce
                     
                     # calcVacancies of firm i
-                    # vac[i] = math.ceil(max((Ld[i] - Lo[i]) ,0)) # vacancies are always rounded to the next higher and cannot be negative
                     vac[i] = np.around(max((Ld[i] - Lo[i]) ,0), decimals = 8)
                     if vac[i] > 0: 
                         f_empl.append(i+1) # if firm i has vacancies, then firm id i is saved to list 
@@ -362,10 +338,10 @@ class BAM_mc:
  
                     if vac[i] > 0: # firm increases wage in case it has currently open vacancies:
                             Wp[i] = np.around(max(w_min, Wp[i]*(1+xi)),decimals=4) # Wage of firm i is set: either minimum wage or wage of period before revised upwards 
-                            is_hiring[i] = True 
+                            #is_hiring[i] = True 
                     else:
                         Wp[i] = np.around(max(w_min, Wp[i]),decimals=2) # wage is either min. wage or wage of period before 
-                        is_hiring[i] = False        
+                        #is_hiring[i] = False        
 
                 """
                 Search and Match: After firms made conctractual terms (wages and vacancies) public, search and match on the labour market begins.  
@@ -430,12 +406,9 @@ class BAM_mc:
                                 
                                 # update labor market variables
                                 is_employed[j-1] = True # updateEmploymentStatus
-                                #firm_id[j-1] = f_max_id # save the firm id where HH is employed (add one since Python starts counting at 0)
                                 w[j-1] = np.around(w_max,decimals=2) # save wage HH l is earning
                                 hired = hired + 1 # counter for #HH increases by 1
                                 w_emp[f_max_id - 1].append(j) # employHousehold: save HH id to list of firm that is employing
-                                #L[f_max_id - 1] = len(w_emp[f_max_id - 1]) # updateTotalEmployees: update number of HH employed 
-                                #firm_went_bankrupt[j-1] = 0 # reset flag for employed worker in case she became unemployed because his previous firm went bankrupt
 
                                 break
 
@@ -445,16 +418,7 @@ class BAM_mc:
 
                         # labor market closes in case no more open vacancies (i.e. no more firms employing) 
                         #if sum(vac) == 0:
-                        #    break"
-                    
-                    """
-                    labor market issues:
-                    - min_wage: use wage_level or P_lvl ??
-                    - is_hiring needed ? 
-                    - vac = int(..) => because then ??
-                    - with coordination failure: Ld_zero = 16.5 (hence each firm 16 vacancies) s.t. sum(L) =  46 (u = 8)
-                    => 2.4782608695652173 , too high ? but only in t = 0 .. 
-                    """                
+                        #    break"              
     
                 #else:
                     #print("No Firm with open vacancies")
@@ -633,10 +597,7 @@ class BAM_mc:
                                 
                             L[f-1] = len(w_emp[f-1]) # update labour employed at firm f
                             W[f-1] = np.around(Wp[f-1] * L[f-1], decimals=4)  # update (total wage bills = wages * labour employed
-                    """
-                    Issues:
-                    - interest rate differences really small, since mark up so small !! 
-                    """                    
+
                 #else: 
                     #print("No credit requirement in the economy")
                     #print("")            
@@ -677,10 +638,7 @@ class BAM_mc:
                         f_produced.append(f+1) # append firm id if firm produced anything 
                     
                     Qs[f] = 0 # resetQtySold
-                    Qr[f] = Qp[f] # Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)
-                """
-                - subtracting W from NW ??
-                """    
+                    Qr[f] = Qp[f] # Initialize the remaining quantity by subtracting the quantity sold (currently 0, since goods market did not open yet)  
 
                 #print("Wage payments and Production done!!!")
                 #print("")
@@ -980,7 +938,7 @@ class BAM_mc:
                 """
                 wage_lvl[t,mc] = np.sum(W)/np.sum(L) # nominal wage level: sum of wage paid * number of employees relative to number of employees
                 wage_inflation[t,mc] = (wage_lvl[t,mc]- wage_lvl[t-1,mc]) / np.sum(wage_lvl[t-1,mc]) if t!=0 else 0
-                real_wage_lvl[t,mc] = (1-inflation[t,mc])*wage_lvl[t,mc] if t!= 0 else 0 # (1-inflation rate)* wage = real income
+                real_wage_lvl[t,mc] = (1-inflation[t,mc])*wage_lvl[t,mc] if t!= 0 else 0 # (1-inflation rate)* wage = real income Wr
 
                 """
                 Productivity / real wage ratio

@@ -1,5 +1,5 @@
 """
-BAM model from Delli Gatti 2011. 
+Simulating and estimating BAM model from Delli Gatti 2011. 
 @author: maxbaldus
 """
 
@@ -59,7 +59,7 @@ The plots of both models are saved into plots/BAM and plots/BAM_plus respectivel
 """
 
 # number of MC simulations
-MC = 2
+MC = 1
 
 # upper bound of price growth rate
 H_eta=0.1
@@ -94,7 +94,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 
 # simulating BAM model MC times without parallising 
-"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
@@ -104,7 +104,7 @@ start_time = time.time()
 BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # approximately 2 minutes for one 1 run
 
 

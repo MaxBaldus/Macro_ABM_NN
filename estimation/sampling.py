@@ -1,6 +1,6 @@
 """
+sampling and estimation routine
 @author: maxbaldus
-
 """
 
 # libraries

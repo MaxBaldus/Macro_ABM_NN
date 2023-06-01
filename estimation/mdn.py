@@ -1,6 +1,6 @@
 """
+Mixture density network
 @author: maxbaldus
-
 """
 
 import os
