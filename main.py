@@ -202,10 +202,10 @@ def grid_search_parallel(theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 20MC simulations per theta in parallel
-"""Parallel(n_jobs=num_cores, verbose=50)(
+Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (Theta, BAM_model, path, i) for i in range(grid_size)
-        )"""
+        )
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
