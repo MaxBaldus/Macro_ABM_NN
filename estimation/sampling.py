@@ -205,7 +205,7 @@ class sample_posterior:
 
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
-            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
+            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0], :]
 
             if self.filter:
                 # filter

@@ -94,7 +94,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 
 # simulating BAM model MC times without parallising 
-BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
@@ -104,7 +104,7 @@ start_time = time.time()
 BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))
+print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
 # approximately 2 minutes for one 1 run
 
 
@@ -166,9 +166,11 @@ start_time = time.time()
 # generate grid with parameter values
 np.random.seed(123)
 Theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_simulations/latin_hypercube')
-np.save('estimation/BAM/Theta', Theta)
+# np.save('estimation/BAM/Theta', Theta)
 
 # Theta = np.load('estimation/BAM/Theta_500.npy') # load test parameter combinations (with large bounds)
+Theta = np.load('estimation/BAM/Theta.npy') # load parameter for small grid (5000 combinations)
+
 
 path = 'data/simulations/BAM_simulations/latin_hypercube'
 # path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
@@ -202,10 +204,10 @@ def grid_search_parallel(theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 20MC simulations per theta in parallel
-Parallel(n_jobs=num_cores, verbose=50)(
+"""Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (Theta, BAM_model, path, i) for i in range(grid_size)
-        )
+        )"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -217,21 +219,26 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
 """
+# save start time
+start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
 posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
 
 # TEST check with log values ??
-np.save('estimation/BAM/log_posterior_loggdpvalues_500', log_posterior)
-np.save('estimation/BAM/posterior_loggdpvalues_500', posterior)
-np.save('estimation/BAM/prior_loggdpvalues_500', prior_probabilities)
+np.save('estimation/BAM/log_posterior_loggdpvalues_5000', log_posterior)
+np.save('estimation/BAM/posterior_loggdpvalues_5000', posterior)
+np.save('estimation/BAM/prior_loggdpvalues_5000', prior_probabilities)
 
-# Theta = np.load('estimation/BAM/Theta_500.npy)
+
 # log_posterior = np.load('estimation/BAM/log_posterior.npy)
 # posterior = np.load('estimation/BAM/posterior.npy)
 
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
 print("blub")
+# --- 290.84607830047605 minutes ---
 # plots
 # path = 'plots/posterior/BAM'
 
