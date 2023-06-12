@@ -5,10 +5,16 @@ sampling and estimation routine
 
 # libraries
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import qmc
+from scipy.interpolate import make_interp_spline
+
+from scipy.stats import gaussian_kde
+import seaborn as sns
+
 from tqdm import tqdm
 from itertools import product
-from scipy.stats import qmc
-import matplotlib.pyplot as plt
 
 from joblib import Parallel, delayed
 import multiprocessing
@@ -236,8 +242,8 @@ class sample_posterior:
             log_posterior[i,:] = posteriors[i][1]
             # marginal_priors[i,:] = posteriors[i][1]
         
-        np.save('estimation/BAM/log_posterior', log_posterior)
-        np.save('estimation/BAM/posterior', posterior)
+        # np.save('estimation/BAM/log_posterior', log_posterior)
+        # np.save('estimation/BAM/posterior', posterior)
         
         print("")
         print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -293,22 +299,104 @@ class sample_posterior:
         return prior_probabilities
 
 
-    def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors):
-        
-        number_parameter = np.shape(self.bounds)[1]
+    def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,
+                        para_names, path, plot_name):
 
-        # plotting posterior values
+        """
+        Plot posterior and prior probabilities
+        """
+        
+        number_parameter = np.shape(Theta)[1]
+
+        """
+        1) plot log posteriors 
+        """
+        
+        # remove NAN's
+        slicer_nan = np.isnan(log_posterior)
+        log_post_tmp = log_posterior[~slicer_nan.any(axis=1)]
+
+        # determine min (most negative) log posterior values, ignoring -inf values
+        slicer_inf = np.isinf(log_post_tmp)
+        log_post_tmp_noinf = log_post_tmp[~slicer_inf.any(axis=1)]
+        min_log_post = min(log_post_tmp_noinf.min(axis=0))
+
+        # replace -inf values with largest negative value - 1000 from above
+        np.place(log_post_tmp, log_post_tmp < -10000, [min_log_post - 1000, min_log_post - 1000,min_log_post - 1000, min_log_post - 1000])
+
+        # delete corresponding Theta values and prior values with nan's
+        Theta_new = Theta[~slicer_nan.any(axis=1)]
+        prior_new = marginal_priors[~slicer_nan.any(axis=1)]
+
+        # plotting the marginal posteriors
         for i in range(number_parameter):
 
-            plt.subplot(1, number_parameter, i + 1)
-            plt.plot(Theta[:,i], posterior[:,i])
+            # scatter the all marginal posterior values and corresponding parameter values
+            plt.clf()
+            plt.scatter(Theta_new[:,i], log_post_tmp[:,i])
+            plt.xlabel(para_names[i])
+            plt.ylabel("log_posterior")
+            #plt.show()
+            
+            # only consider positive posterior values (and corresponding parameter and prior values)
+            log_post_tmp_positive = log_post_tmp[:,i][log_post_tmp[:,i] > 0]
+            slicer_greaterzero = np.where(log_post_tmp[:,i] > 0)[0]
+            Theta_positive = Theta_new[:,i][slicer_greaterzero]
+            prior_positive = prior_new[:,i][slicer_greaterzero]
+
+            # scatterplot of positive parameter values
+            plt.clf()
+            plt.scatter(Theta_positive, log_post_tmp_positive)
+            plt.savefig(path + plot_name + '_parameter' + str(i) + '.png')
+            
+            # create pd dataframe and order values according to theta values
+            df = pd.DataFrame()
+            df['theta'] = Theta_positive
+            df['log_post'] = log_post_tmp_positive
+            df['prior'] = prior_positive
+            df = df.sort_values('theta')
+            
+            # smooth scatterplot/posterior distribution 
+            #gfg = make_interp_spline(df['theta'], df['log_post'], k=3)
+            #log_post_smooth = gfg(df['theta'])
+
+            plt.clf()
+            # plt.plot(df['theta'], log_post_smooth)
+            plt.plot(df['theta'], df['log_post'])
+            
+            # prior
+            plt.plot(df['theta'], np.log(df['prior']))
+            
+            # posterior mode
+            df = df.reset_index()
+            max_log_post = df.loc[int(df['log_post'].idxmax()), 'theta']
+            plt.axvline(x = max_log_post, c = 'k', linestyle = 'dashed', alpha = 0.75)
+            
+            # axis and legend
+            plt.xlabel(para_names[i])
+            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
+            plt.legend(['log Posterior Density', 'log Prior Density', 'Posterior Mode'], fontsize = 8)
+            plt.savefig(path + plot_name + '_smooth_parameter' + str(i) + '.png')
+
+            # prior
+            # plt.plot(Theta[:,i], marginal_priors[:,i])
 
 
-        
-        
-            print("blub")
-        # output posterior estimates (mean of theta chain)
-        # plot the sampled posterior parameter values 
 
-        # save plots  'plots/posterior/BAM/NAME'
-        # scale values ?!
+            """plt.clf()
+            plt.hist(log_post_tmp_positive, 25, density = True, color = 'b', alpha = 0.5)
+            plt.show()
+
+            # apply kde to smooth the distribution
+            plt.clf()
+            sns.kdeplot(data=df, x = 'log_post')
+            plt.show()
+            
+            
+            kde = gaussian_kde(df['log_post'])
+            
+            plt.plot(kde)
+            plt.show()"""
+
+        print('--------------------------------------')
+        print("Done")

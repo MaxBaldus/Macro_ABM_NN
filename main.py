@@ -220,27 +220,42 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
 """
 # save start time
+print('--------------------------------------')
+print("Estimation Block")
 start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+# posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
 
-# TEST check with log values ??
-np.save('estimation/BAM/log_posterior_loggdpvalues_5000', log_posterior)
+# uncomment for saving posterior and prior values
+"""np.save('estimation/BAM/log_posterior_loggdpvalues_5000', log_posterior)
 np.save('estimation/BAM/posterior_loggdpvalues_5000', posterior)
-np.save('estimation/BAM/prior_loggdpvalues_5000', prior_probabilities)
-
-
-# log_posterior = np.load('estimation/BAM/log_posterior.npy)
-# posterior = np.load('estimation/BAM/posterior.npy)
+np.save('estimation/BAM/prior_loggdpvalues_5000', prior_probabilities)"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
-print("blub")
 # --- 290.84607830047605 minutes ---
-# plots
+
+# plotting the posterior, log posterior and prior values, for each theta on the grid
+posterior = np.load('estimation/BAM/posterior_loggdpvalues_5000.npy')
+log_posterior = np.load('estimation/BAM/log_posterior_loggdpvalues_5000.npy')
+prior_probabilities = np.load('estimation/BAM/prior_loggdpvalues_5000.npy')
+
+# parameter names
+para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
+
+# plot names
+name = 'small_grid_5000_log_filter'
+
 # path = 'plots/posterior/BAM'
+BAM_posterior.posterior_plots(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+                              marginal_priors=prior_probabilities, para_names = para_names,
+                              path = 'plots/posterior/BAM/',
+                              plot_name=name)
+print("HIER")
+
+
 
 # Simulation hyperparameters:
 # Gatti 2020
@@ -298,7 +313,7 @@ toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para,
 # Use the plain grid search to compute the posterior estimates of each free parameter
 # the likelihood approximation method used inside the sampling method is set inside the sampling class
 toy_posterior.grid_search(grid_size = 3000, path = 'data/simulations/toymodel_simulations/latin_hypercube')
-print("blub")"""
+"""
 
 # Gatti 2020
 # 5000 combinations
