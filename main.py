@@ -1,5 +1,5 @@
 """
-Simulating and estimating BAM model from Delli Gatti 2011. 
+Simulating and estimating BAM model from Delli Gatti 2011 (and a toy model from Caiani et al. 2016). 
 @author: maxbaldus
 """
 
@@ -19,7 +19,7 @@ import multiprocess as mp
 # import model classes
 from models.toymodel import Toymodel
 from models.BAM import BAM_mc # BAM with regular mc loop
-from models.BAM_parallel import BAM_parallel # BAM model parallized
+from models.BAM_parallel import BAM_parallel # BAM model parallized (only for demonstration: parallized computing used later on with BAM_mc)
 
 
 #from models.BAM_numba import BAM_simulation_numba # BAM as a function, exploiting numba
@@ -36,26 +36,28 @@ from estimation.sampling import sample_posterior
 #################################################################################################
 
 """
-Simulating a simple macro model with 10 Monte carlo replications. 
+Simulating a simple macro model with 5 Monte carlo replications. 
 The plots are saved into plots/toymodel folder.
 """
 
+"""
 # instantiate the toymodel class
-"""toymodel = Toymodel(Time=1000, Ni=100, MC=5,  
+toymodel = Toymodel(Time=1000, Ni=100, MC=5,  
                     plots=True, filters=False)
 
 # simulate the toy model and create the plots 
 # toy_simulations = toymodel.simulation(gamma=2, pbar=0.01, delta=0.05, rbar=0.075) 
 parameter = np.array([2, 0.01, 0.05, 0.075])
-toy_simulations = toymodel.simulation(parameter)""" 
+toy_simulations = toymodel.simulation(parameter)
+"""
 
 #################################################################################################
 # Simulating the BAM model(s) by Delli Gatti (2011)
 #################################################################################################
 
 """ 
-Simulating the base model and the plus version MC times, with and without parallel computing.
-The plots of both models are saved into plots/BAM and plots/BAM_plus respectively.  
+Simulating the base model MC times, with and without parallel computing.
+The plots are saved into plots/cut and plots/full respectively.  
 """
 
 # number of MC simulations
@@ -66,13 +68,14 @@ H_eta=0.1
 # upper bound of quantity growth rate
 H_rho=0.1
 # upper bound bank costs 
-H_phi=0.1 # 0.01
+H_phi=0.1 
 # upper bound growth rate of wages
 h_xi=0.05
 # parameter
 parameter = np.array([H_eta, H_rho, H_phi, h_xi])
 
-"""# simulate the base BAM model MC times using parallel computing
+"""
+# simulate the base BAM model MC times using parallel computing
 BAM_model_parallel = BAM_parallel(T=1000, MC = 5, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 
@@ -90,11 +93,13 @@ BAM_simulations_parallel = Parallel(n_jobs=num_cores)(
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
-# np.save('data/simulations/BAM_10MC', BAM_simulations_parallel) # save the 10 simulations"""
+# np.save('data/simulations/BAM_10MC', BAM_simulations_parallel) # save the 10 simulations
+# """
 
 
 # simulating BAM model MC times without parallising 
-"""BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=True, csv=False) 
 print("")
 print('--------------------------------------')
@@ -104,25 +109,17 @@ start_time = time.time()
 BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
-# approximately 2 minutes for one 1 run
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
+# approximately 2 minutes for one 1 run 
 
-"""
-# simulate plus version by setting growth parameters not to 0 !!
-# NO: use another function s.t. having specific bounds later .. !!
-
-
-Analyse:
-Idee: extra class mit function für MC plots,
-=> MC analysis "nicht" so wie in Buch, sondern analog zu MC analysis in book (pract. applications)
-"""
 
 #################################################################################################
 # Estimating the BAM model
 #################################################################################################
 
 """
+General estimation set-up: Grid search:
 Generate MC simluations of the model, ech with length T, for each parameter combination.
 
 A)
@@ -136,7 +133,7 @@ MC = 20
 BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0] # use only last 500 observations
 
-# create new instance of the BAM model 
+# create new instance of the BAM model (wihtout any plotting)
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
                 plots=False, csv=False) 
 
@@ -145,7 +142,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 # bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.1] ]))
 
-# initialize the estimation methods
+# initialize the estimation method
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
 """
@@ -170,7 +167,6 @@ Theta = BAM_posterior.simulation_block(grid_size, path = 'data/simulations/BAM_s
 
 # Theta = np.load('estimation/BAM/Theta_500.npy') # load test parameter combinations (with large bounds)
 Theta = np.load('estimation/BAM/Theta.npy') # load parameter for small grid (5000 combinations)
-
 
 path = 'data/simulations/BAM_simulations/latin_hypercube'
 # path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
@@ -204,10 +200,12 @@ def grid_search_parallel(theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 20MC simulations per theta in parallel
-"""Parallel(n_jobs=num_cores, verbose=50)(
+"""
+Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (Theta, BAM_model, path, i) for i in range(grid_size)
-        )"""
+        )
+"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -229,15 +227,20 @@ start_time = time.time()
 # path = 'data/simulations/toymodel_simulations/latin_hypercube'
 
 # uncomment for saving posterior and prior values
-"""np.save('estimation/BAM/log_posterior_loggdpvalues_5000', log_posterior)
+"""
+np.save('estimation/BAM/log_posterior_loggdpvalues_5000', log_posterior)
 np.save('estimation/BAM/posterior_loggdpvalues_5000', posterior)
-np.save('estimation/BAM/prior_loggdpvalues_5000', prior_probabilities)"""
+np.save('estimation/BAM/prior_loggdpvalues_5000', prior_probabilities)
+"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # --- 290.84607830047605 minutes ---
 
-# plotting the posterior, log posterior and prior values, for each theta on the grid
+"""
+plotting the posterior, log posterior and prior values, for each theta in the grid
+"""
+
 posterior = np.load('estimation/BAM/posterior_loggdpvalues_5000.npy')
 log_posterior = np.load('estimation/BAM/log_posterior_loggdpvalues_5000.npy')
 prior_probabilities = np.load('estimation/BAM/prior_loggdpvalues_5000.npy')

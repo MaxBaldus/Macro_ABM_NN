@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import csv 
 import math
 from tqdm import tqdm
+from statsmodels.tsa.stattools import adfuller
+
 
 """
 Overall class structure: The class BAM_base contains the BAM model from Delli Gatti 2011. 
@@ -64,7 +66,6 @@ class BAM_mc:
         H_phi = theta[2] 
         h_xi = theta[3] 
 
-        # growth plus parameters? EXTRA FILE ?
 
         """
         Aggregate report variables: dimension = Time x MC (1 time series for each MC run)
@@ -127,20 +128,12 @@ class BAM_mc:
 
             w = np.zeros(self.Nh) # wage of each HH
             w_last_round = np.zeros(self.Nh) # wage of round before 
-            #unemp_benefit = np.zeros(self.Nh) # uneployment benefits in case HH has no employment
             div = np.zeros(self.Nh) # dividend payment to HH from profit of firm (new each round)
-            #w_flag = np.zeros(self.Nh) # flag in case HH received wage in current t
-            #div_flag = np.zeros(self.Nh) # flag in case HH received dividend payment in current t
-
+            
             is_employed = np.zeros(self.Nh, bool) # True if HH has job: e.g. array([False, False, False, False, False])
             d_employed = np.zeros(self.Nh) # counts the days a HH is employed
-            #d_unemployed = np.zeros(self.Nh) # counts the days a HH is unemployed
-            #firm_id = np.zeros(self.Nh) # firm_id where HH is employed
             prev_firm_id = np.zeros(self.Nh, int) # firm id HH was employed last
-            #firms_applied =  [[] for _ in range(self.Nh)] # list of firm ids HH applied to 
-            #job_offered_from_firm = [[] for _ in range(self.Nh)] # list of an offered job from firm i for each HH
 
-            #firm_went_bankrupt = np.zeros(self.Nh) # flag (value of 1) in case the firm HH was employed just went bankrupt 
             expired = np.zeros(self.Nh, bool) # flag in case contract of a HH expired, it is set to True 
             goods_visited = np.zeros(self.Nh)# one list for each HH in which firm id's are stored that sold product to HH in round before
             
@@ -165,9 +158,6 @@ class BAM_mc:
             time_stamp_wage_adjustment = np.arange(3,self.T,4)
             Wp = np.zeros(self.Nf) # Wage payments of firm this round
            
-            #is_hiring = np.zeros(self.Nf, bool) # Flag to be activated when firm enters labor market to hire 
-            # NEEDED ?!
-
             P = np.zeros(self.Nf) # net Profits
             NW = np.ones(self.Nf)  # initial Net worth
             Rev = np.zeros(self.Nf) # Revenues of a firm (gross profits)
@@ -182,17 +172,9 @@ class BAM_mc:
             # BANKS
             E = np.zeros(self.Nb) # equity base 
             phi = np.zeros(self.Nb)
-            #tCr = np.zeros(self.Nb) # initial amount of Credit of all banks, filled with random numbers for t = 0
             Cr = np.zeros(self.Nb) # amount of credit supplied / "Credit vacancies"
-            #Cr_a = np.zeros(self.Nb) # actual amount of credit supplied (after..)
             Cr_rem = np.zeros(self.Nb) # credit remaining 
-            # Cr_s = [[] for _ in range(self.Nb)] # amount of credit supplied 
-            # r_s = [[] for _ in range(self.Nb)] # interest rate supplied 
             
-            #firms_applied_b = [[] for _ in range(self.Nb)] 
-            # firms_loaned = [[] for _ in range(self.Nb)] 
-            #Cr_p = np.zeros(self.Nb)
-
             Bad_debt = np.zeros(self.Nb)
 
             """
@@ -201,32 +183,20 @@ class BAM_mc:
             """
             # HOUSEHOLDS
             S = np.around(np.random.uniform(low=1,high=1,size=self.Nh), decimals = 4) # initial (random) income of each HH  
-            # S_initial = 10 => sum(C_d) 3179 ; S_intiial = 2 => sum(Qr) = 25
             MPC = np.around(np.random.uniform(low=0.6,high=0.9,size=self.Nh), decimals = 4) # initial random marginal propensity to consume of each HH 
 
             # FIRMS
             NW = np.around(np.random.uniform(low=5 ,high=5, size=self.Nf), decimals = 4) # initial net worth of the firms 
-            # assuming: B / NW = 0.4 => 0.4 * NW should be loaned (circa) 
-            # in t = 0 ->  NW = 20 => few firms are around 0.2, 0.15 , other are higher up to 1 (depending on number of vacancies)
-            # B often the same value if NW in t=0 the same for all firms => changed NW initial NW a little bit
             p = np.around(np.random.uniform(low=1.4, high=1.4,size=self.Nf), decimals = 4) # initial prices
-
-
-            #Ld_zero = np.around(np.random.uniform(low=12 ,high=12), decimals = 2) # initial labour demand per firm 
             Ld_zero = 5 # 4.5 # s.t. in first round sum(vac) = 400 and therefore u = 1 - (L/Nh) = 0.2 
-            # with 16.5 => intial vacancies s.t. u = 7% => sum(Qp) = 241
             Wp = np.around(np.random.uniform(low= 1,high=1,size=self.Nf), decimals = 4) # initial wages
             alpha = np.random.uniform(low=0.5, high=0.5, size = self.Nf) # Productivity alpha stays constant here, since no R&D in this version
             # Delli Gatti & Grazzini 2020 set alpha to 0.5 in their model (constant)
-            # p_zero = np.around(np.random.uniform(low = 2, high = 2), decimals=2) # initial prices of firms 
-            #p_zero = 2
             w_min_zero = 0.95
             
             # BANKS
             E = np.random.uniform(low = 5, high = 5, size = self.Nb)
-            # E / v = 5 / 0.25 = 20 => sum(Cr) = 200 ; sum(B)=206 in t=0 => u goes up 12% 
-            # increasing captial requrirment coefficient to 0.1 => only 6 HH's layed off now
-
+        
             """
             Simulation:
             """
@@ -611,10 +581,10 @@ class BAM_mc:
                 Production takes one unit of time regardless of the scale of prod/firms (constant return to scale, labor as the only input).  
                 Since Firms either received enough credit or layed some HH's off if credit received was not enough, wage payments can all be paid,
                 using internal (net worth) and external (credit) funds.
-                The actual Wage payments have to the workers have to be made now in order to start production, which might become negative in case the 
-                firm had to borrow money in the credit market. 
-                Firms then have to make enough revenue (gross profit) in the following goods market s.t. it has enough income to cover the wage payments
-                (negative net worth) and be able to pay back bank and potentially dividends (i.e. remaining with positive net worth in the end).
+                The actual Wage payments to the workers are done in 7) after credit is paid back. Since the wage payments are transacted after the goods market closes 
+                and any loans granted on the preceding credit market have to be paid back at the end of $t$, 
+                firms are forced to make enough revenue (gross profit) to be able to cover Wp, Bi 
+                and potential dividend payments to the households (in case the company remains with positive net worth in the end).
                 Productivity alpha is 0.5 for each firm and remains constant throughout the entire simulation (hence no aggregate Output growth in the long run).
                 In the BAM_plus version there is also technical innovation included s.t. alpha increases over time (through R&D in 6). 
                 """
@@ -699,8 +669,8 @@ class BAM_mc:
                     # extract the specific prices of each firm
                     prices_chosen_firms = []  # initialize list with the prices of the chosen firms 
                     for ii in appl_firms: 
-                            p_current = p[ii-1] # interest rate of the current firm (first slice list of all r of bank ii, then r for firm actually applying)
-                            prices_chosen_firms.append(p_current) # extract the interest rateS of the chosen banks
+                            p_current = p[ii-1] # price of the current firm (similar: first slice list of all r of bank ii, then r for firm actually applying)
+                            prices_chosen_firms.append(p_current) # extract price (interest rates of the chosen banks)
 
                     if len(prices_chosen_firms) > 0:
                         goods_visited[c-1] = int(appl_firms[prices_chosen_firms.index(min(prices_chosen_firms))]) # save firm id out of firms she visits with lowest price
@@ -825,7 +795,7 @@ class BAM_mc:
 
                             """
                             If firm cannot pay back all loans, i.e her gross revenue is smaller than total amount of loans firm has to pay back: 
-                            The firm starts to pay back using her entire revenue, starting with the first bank she got credit from. 
+                            The firm starts to pay back using her entire revenue and parts of its net worth, starting with the first bank she got credit from. 
                             """
                             amount_left = Rev[f] # initialize the entire amount of revenue firm has left to pay back firms
                             
@@ -1043,22 +1013,6 @@ class BAM_mc:
                         plt.xlabel("Firm Size distribution by labor L")
                         plt.savefig("plots/cut/firm_size/size_disribution_mc%s_t=%s.png" %(mc,t))
 
-                    
-
-            
-                """ 
-                TO DO:
-
-                    
-                BAM plus:
-                -  build BAM_plus and see if more firms bankrupt then
-                -  dafür: class markets => each market as a function s.t. when fixing bugs in markets not have to do it twce for each model ..
-
-                Computationally more efficient
-                - using only numpy arrays: never use append and no for loops inside for loops
-                - rather: use 2-d numpy arrays: save values to initiazed list, then remove values not used .. 
-                """
-
             """
             Plotting main aggregate report variables if number of MC replications small enough and simulation ran through:
             The plots are saved in folder: 
@@ -1204,5 +1158,32 @@ class BAM_mc:
                 plt.xlabel("Time")
                 plt.ylabel("average HH Income")
                 plt.savefig("plots/cut/HH_income_mc%s.png" %mc)
+                
+                """
+                DF test
+                """
+                # Augmented Dickey-Fuller unit root test on gdp and inflation
+                fuller_gdp = adfuller(np.log(production[self.T -499:,mc]))
+                fuller_inflation = adfuller(inflation[self.T -499:,mc])
+                print(fuller_gdp)
+                print(fuller_inflation)
+                
+                print("Average production %s" %np.mean(np.log(production[self.T -499:,mc])))
+                print("Average unemployment %s" %np.mean(unemp_rate[self.T -499:,mc]))
+                print("Average inflation %s" %np.mean(inflation[self.T -499:,mc]))
+                
+                """
+                Correlation and regression
+                """
+                
+                print("Corr phill curve %s" %np.corrcoef(unemp_rate[self.T -499:,mc], wage_inflation[self.T -499:,mc]))
+                print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc]))
+                print("Corr beveridge %s" %np.corrcoef(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc]))
+                
+                
+                
+                
+                # Correlation coefficients of scatter plots
+                
             
         return production

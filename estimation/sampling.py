@@ -92,7 +92,7 @@ class sample_posterior:
             plt.savefig(current_path + "png")"""
 
 
-        # parallize the grid search: using joblib
+        # parallize the grid search: using joblib (not used here: outsourced to main.py)
         """def grid_search_parallel(theta, model, path, i):
 
             # current parameter combination
@@ -167,7 +167,9 @@ class sample_posterior:
         start_time = time.time()
         
         # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        """# for i in tqdm(range(grid_size)):
+        # without parallised computing
+        """
+        # for i in tqdm(range(grid_size)):
         for i in [27, 31, 45, 49]:
 
             i = 27 
@@ -200,7 +202,8 @@ class sample_posterior:
 
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors[i,:]
-            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])"""
+            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
+            """
 
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
