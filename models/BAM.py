@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 import csv 
 import math
 from tqdm import tqdm
+
 from statsmodels.tsa.stattools import adfuller
+from sklearn.linear_model import LinearRegression
 
 
 """
@@ -1121,28 +1123,41 @@ class BAM_mc:
                 plt.ylabel("Productivity-real wage")
                 plt.savefig("plots/cut/product_to_real_wage_mc%s.png" %mc)
 
-
+                # linear regression object for putting regression lines through following scatter plots
+                linear_regressor = LinearRegression() 
+                
                 # Philips curve
+                linear_regressor = LinearRegression() 
+                reg_phillip = linear_regressor.fit(unemp_rate[self.T -499:,mc].reshape(-1,1), wage_inflation[self.T -499:,mc].reshape(-1,1))
+                Y_pred = linear_regressor.predict(unemp_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
                 plt.clf()
                 plt.scatter(unemp_rate[self.T -499:,mc], wage_inflation[self.T -499:,mc])
+                plt.plot(unemp_rate[self.T -499:,mc],Y_pred, color='red')
                 plt.xlabel("Unemployment Rate")
                 plt.ylabel("Wage Inflation")
                 plt.savefig('plots/cut/philips_mc%s.png' %mc)
 
                 # Okuns law
+                linear_regressor = LinearRegression() 
+                reg_okun = linear_regressor.fit(unemp_growth_rate[self.T -499:,mc].reshape(-1,1), output_growth_rate[self.T -499:,mc].reshape(-1,1))
+                Y_pred = linear_regressor.predict(unemp_growth_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
                 plt.clf()
                 plt.scatter(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc])
+                plt.plot(unemp_growth_rate[self.T -499:,mc],Y_pred, color='red')
                 plt.xlabel("Unemployment growth rate")
                 plt.ylabel("Output growth rate")
                 plt.savefig('plots/cut/Okun_mc%s.png' %mc)
 
                 # Beveridge
+                linear_regressor = LinearRegression() 
+                reg_beveridge = linear_regressor.fit(unemp_rate[self.T -499:,mc].reshape(-1,1), vac_rate[self.T -499:,mc].reshape(-1,1))
+                Y_pred = linear_regressor.predict(unemp_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
                 plt.clf()
                 plt.scatter(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc])
+                plt.plot(unemp_rate[self.T -499:,mc],Y_pred, color='red')
                 plt.xlabel("Unemployment rate")
                 plt.ylabel("Vacancy rate")
                 plt.savefig('plots/cut/Beveridge_mc%s.png' %mc)
-
 
                 # bankrutpcy
                 plt.clf()
@@ -1160,7 +1175,7 @@ class BAM_mc:
                 plt.savefig("plots/cut/HH_income_mc%s.png" %mc)
                 
                 """
-                DF test
+                DF test & averages
                 """
                 # Augmented Dickey-Fuller unit root test on gdp and inflation
                 fuller_gdp = adfuller(np.log(production[self.T -499:,mc]))
@@ -1173,12 +1188,15 @@ class BAM_mc:
                 print("Average inflation %s" %np.mean(inflation[self.T -499:,mc]))
                 
                 """
-                Correlation and regression
+                Correlation coefficients & betas
                 """
                 
                 print("Corr phill curve %s" %np.corrcoef(unemp_rate[self.T -499:,mc], wage_inflation[self.T -499:,mc]))
+                print("beta phillips %s" %reg_phillip.coef_)
                 print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc]))
+                print("beta okun %s" %reg_okun.coef_)
                 print("Corr beveridge %s" %np.corrcoef(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc]))
+                print("beta beveridge %s" %reg_beveridge.coef_)
                 
                 
                 
