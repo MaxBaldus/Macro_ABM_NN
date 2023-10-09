@@ -44,16 +44,12 @@ class sample_posterior:
         self.model = model # agent based model class with a simulation function
         self.bounds = bounds # upper lower parameter bounds (2d numpy array) with two rows for each parameter
         self.data_obs = data_obs # observed data: 1-d numpy array
-        self.filter = filter
+        self.filter = filter # set to True: filter is applied 
 
     """
-    1) Simulation block: simulation and storing the TxMC matrix for each parameter combination
+    1) Simulation block
     """
     def simulation_block(self, grid_size, path):
-
-        print("")
-        print('--------------------------------------')
-        print("Simulation Block")
 
         # get the number of parameters to be estimated
         number_para = self.bounds.shape[1] 
@@ -89,11 +85,10 @@ class sample_posterior:
             plt.plot(np.log(simulations[:,0]))
             plt.xlabel("Time")
             plt.ylabel("Log output")
-            plt.savefig(current_path + "png")"""
+            plt.savefig(current_path + "png")
 
-
-        # parallize the grid search: using joblib (not used here: outsourced to main.py)
-        """def grid_search_parallel(theta, model, path, i):
+        # parallel computing using joblib
+        def grid_search_parallel(theta, model, path, i):
 
             # current parameter combination
             # theta_current = theta[i,:]
@@ -132,18 +127,17 @@ class sample_posterior:
             
         print("")
         print('--------------------------------------')
-        print("Likelihood block and evaluating the posterior for each parameter")
+        print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 
         # apply filter or transformation to observed time series
-        data_obs_log = np.log(self.data_obs)
-        """if self.filter:
-                # filter
+        if self.filter:
+                # apply filter
                 print("blub")
-            else:
-                # log transformation"""
+        else:
+            data_obs = self.data_obs
 
         # instantiate the likelihood approximation method
-        likelihood_appro = mdn(data_obs_log, L = 3, K = 16, 
+        likelihood_appro = mdn(data_obs, L = 3, K = 16, 
                            neurons = 32, layers = 3, batch_size = 512, epochs = 12, 
                            eta_x=0.2, eta_y=0.2, act_fct="relu"
                            ) 

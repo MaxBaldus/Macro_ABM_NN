@@ -14,6 +14,7 @@ from statsmodels.tsa.stattools import adfuller
 from sklearn.linear_model import LinearRegression
 
 
+
 """
 Overall class structure: The class BAM_base contains the BAM model from Delli Gatti 2011. 
 The inputs are the the simulation parameters and some integer parameter values calibrated in advance.  
@@ -1139,14 +1140,26 @@ class BAM_mc:
 
                 # Okuns law
                 linear_regressor = LinearRegression() 
-                reg_okun = linear_regressor.fit(unemp_growth_rate[self.T -499:,mc].reshape(-1,1), output_growth_rate[self.T -499:,mc].reshape(-1,1))
-                Y_pred = linear_regressor.predict(unemp_growth_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
-                plt.clf()
-                plt.scatter(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc])
-                plt.plot(unemp_growth_rate[self.T -499:,mc],Y_pred, color='red')
-                plt.xlabel("Unemployment growth rate")
-                plt.ylabel("Output growth rate")
-                plt.savefig('plots/cut/Okun_mc%s.png' %mc)
+                # drop inf values in case there are any
+                if np.isfinite(unemp_growth_rate[self.T -499:,mc]).any() == True:
+                    mask = np.isfinite(unemp_growth_rate[self.T -499:,mc])
+                    reg_okun = linear_regressor.fit(unemp_growth_rate[self.T -499:,mc][mask].reshape(-1,1), output_growth_rate[self.T -499:,mc][mask].reshape(-1,1))
+                    Y_pred = linear_regressor.predict(unemp_growth_rate[self.T -499:,mc][mask].reshape(-1,1))  # make predictions
+                    plt.clf()
+                    plt.scatter(unemp_growth_rate[self.T -499:,mc][mask], output_growth_rate[self.T -499:,mc][mask])
+                    plt.plot(unemp_growth_rate[self.T -499:,mc][mask],Y_pred, color='red')
+                    plt.xlabel("Unemployment growth rate")
+                    plt.ylabel("Output growth rate")
+                    plt.savefig('plots/cut/Okun_mc%s.png' %mc)
+                else:
+                    reg_okun = linear_regressor.fit(unemp_growth_rate[self.T -499:,mc].reshape(-1,1), output_growth_rate[self.T -499:,mc].reshape(-1,1))
+                    Y_pred = linear_regressor.predict(unemp_growth_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
+                    plt.clf()
+                    plt.scatter(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc])
+                    plt.plot(unemp_growth_rate[self.T -499:,mc],Y_pred, color='red')
+                    plt.xlabel("Unemployment growth rate")
+                    plt.ylabel("Output growth rate")
+                    plt.savefig('plots/cut/Okun_mc%s.png' %mc)
 
                 # Beveridge
                 linear_regressor = LinearRegression() 
@@ -1193,7 +1206,11 @@ class BAM_mc:
                 
                 print("Corr phill curve %s" %np.corrcoef(unemp_rate[self.T -499:,mc], wage_inflation[self.T -499:,mc]))
                 print("beta phillips %s" %reg_phillip.coef_)
-                print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc]))
+                # drop inf values in case there are any
+                if np.isfinite(unemp_growth_rate[self.T -499:,mc]).any() == True:
+                    print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc][mask], output_growth_rate[self.T -499:,mc][mask]))
+                else:
+                    print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc]))
                 print("beta okun %s" %reg_okun.coef_)
                 print("Corr beveridge %s" %np.corrcoef(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc]))
                 print("beta beveridge %s" %reg_beveridge.coef_)
