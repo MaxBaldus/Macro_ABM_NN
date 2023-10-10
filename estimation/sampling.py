@@ -129,7 +129,7 @@ class sample_posterior:
         print('--------------------------------------')
         print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 
-        # apply filter or transformation to observed time series
+        # apply filter to observed time series
         if self.filter:
                 # apply filter
                 print("blub")
@@ -142,31 +142,28 @@ class sample_posterior:
                            eta_x=0.2, eta_y=0.2, act_fct="relu"
                            ) 
 
-        # initiate the vector with likelihood values for each parameter combination
-        # ???
-        # ll = np.zeros(grid_size)
-        
+               
         # initiate the matrix with marginal posterior probablities
         number_parameter = np.shape(self.bounds)[1]
         posterior = np.zeros((grid_size, number_parameter))
         log_posterior = np.zeros((grid_size, number_parameter))
 
-        # sample the prior probabilities (AGAIN FOR EACH LIKELIHOOD VALUE ?! YES)
+        # sample the prior probabilities for each parameter combination
         marginal_priors = np.zeros((grid_size, number_parameter))
         for i in range(grid_size):
             marginal_priors[i,:] = self.sample_prior() 
         
-
         # save start time
         start_time = time.time()
         
-        # approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
+        """# approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         # without parallised computing
-        """
         # for i in tqdm(range(grid_size)):
-        for i in [27, 31, 45, 49]:
-
-            i = 27 
+        for i in range(grid_size):
+            
+            # good simulations for testing:[27, 31, 45, 49]
+            i = 45
+            
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
@@ -175,29 +172,25 @@ class sample_posterior:
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
 
+            # apply filter to simulated time series
             if self.filter:
-                # filter
+                # filter: apply to each column
                 print("blub")
-            else:
-                # log transformation
-                simulation_short = np.log(simulation_short)
-
-            # TEST!! same data -> apply single column filter !!
-            # simulation_short = data_obs_log
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
-
-            # USE HIS SCALING => otherwise ll huge and negative (hence really small probabilities)
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
             ll = np.sum(np.log(densities)) 
 
+            # testing: for i=27, with 1/std(y_tilde): ll = -2446.8013911398457, without 1/std(y_tilde): ll = -1529.9878020603692  , 
+            # testing: for i=49, with 1/std(y_tilde): ll = -inf , 
+            # testing: for i=45 (keine 0's), with 1/std(y_tilde): ll = -inf , without 1/std(y_tilde): ll = -inf  , 
+            
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors[i,:]
-            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
-            """
+            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])"""
 
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
@@ -210,12 +203,10 @@ class sample_posterior:
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0], :]
 
+            # apply filter to simulated time series
             if self.filter:
-                # filter
+                # filter: apply to each column
                 print("blub")
-            else:
-                # log transformation
-                simulation_short = np.log(simulation_short)
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
@@ -238,12 +229,6 @@ class sample_posterior:
             posterior[i,:] = posteriors[i][0]
             log_posterior[i,:] = posteriors[i][1]
             # marginal_priors[i,:] = posteriors[i][1]
-        
-        # np.save('estimation/BAM/log_posterior', log_posterior)
-        # np.save('estimation/BAM/posterior', posterior)
-        
-        print("")
-        print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
         # parallel: 10 theta with 5 MC => 3.6551249821980796 minutes
 
@@ -286,7 +271,7 @@ class sample_posterior:
         Sample uniform prior probabilities for each theta, according to its bounds
         """
 
-        # use self.bounds to compute prior probabilities with the the respective bounds
+        # use self.bounds to compute prior probabilities with the the respective bounds for each parameter to be estimated
         number_parameter = np.shape(self.bounds)[1]
         prior_probabilities = np.zeros(number_parameter)
         
@@ -325,6 +310,8 @@ class sample_posterior:
         Theta_new = Theta[~slicer_nan.any(axis=1)]
         prior_new = marginal_priors[~slicer_nan.any(axis=1)]
 
+        # einfach posteriors plotten mit x-achse von lower bis upper bounds
+        
         # plotting the marginal posteriors
         for i in range(number_parameter):
 

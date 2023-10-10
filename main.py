@@ -143,7 +143,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 # bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.1] ]))
 
-# initialize the estimation method
+# initialize the estimation method: here without applying any filter to observed as simulated time series
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
 """
@@ -228,13 +228,11 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
 posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
-
 # saving posterior and prior values 
-"""
-np.save('estimation/BAM/log_posterior_loggdpvalues_5000', log_posterior)
-np.save('estimation/BAM/posterior_loggdpvalues_5000', posterior)
-np.save('estimation/BAM/prior_loggdpvalues_5000', prior_probabilities)
-"""
+np.save('estimation/BAM/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/posterior_identification', posterior)
+np.save('estimation/BAM/prior_identification', prior_probabilities)
+
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))

@@ -73,10 +73,9 @@ class mdn:
         The distribution is a gaussian mixture, its parameters result from a feed-foward, artifical neural network: mdn 
         """
 
-        # construct one large ordered training set with self.L number of features and 1-d target,
+        # construct one large ordered training set with self.L number of features and 1d target,
         # being the value that follows each window of lagged observations of length self.L
         X_train, y_train = mdn.order_data(np.transpose(data_sim), self.L)
-
         # sd of y
         y_train_std = y_train.std(axis = 0)
 
@@ -196,10 +195,8 @@ class mdn:
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
-            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd))
-
-        # plot mixture distribution ???
+            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
+            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd))
 
         # reset everything and close session 
         tf.keras.backend.clear_session() 
