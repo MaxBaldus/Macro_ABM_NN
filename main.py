@@ -226,7 +226,7 @@ print('--------------------------------------')
 print("Estimation Block")
 start_time = time.time()
 
-# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
+"""# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
 posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 # saving posterior and prior values 
 np.save('estimation/BAM/log_posterior_identification', log_posterior)
@@ -235,22 +235,22 @@ np.save('estimation/BAM/prior_identification', prior_probabilities)
 
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))
+print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
 # --- 290.84607830047605 minutes ---
 
 """
 plotting the posterior, log posterior and prior values, for each theta in the grid
 """
 
-posterior = np.load('estimation/BAM/posterior_loggdpvalues_5000.npy')
-log_posterior = np.load('estimation/BAM/log_posterior_loggdpvalues_5000.npy')
-prior_probabilities = np.load('estimation/BAM/prior_loggdpvalues_5000.npy')
+posterior = np.load('estimation/BAM/log_posterior_identification.npy')
+log_posterior = np.load('estimation/BAM/posterior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/prior_identification.npy')
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 
 # plot names
-name = 'small_grid_5000_log_filter'
+name = 'small_grid_5000_NO_filter'
 
 # path = 'plots/posterior/BAM'
 BAM_posterior.posterior_plots(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
