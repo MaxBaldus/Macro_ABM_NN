@@ -11,7 +11,7 @@ from scipy.stats import qmc
 from scipy.interpolate import make_interp_spline
 
 from scipy.stats import gaussian_kde
-import seaborn as sns
+# import seaborn as sns
 
 from tqdm import tqdm
 from itertools import product
@@ -219,7 +219,7 @@ class sample_posterior:
 
             return  L * priors, ll + np.log(priors) 
         
-        posteriors = Parallel(n_jobs=28)(
+        posteriors = Parallel(n_jobs=32)(
         delayed(approximate_parallel)
         (path, marginal_priors, i) for i in range(grid_size)
         )
