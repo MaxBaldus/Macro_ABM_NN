@@ -222,24 +222,25 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
 """
 # save start time
+print("")
 print('--------------------------------------')
-print("Estimation Block")
+print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 start_time = time.time()
 
-"""# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
+# Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
 posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 # saving posterior and prior values 
-np.save('estimation/BAM/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/posterior_identification', posterior)
-np.save('estimation/BAM/prior_identification', prior_probabilities)
+np.save('estimation/BAM/Theta_ordered/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/Theta_ordered/posterior_identification', posterior)
+np.save('estimation/BAM/Theta_ordered/prior_identification', prior_probabilities)
 
 
 print("")
-print("--- %s minutes ---" % ((time.time() - start_time)/60))"""
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # --- 290.84607830047605 minutes ---
 
 """
-plotting the posterior, log posterior and prior values, for each theta in the grid
+plotting the posterior, log posterior and prior values (marginal), for each theta in the grid
 """
 
 posterior = np.load('estimation/BAM/log_posterior_identification.npy')
@@ -253,11 +254,19 @@ para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 name = 'small_grid_5000_NO_filter'
 
 # path = 'plots/posterior/BAM'
+"""BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+                              marginal_priors=prior_probabilities, para_names = para_names,
+                              path = 'plots/posterior/BAM/',
+                              plot_name=name)"""
+
+
 BAM_posterior.posterior_plots(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                               marginal_priors=prior_probabilities, para_names = para_names,
                               path = 'plots/posterior/BAM/',
                               plot_name=name)
-print("HIER")
+
+print('--------------------------------------')
+print("Done")
 
 
 

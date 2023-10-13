@@ -11,7 +11,7 @@ from scipy.stats import qmc
 from scipy.interpolate import make_interp_spline
 
 from scipy.stats import gaussian_kde
-# import seaborn as sns
+import seaborn as sns
 
 from tqdm import tqdm
 from itertools import product
@@ -125,10 +125,6 @@ class sample_posterior:
     """
     def approximate_posterior(self, grid_size, path, Theta):
             
-        print("")
-        print('--------------------------------------')
-        print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
-
         # apply filter to observed time series
         if self.filter:
                 # apply filter
@@ -156,8 +152,10 @@ class sample_posterior:
         # save start time
         start_time = time.time()
         
-        """# approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        # without parallised computing
+        """
+        Approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
+        without parallised computing
+        """
         # for i in tqdm(range(grid_size)):
         for i in range(grid_size):
             
@@ -171,6 +169,8 @@ class sample_posterior:
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
+            
+            #simulation_short[:,i for in range(4)] = data_obs
 
             # apply filter to simulated time series
             if self.filter:
@@ -190,7 +190,7 @@ class sample_posterior:
             
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors[i,:]
-            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])"""
+            log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
 
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
@@ -211,15 +211,20 @@ class sample_posterior:
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
             
-            # compute likelihood of the observed data for the given parameter combination
+            """# compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
             ll = np.sum(np.log(densities))
 
-            priors = marginal_priors[i,:]
+            priors = marginal_priors[i,:]"""
 
-            return  L * priors, ll + np.log(priors) 
+            return  densities
         
-        posteriors = Parallel(n_jobs=32)(
+        densities = Parallel(n_jobs=32)(
+        delayed(approximate_parallel)
+        (path, marginal_priors, i) for i in range(40)
+        )
+        
+        """posteriors = Parallel(n_jobs=32)(
         delayed(approximate_parallel)
         (path, marginal_priors, i) for i in range(grid_size)
         )
@@ -228,7 +233,7 @@ class sample_posterior:
         for i in range(len(posteriors)):
             posterior[i,:] = posteriors[i][0]
             log_posterior[i,:] = posteriors[i][1]
-            # marginal_priors[i,:] = posteriors[i][1]
+            # marginal_priors[i,:] = posteriors[i][1]"""
 
         # parallel: 10 theta with 5 MC => 3.6551249821980796 minutes
 
@@ -294,6 +299,9 @@ class sample_posterior:
         1) plot log posteriors 
         """
         
+        # order Theta values
+        
+        
         # remove NAN's
         slicer_nan = np.isnan(log_posterior)
         log_post_tmp = log_posterior[~slicer_nan.any(axis=1)]
@@ -315,12 +323,12 @@ class sample_posterior:
         # plotting the marginal posteriors
         for i in range(number_parameter):
 
-            # scatter the all marginal posterior values and corresponding parameter values
+            # scatter all marginal posterior values and corresponding parameter values
             plt.clf()
             plt.scatter(Theta_new[:,i], log_post_tmp[:,i])
             plt.xlabel(para_names[i])
             plt.ylabel("log_posterior")
-            #plt.show()
+            plt.show()
             
             # only consider positive posterior values (and corresponding parameter and prior values)
             log_post_tmp_positive = log_post_tmp[:,i][log_post_tmp[:,i] > 0]
@@ -364,7 +372,21 @@ class sample_posterior:
 
             # prior
             # plt.plot(Theta[:,i], marginal_priors[:,i])
-
+            
+            
+            # ordering some stuff 
+            """
+            # order sampled parameter values (ascending order) and corresponding probabilities
+            theta_ordered = np.sort(Theta[:,i])
+            theta_index = Theta[:,i].argsort()
+            log_posterior_array = log_posterior[:,i]
+            log_posterior_ordered = log_posterior_array[theta_index]
+            
+            # convert nan, if any, also to 0 probability
+            if any(np.isnan(log_posterior_ordered)) == True:
+                print("numbers of NAN values: %s" %sum(np.isnan(log_posterior_ordered)))
+                log_posterior_ordered = np.nan_to_num(log_posterior_ordered)
+            """
 
 
             """plt.clf()
@@ -384,3 +406,46 @@ class sample_posterior:
 
         print('--------------------------------------')
         print("Done")
+        
+    
+    
+    
+    
+    def posterior_plots_new(self, Theta, posterior, log_posterior, marginal_priors,
+                        para_names, path, plot_name):
+
+        """
+        Plot posterior and log posterior and prior probabilities
+        """
+        
+        # get number of parameter
+        number_parameter = np.shape(Theta)[1]
+        
+        """
+        1) posterior 
+        """
+        
+        """
+        2) log posterior 
+        """
+           
+        for i in range(number_parameter):
+                
+            # plot .. 
+            plt.clf()
+            plt.plot(log_posterior[:,i])
+            plt.xlabel(para_names[i])
+            plt.ylabel("log_posterior")
+            plt.show()
+            
+            
+            print("") 
+         
+            
+                
+        
+        
+        
+        
+
+        
