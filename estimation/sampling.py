@@ -71,6 +71,8 @@ class sample_posterior:
         for i in range(number_para):
             Theta[:,i] = np.sort(Theta[:,i]) 
         
+        # blub 
+        
         print("bb")
         """
         # 1) Simulation block (outsourced to main.py)
