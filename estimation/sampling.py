@@ -11,7 +11,7 @@ from scipy.stats import qmc
 from scipy.interpolate import make_interp_spline
 
 from scipy.stats import gaussian_kde
-import seaborn as sns
+#import seaborn as sns
 
 from tqdm import tqdm
 from itertools import product
@@ -71,13 +71,12 @@ class sample_posterior:
         for i in range(number_para):
             Theta[:,i] = np.sort(Theta[:,i]) 
         
-        # blub 
-        
         print("bb")
         """
         # 1) Simulation block (outsourced to main.py)
         # simulation and storing the TxMC matrix for each parameter combination
-        for i in tqdm(range(grid_size)):
+        
+        """for i in tqdm(range(grid_size)):
 
             # current parameter combination
             theta_current = theta[i,:]
@@ -155,7 +154,10 @@ class sample_posterior:
         marginal_priors = np.zeros((grid_size, number_parameter))
         for i in range(grid_size):
             marginal_priors[i,:] = self.sample_prior() 
-                
+        
+        # save start time
+        start_time = time.time()
+        
         """
         Approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         without parallised computing
@@ -174,7 +176,6 @@ class sample_posterior:
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
             
-            # try out: what happens when all time series are the same 
             #simulation_short[:,i for in range(4)] = data_obs
 
             # apply filter to simulated time series
@@ -187,13 +188,8 @@ class sample_posterior:
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
-            
-            # replace 0 likelihood values with 0.0001 in order to avoid log(0) = -inf
-            # if any(densities == 0) == True:
-                #densities[np.where(densities == 0)[0]] = min(densities) 
-                       
             ll = np.sum(np.log(densities)) 
-            
+
             # testing: for i=27, with 1/std(y_tilde): ll = -2446.8013911398457, without 1/std(y_tilde): ll = -1529.9878020603692  , 
             # testing: for i=49, with 1/std(y_tilde): ll = -inf , 
             # testing: for i=45 (keine 0's), with 1/std(y_tilde): ll = -inf , without 1/std(y_tilde): ll = -inf  , 
@@ -202,9 +198,6 @@ class sample_posterior:
             posterior[i,:] = L * marginal_priors[i,:]
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
 
-        # new parallel function: only compute and save 5000 densities
-        # then: do multiplications etc. afterwards (outside) 
-        
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
            
@@ -224,15 +217,20 @@ class sample_posterior:
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
             
-            # compute likelihood of the observed data for the given parameter combination
+            """# compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
             ll = np.sum(np.log(densities))
 
-            priors = marginal_priors[i,:]
+            priors = marginal_priors[i,:]"""
 
-            return  L * priors, ll + np.log(priors) 
+            return  densities
         
-        posteriors = Parallel(n_jobs=32)(
+        densities = Parallel(n_jobs=32)(
+        delayed(approximate_parallel)
+        (path, marginal_priors, i) for i in range(40)
+        )
+        
+        """posteriors = Parallel(n_jobs=32)(
         delayed(approximate_parallel)
         (path, marginal_priors, i) for i in range(grid_size)
         )
@@ -241,7 +239,7 @@ class sample_posterior:
         for i in range(len(posteriors)):
             posterior[i,:] = posteriors[i][0]
             log_posterior[i,:] = posteriors[i][1]
-            # marginal_priors[i,:] = posteriors[i][1]
+            # marginal_priors[i,:] = posteriors[i][1]"""
 
         # parallel: 10 theta with 5 MC => 3.6551249821980796 minutes
 
