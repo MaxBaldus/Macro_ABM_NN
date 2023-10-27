@@ -266,13 +266,13 @@ class mdn:
     
     def gmm_density(self, y, mu, pi, sigma_sqrd):
         
-        # compute likelihood of each component
+        # compute density of each component
         # individual_likelihoods = stats.norm.pdf(y[0], loc = mu, scale = sigma_sqrd) # using minmax scaler
-        individual_likelihoods = stats.norm.pdf(y, loc = mu, scale = sigma_sqrd) # using mean / std scaling
+        individual_densities = stats.norm.pdf(y, loc = mu, scale = sigma_sqrd) # using mean / std scaling
 
         
         # weight the likelihood value from each normal component by its corresponding weight and sum
-        mixture_likelihood = np.sum(pi * individual_likelihoods)
+        mixture_likelihood = np.sum(pi * individual_densities)
         
         # his version: result almost identical 
         # mixture_likelihood = (np.array([stats.norm.pdf(y, loc = mu[0][i], scale = sigma_sqrd[0][i]) for i in range(self.K)]) * pi[0]).sum()

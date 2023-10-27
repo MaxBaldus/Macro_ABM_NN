@@ -165,8 +165,9 @@ start_time = time.time()
 # generate grid with parameter values
 np.random.seed(123)
 Theta = BAM_posterior.simulation_block(grid_size, path = '')
-#np.save('estimation/BAM/Theta_ordered', Theta)
 
+# save and load theta combinations
+#np.save('estimation/BAM/Theta_ordered', Theta)
 #Theta = np.load('estimation/BAM/Theta_500.npy') # load test parameter combinations (with large bounds)
 #Theta = np.load('estimation/BAM/Theta.npy') # load parameter grid with 5000 combinations 
 
@@ -174,7 +175,7 @@ Theta = BAM_posterior.simulation_block(grid_size, path = '')
 #path = 'data/simulations/BAM_simulations/latin_hypercube'
 #path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
 #path = 'data/simulations/toymodel_simulations/latin_hypercube' # toymodel data
-path = 'data/simulations/BAM_simulations/Theta_ordered'
+path = 'data/simulations/BAM_simulations/Theta_ordered/Theta_ordered'
 
 
 # parallize the grid search: using joblib
@@ -206,10 +207,10 @@ def grid_search_parallel(Theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 5000 times 20MC simulations (per theta) in parallel and saves
-Parallel(n_jobs=num_cores, verbose=50)(
+"""Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (Theta, BAM_model, path, i) for i in range(grid_size)
-        )
+        )"""
 
 
 print("")
@@ -229,11 +230,12 @@ print("2) Estimation block: Approximating Likelihood and evaluating the posterio
 start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-"""posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+
 # saving posterior and prior values 
 np.save('estimation/BAM/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/posterior_identification', posterior)
-np.save('estimation/BAM/prior_identification', prior_probabilities)"""
+np.save('estimation/BAM/prior_identification', prior_probabilities)
 
 
 print("")

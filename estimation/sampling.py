@@ -71,11 +71,6 @@ class sample_posterior:
         for i in range(number_para):
             Theta[:,i] = np.sort(Theta[:,i]) 
         
-        print("bb")
-        
-        # hello 
-        
-        # new 
         """
         # 1) Simulation block (outsourced to main.py)
         # simulation and storing the TxMC matrix for each parameter combination
@@ -166,7 +161,7 @@ class sample_posterior:
         for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
-            i = 45
+            i = 999
             
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
@@ -176,9 +171,6 @@ class sample_posterior:
             # only use last observations with length of the observed ts
             simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
             
-            # try out: what happens when all time series are the same 
-            #simulation_short[:,i for in range(4)] = data_obs
-
             # apply filter to simulated time series
             if self.filter:
                 # filter: apply to each column
@@ -225,6 +217,8 @@ class sample_posterior:
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
+            
+            # DENSITIES ARE TOO SMALL !! => prod = 0 , sum(log) = -large 
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
