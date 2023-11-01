@@ -17,10 +17,11 @@ from keras.layers import Input, Dense, GaussianNoise , Lambda # import the diffe
 from keras.models import Model  # group the layers into a model that can be estimated
 
 # TEST LOSS
-#from keras import backend as K
+from keras import backend as K
 
 # scaling the data
 from sklearn.preprocessing import MinMaxScaler
+from sklearn import preprocessing
 
 import numpy as np
 import random as rn
@@ -96,12 +97,15 @@ class mdn:
         X_std = X_train.std(axis = 0)
         y_mean = y_train.mean(axis = 0)
         y_std = y_train.std(axis = 0)
+        
+        X_train  = (X_train - X_means) / X_std
+        y_train = (y_train - y_mean) / y_std
 
-        # (X_std==0).any()
+        """# (X_std==0).any()
         if 0 not in X_std:
             X_train  = (X_train - X_means) / X_std
         if y_std != 0:
-            y_train = (y_train - y_mean) / y_std
+            y_train = (y_train - y_mean) / y_std"""
 
         # not needed in tf2 ??
         """# Initiate the network graph
@@ -142,7 +146,7 @@ class mdn:
         sigma_sqr = Lambda(lambda x: tf.math.exp(x), output_shape=(self.K,), name="variance_layer")(log_var) # K variances (one for each gaussian component)
 
         # Instantiate model (the mdn) by using keras.input objects
-        nn = Model(inputs = [X,y], outputs = [mu,pi,sigma_sqr])
+        nn = Model(inputs = [X,y], outputs = [mu,pi,log_var])
         #nn.summary()
 
         # add the loss fct (likelihood function) used to estimate the mdn (minimizing using a gradient descent/back propagation)
@@ -184,26 +188,36 @@ class mdn:
             y_obs = (y_obs - y_obs_mean) / y_obs_sd
 
         # Create Data Structure to store the likelihood values for each observation
-        likelihoods = np.zeros(len(y_obs))
+        densities = np.zeros(len(y_obs))
 
         # compute likelihood of each empirical observation for the given parameter combination
         # since rolling window on 1 ts, loosing the last L observations => hence T_tilde - L = len(y_obs)
         for i in range(len(y_obs)):
 
             # 1) predicting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
-            mu, pi, sigma_sqrd = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
+            mu, pi, log_var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, sigma_sqrd)
-            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, sigma_sqrd))
+            
+            densities[i] = (self.gmm_density(y_obs[i], mu, pi, log_var))
+            
+            # scale by dividing by var ??
+            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, log_var) 
+            
+            # scale the likelihood values by scaling_factor => L HUGE e^226
+            scaling_factor = 10 
+            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * (scaling_factor)
 
         # reset everything and close session 
         tf.keras.backend.clear_session() 
         np.random.seed()
         rn.seed()
         
-        return likelihoods
+        # scale values between 1 and 2
+        # densities = preprocessing.minmax_scale(densities, feature_range=(1, 2))
+        
+        return densities
         
  
 # -------------------------------------- 
@@ -242,7 +256,7 @@ class mdn:
         # mixture density
         p_mix = tf.reduce_sum(tf.multiply(p,pi), axis = 1, keepdims=True)
         
-        # negative (log) likelihood function (since want to max. likelihood, but minimising gradient descent algorithm in tensorflow    )
+        # negative (log) likelihood function (since want to max. likelihood, but minimising gradient descent algorithm in tensorflow)
         log_likelihood_fct = - tf.reduce_sum(tf.math.log(p_mix), axis = 0)
 
         return  log_likelihood_fct
@@ -264,13 +278,15 @@ class mdn:
 
         return out"""
     
-    def gmm_density(self, y, mu, pi, sigma_sqrd):
+    def gmm_density(self, y, mu, pi, log_var):
+        
+        # convert log variances to sd
+        s = np.exp(0.5 * log_var)
         
         # compute density of each component
         # individual_likelihoods = stats.norm.pdf(y[0], loc = mu, scale = sigma_sqrd) # using minmax scaler
-        individual_densities = stats.norm.pdf(y, loc = mu, scale = sigma_sqrd) # using mean / std scaling
+        individual_densities = stats.norm.pdf(y, loc = mu, scale = s) # using mean / std scaling
 
-        
         # weight the likelihood value from each normal component by its corresponding weight and sum
         mixture_likelihood = np.sum(pi * individual_densities)
         
@@ -280,7 +296,7 @@ class mdn:
         return mixture_likelihood 
 
     # TEST HIS LOSS FUNCTION !!
-    """def _TEST(y, alpha, m, log_var):
+    def _TEST(y, alpha, m, log_var):
         '''
         Maximum likelihood-based Loss function used to train the MDN.
         '''
@@ -296,7 +312,7 @@ class mdn:
         exponent = -K.square(y - m) / (2 * K.square(s))
         
         # Return the Loss Function
-        return -K.sum(K.log(K.sum(alpha * coeff * K.exp(exponent), axis = 1)), axis = 0)"""
+        return -K.sum(K.log(K.sum(alpha * coeff * K.exp(exponent), axis = 1)), axis = 0)
 
 
 

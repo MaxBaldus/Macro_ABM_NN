@@ -195,6 +195,9 @@ class sample_posterior:
             # compute marginal (log) posteriors
             posterior[i,:] = L * marginal_priors[i,:]
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
+            
+            # bei i = 999: L = 1.1623265223664991e-275 => * 275
+            print("")
 
         # new parallel function: only compute and save 5000 densities
         # then: do multiplications etc. afterwards (outside) 
@@ -218,7 +221,7 @@ class sample_posterior:
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
             
-            # DENSITIES ARE TOO SMALL !! => prod = 0 , sum(log) = -large 
+            # DENSITIES ARE TOO SMALL !! => prod = 0.000.. , sum(log) = -large 
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(densities)
@@ -288,6 +291,36 @@ class sample_posterior:
             prior_probabilities[i] = np.random.uniform(low=self.bounds[0,i], high=self.bounds[1,i])
         
         return prior_probabilities
+    
+    def posterior_plots_new(self, Theta, posterior, log_posterior, marginal_priors,
+                        para_names, path, plot_name):
+
+        """
+        Plot posterior and log posterior and prior probabilities
+        """
+        
+        # get number of parameter
+        number_parameter = np.shape(Theta)[1]
+        
+        """
+        1) posterior 
+        """
+        # SCALE THE VALUES : 0 - 10 
+        """
+        2) log posterior 
+        """
+           
+        for i in range(number_parameter):
+                
+            # plot .. 
+            plt.clf()
+            plt.plot(log_posterior[:,i])
+            plt.xlabel(para_names[i])
+            plt.ylabel("log_posterior")
+            plt.show()
+            
+            
+            print("") 
 
 
     def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,
@@ -410,40 +443,6 @@ class sample_posterior:
 
         print('--------------------------------------')
         print("Done")
-        
-    
-    
-    
-    
-    def posterior_plots_new(self, Theta, posterior, log_posterior, marginal_priors,
-                        para_names, path, plot_name):
-
-        """
-        Plot posterior and log posterior and prior probabilities
-        """
-        
-        # get number of parameter
-        number_parameter = np.shape(Theta)[1]
-        
-        """
-        1) posterior 
-        """
-        
-        """
-        2) log posterior 
-        """
-           
-        for i in range(number_parameter):
-                
-            # plot .. 
-            plt.clf()
-            plt.plot(log_posterior[:,i])
-            plt.xlabel(para_names[i])
-            plt.ylabel("log_posterior")
-            plt.show()
-            
-            
-            print("") 
          
             
                 
