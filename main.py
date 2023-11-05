@@ -142,10 +142,10 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
 # bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
-#0.1
 
 # initialize the estimation method: here without applying any filter to observed as simulated time series
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
+# ???
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=True)
 
 """
 1) Simulation block: simulating and storing the TxMC matrix for each parameter combination
@@ -247,27 +247,25 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 plotting the posterior, log posterior and prior values (marginal), for each theta in the grid
 """
 
-posterior = np.load('estimation/BAM/log_posterior_identification.npy')
-log_posterior = np.load('estimation/BAM/posterior_identification.npy')
-prior_probabilities = np.load('estimation/BAM/prior_identification.npy')
+log_posterior = np.load('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered.npy')
+posterior = np.load('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered.npy')
+prior_probabilities = np.load('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered.npy')
+Likelihoods = np.load('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered.npy')
+log_Likelihoods = np.load('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered.npy')
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 
-# plot names
-name = 'small_grid_5000_NO_filter'
+BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+                                Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
+                                marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
+                                path = 'plots/posterior/BAM/Theta_ordered/', plot_name= 'Theta_ordered_5000_NO_filter')
 
-# path = 'plots/posterior/BAM'
-"""BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+
+"""BAM_posterior.posterior_plots(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                               marginal_priors=prior_probabilities, para_names = para_names,
                               path = 'plots/posterior/BAM/',
-                              plot_name=name)"""
-
-
-BAM_posterior.posterior_plots(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
-                              marginal_priors=prior_probabilities, para_names = para_names,
-                              path = 'plots/posterior/BAM/',
-                              plot_name=name)
+                              plot_name=plot_name)"""
 
 print('--------------------------------------')
 print("Done")

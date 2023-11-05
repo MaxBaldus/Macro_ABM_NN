@@ -19,10 +19,13 @@ from itertools import product
 from joblib import Parallel, delayed
 import multiprocessing
 
+from sklearn import preprocessing
+
 import time
 
 # classes
 from estimation.mdn import mdn
+from estimation.data_prep import Filters
 
 class sample_posterior:
 
@@ -131,8 +134,11 @@ class sample_posterior:
             
         # apply filter to observed time series
         if self.filter:
-                # apply filter
-                print("blub")
+                filters = Filters(self.data_obs, inflation=None, unemployment=None)
+                components = filters.HP_filter(empirical = False)
+
+                # use cyclical component of HP filter as observed data
+                data_obs = components[0]  # both cyclical and trend component
         else:
             data_obs = self.data_obs
 
@@ -160,7 +166,7 @@ class sample_posterior:
         without parallised computing
         """
         # for i in tqdm(range(grid_size)):
-        """for i in range(grid_size):
+        for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
             i = 999
@@ -175,8 +181,19 @@ class sample_posterior:
             
             # apply filter to simulated time series
             if self.filter:
-                # filter: apply to each column
-                print("blub")
+                simulation_short_filtered = np.zeros(simulation_short.shape)
+                
+                # apply filter to each column
+                for i in range(simulation_short.shape[1]):
+                    filters = Filters(simulation_short[:,i], inflation=None, unemployment=None)
+                    components = filters.HP_filter(empirical = False) # both cyclical and trend component
+
+                    # save cyclical component of HP filter
+                    simulation_short_filtered[:,i] = components[0] 
+                    
+
+                # use filtered time series from now on forward
+                simulation_short = simulation_short_filtered
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
@@ -199,7 +216,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")"""
+            print("")
 
         # new parallel function: only compute and save 5000 densities
         # then: do multiplications etc. afterwards (outside) 
@@ -295,8 +312,8 @@ class sample_posterior:
         
         return prior_probabilities
     
-    def posterior_plots_new(self, Theta, posterior, log_posterior, marginal_priors,
-                        para_names, path, plot_name):
+    def posterior_plots_new(self, Theta, posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods,
+                        para_names, path, plot_name, bounds_BAM):
 
         """
         Plot posterior and log posterior and prior probabilities
@@ -308,7 +325,37 @@ class sample_posterior:
         """
         1) posterior 
         """
-        # SCALE THE VALUES : 0 - 10 
+        # handle NANs
+        print("number of NANs in posterior: %s" %np.sum(np.isnan(posterior)))
+        posterior_no_NAN = np.nan_to_num(posterior)
+        
+        # scale posterior values 
+        # posterior_scaled = preprocessing.minmax_scale(posterior_no_NAN, feature_range=(0, 10))
+        
+        # plotting the marginal posteriors
+        for i in range(number_parameter):
+            
+            # scale posterior values 
+            posterior_scaled = posterior_no_NAN[:,i] * (10**125)
+            
+            # mode of posterior is final parameter estimate
+            max_post = Theta[np.argmax(posterior_scaled),i]
+            
+            plt.clf()
+            plt.plot(Theta[:,i], posterior_scaled, color='red')
+            #plt.plot(Theta[:,i], marginal_priors[:,i])
+            
+            plt.xlabel(para_names[i])
+            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$' + " " + r'$ *10^{125}$')
+            
+            plt.axvline(x = max_post, c = 'k', linestyle = 'dashed', alpha = 0.75)
+            
+            plt.legend(['Posterior Density', r'$\hat \theta$'], fontsize = 8)
+            #plt.legend(['Posterior Density', 'Prior Density', r'$\hat \theta$'], fontsize = 8)
+            
+            plt.savefig(path + plot_name + 'parameter_' + str(i) + '.png')
+        
+        print("bis hier")
         """
         2) log posterior 
         """
