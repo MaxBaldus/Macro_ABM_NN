@@ -147,6 +147,8 @@ class sample_posterior:
         number_parameter = np.shape(self.bounds)[1]
         posterior = np.zeros((grid_size, number_parameter))
         log_posterior = np.zeros((grid_size, number_parameter))
+        Likelihoods = np.zeros(grid_size)
+        log_Likelihoods = np.zeros(grid_size)
 
         # sample the prior probabilities for each parameter combination
         marginal_priors = np.zeros((grid_size, number_parameter))
@@ -158,7 +160,7 @@ class sample_posterior:
         without parallised computing
         """
         # for i in tqdm(range(grid_size)):
-        for i in range(grid_size):
+        """for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
             i = 999
@@ -197,7 +199,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")
+            print("")"""
 
         # new parallel function: only compute and save 5000 densities
         # then: do multiplications etc. afterwards (outside) 
@@ -229,18 +231,19 @@ class sample_posterior:
 
             priors = marginal_priors[i,:]
 
-            return  L * priors, ll + np.log(priors) 
+            return L, ll, L * priors, ll + np.log(priors) 
         
-        posteriors = Parallel(n_jobs=32)(
+        computations = Parallel(n_jobs=32)(
         delayed(approximate_parallel)
-        (path, marginal_priors, i) for i in range(grid_size)
+        (path, marginal_priors, i) for i in range(grid_size) 
         )
 
         # unpack and save the parallel computed posterior probabilities
-        for i in range(len(posteriors)):
-            posterior[i,:] = posteriors[i][0]
-            log_posterior[i,:] = posteriors[i][1]
-            # marginal_priors[i,:] = posteriors[i][1]
+        for i in range(len(computations)):
+            Likelihoods[i] = computations[i][0]
+            log_Likelihoods[i] = computations[i][1]
+            posterior[i,:] = computations[i][2]
+            log_posterior[i,:] = computations[i][3]
 
         # parallel: 10 theta with 5 MC => 3.6551249821980796 minutes
 
@@ -272,7 +275,7 @@ class sample_posterior:
         # good simulations: 27, 31, 45, 49, 
         # CHECK WHETHER log_posterior values large (large negative values?!)
 
-        return posterior, log_posterior, marginal_priors
+        return posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods
 
 
 #################################################################################################

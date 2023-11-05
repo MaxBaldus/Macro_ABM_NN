@@ -223,19 +223,20 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 2) Estimation block: compute the likelihood and the marginal posterior probability (of each parameter)?? (combination) of the abm model by delli gatti.
 """
-
 print("")
 print('--------------------------------------')
 print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-posterior, log_posterior, prior_probabilities = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 
 # saving posterior and prior values 
-np.save('estimation/BAM/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/posterior_identification', posterior)
-np.save('estimation/BAM/prior_identification', prior_probabilities)
+np.save('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered', log_posterior)
+np.save('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered', posterior)
+np.save('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered', prior_probabilities)
+np.save('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered', Likelihoods)
+np.save('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered', log_Likelihoods)
 
 
 print("")
