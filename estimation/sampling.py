@@ -372,36 +372,31 @@ class sample_posterior:
             max_post = Theta[np.argmax(log_posterior_scaled[:,i]),i]
             
             plt.clf()
-            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[0::10], color='red')
-            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10])
+            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[:,i][0::10], color='b', linewidth=0.5, label='log Posterior Density')
+            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'r', label = 'Prior Density')
             
             # use kde
-            kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
-            test = kde_object.pdf(Theta[:,i][~slicer_nan.any(axis=1)])
+            #kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
+            #test = kde_object.pdf(Theta[:,i][~slicer_nan.any(axis=1)])
             
             # smooth scatterplot/posterior distribution 
-            gfg = make_interp_spline(Theta[:,i][~slicer_nan.any(axis=1)][0::100], log_posterior_scaled[0::100])
-            X_ = np.linspace(Theta[:,i][~slicer_nan.any(axis=1)].min(), Theta[:,i][~slicer_nan.any(axis=1)].max(), 50)
+            #gfg = make_interp_spline(Theta[:,i][~slicer_nan.any(axis=1)][0::100], log_posterior_scaled[0::100])
+            #X_ = np.linspace(Theta[:,i][~slicer_nan.any(axis=1)].min(), Theta[:,i][~slicer_nan.any(axis=1)].max(), 50)
             #log_post_smooth = gfg(Theta[:,i][~slicer_nan.any(axis=1)][0::10])
-            log_post_smooth = gfg(X_)
+            #log_post_smooth = gfg(X_)
             
             #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)], test, color='red')
-            plt.plot(X_, log_post_smooth, linewidth=0.5 ,color='red')
+            #plt.plot(X_, log_post_smooth, linewidth=0.5 ,color='red')
             #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10]) 
                 
             plt.xlabel(para_names[i])
-            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$' + " " + r'$ *10^{125}$')
+            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
             
-            plt.axvline(x = max_post, c = 'k', linestyle = 'dashed', alpha = 0.75)
+            plt.axvline(x = max_post, c = 'k', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$')
+            plt.legend(loc="lower right", fontsize = 8)
+            plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
             
-            # plt.legend(['Posterior Density', r'$\hat \theta$'], fontsize = 8)
-            #plt.legend(['log Posterior Density', 'Prior Density', r'$\hat \theta$'], fontsize = 8)
             
-            plt.show()
-            
-            plt.savefig(path + plot_name + 'parameter_' + str(i) + '.png')
-            
-            print("") 
 
 
     def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,

@@ -144,8 +144,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 
 # initialize the estimation method: here without applying any filter to observed as simulated time series
-# ???
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=True)
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
 """
 1) Simulation block: simulating and storing the TxMC matrix for each parameter combination
@@ -229,14 +228,14 @@ print("2) Estimation block: Approximating Likelihood and evaluating the posterio
 start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-"""posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 
 # saving posterior and prior values 
 np.save('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered', log_posterior)
 np.save('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered', posterior)
 np.save('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered', prior_probabilities)
 np.save('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered', log_Likelihoods)"""
+np.save('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered', log_Likelihoods)
 
 
 print("")
@@ -246,7 +245,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 plotting the posterior, log posterior and prior values (marginal), for each theta in the grid
 """
-
+# using ordered Theta sample 
 log_posterior = np.load('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered.npy')
 posterior = np.load('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered.npy')
 prior_probabilities = np.load('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered.npy')
@@ -261,14 +260,11 @@ BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterio
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = 'plots/posterior/BAM/Theta_ordered/', plot_name= 'Theta_ordered_5000_NO_filter')
 
-
-"""BAM_posterior.posterior_plots(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
-                              marginal_priors=prior_probabilities, para_names = para_names,
-                              path = 'plots/posterior/BAM/',
-                              plot_name=plot_name)"""
-
 print('--------------------------------------')
 print("Done")
+
+# using un-ordered Theta sample 
+
 
 
 
@@ -287,79 +283,3 @@ print("Done")
 """
 B) Estimating the BAM model using real data on US GDP ??, using the same artificial data generated above. 
 """
-
-
-
-
-#################################################################################################
-# Estimating the BAM plus model
-#################################################################################################
-
-
-
-
-
-
-
-#################################################################################################
-# Estimating the simple macro ABM
-#################################################################################################
-
-"""
-...
-1) First the estimation method is tested by using pseudo-empirical data with a-priori specified parameter values.
-The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
-"""
-
-# pseudo empirical data
-"""toy_data_obs = toy_simulations[:,0] 
-
-# create new instance of the toy model with 100 MC replications 
-toymodel_est = Toymodel(Time=1500, Ni=100, MC=100, 
-                    plots=False, filters=False)
-
-# define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
-# with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-bounds_toy_para = np.transpose(np.array([ [1,3], [0.001, 0.1], [0.001, 0.1], [0.001, 0.1] ]))
-
-# initialize the sampling methods (grid search and MH algorithm)
-toy_posterior = sample_posterior(model = toymodel_est, bounds = bounds_toy_para, data_obs=toy_data_obs, filter=False)
-
-# Use the plain grid search to compute the posterior estimates of each free parameter
-# the likelihood approximation method used inside the sampling method is set inside the sampling class
-toy_posterior.grid_search(grid_size = 3000, path = 'data/simulations/toymodel_simulations/latin_hypercube')
-"""
-
-# Gatti 2020
-# 5000 combinations
-# MC = 20 
-# T = 3000, discarding the first 2500
-
-# aleen
-# MC = 100 
-
-
-
-
-# Estimating the TOY model using real data on US GDP ??
-# loading the data and plotting the data and its components
-#german_gdp = pd.read_csv("data/CLVMNACSCAB1GQDE.csv") # gdp 
-# Inflation
-# Unemployment100   
-#filters = Filters(german_gdp['CLVMNACSCAB1GQDE'], inflation=None, unemployment=None)
-#gdp_components = filters.HP_filter(empirical=True) # plots are saved in plots ..
-# print(component# s)
-
-
-# erstmal nur mit einer Zeitreihe
-# robustness checks a la pape100    
-# tuning the lag length? -> for forecasts ..??
-# MH sampling or grid-search ??!!
-
-
-
-#################################################################################################
-# Forecasting
-#################################################################################################
-
-print("DONE")
