@@ -262,6 +262,7 @@ BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterio
 
 print('--------------------------------------')
 print("Done")
+print("Done")
 
 # using un-ordered Theta sample 
 

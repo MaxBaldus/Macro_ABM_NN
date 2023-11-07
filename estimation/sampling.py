@@ -11,7 +11,7 @@ from scipy.stats import qmc
 from scipy.interpolate import make_interp_spline
 
 from scipy.stats import gaussian_kde
-import seaborn as sns
+#import seaborn as sns
 
 from tqdm import tqdm
 from itertools import product
@@ -166,7 +166,7 @@ class sample_posterior:
         without parallised computing
         """
         # for i in tqdm(range(grid_size)):
-        for i in range(grid_size):
+        """for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
             i = 999
@@ -216,7 +216,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")
+            print("")"""
 
         # new parallel function: only compute and save 5000 densities
         # then: do multiplications etc. afterwards (outside) 
