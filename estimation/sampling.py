@@ -332,7 +332,7 @@ class sample_posterior:
         # scale posterior values 
         # posterior_scaled = preprocessing.minmax_scale(posterior_no_NAN, feature_range=(0, 10))
         
-        # plotting the marginal posteriors
+        """# plotting the marginal posteriors
         for i in range(number_parameter):
             
             # scale posterior values 
@@ -353,7 +353,7 @@ class sample_posterior:
             plt.legend(['Posterior Density', r'$\hat \theta$'], fontsize = 8)
             #plt.legend(['Posterior Density', 'Prior Density', r'$\hat \theta$'], fontsize = 8)
             
-            plt.savefig(path + plot_name + 'parameter_' + str(i) + '.png')
+            plt.savefig(path + plot_name + 'parameter_' + str(i) + '.png')"""
         
         """
         2) log posterior 
@@ -362,6 +362,10 @@ class sample_posterior:
         print("number of NANs in log posterior: %s" %np.sum(np.isnan(log_posterior)))
         slicer_nan = np.isnan(log_posterior)
         log_posterior_non_NAN = log_posterior[~slicer_nan.any(axis=1)]
+        
+        # setting -inf values to large number before converting 
+        slicer_inf = np.isinf(log_posterior_non_NAN)
+        log_posterior_non_NAN[slicer_inf.any(axis=1)] = - 10000000
         
         # scaling log posterior values btw. 0 and 10
         log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN, feature_range=(0, 10))
@@ -372,8 +376,8 @@ class sample_posterior:
             max_post = Theta[np.argmax(log_posterior_scaled[:,i]),i]
             
             plt.clf()
-            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[:,i][0::10], color='b', linewidth=0.5, label='log Posterior Density')
-            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'r', label = 'Prior Density')
+            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[:,i][0::10], color='b', linewidth=0.5, label='scaled log Posterior values')
+            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'r', label = 'Prior density values')
             
             # use kde
             #kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
