@@ -163,10 +163,10 @@ class sample_posterior:
                 
         """
         Approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
-        without parallised computing
         """
+        # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        """for i in range(grid_size):
+        for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
             i = 999
@@ -183,7 +183,7 @@ class sample_posterior:
             if self.filter:
                 simulation_short_filtered = np.zeros(simulation_short.shape)
                 
-                # apply filter to each column
+                # apply filter to each column of simulated data 
                 for i in range(simulation_short.shape[1]):
                     filters = Filters(simulation_short[:,i], inflation=None, unemployment=None)
                     components = filters.HP_filter(empirical = False) # both cyclical and trend component
@@ -191,7 +191,6 @@ class sample_posterior:
                     # save cyclical component of HP filter
                     simulation_short_filtered[:,i] = components[0] 
                     
-
                 # use filtered time series from now on forward
                 simulation_short = simulation_short_filtered
             
@@ -216,7 +215,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")"""
+            print("")
 
         # new parallel function: only compute and save 5000 densities
         # then: do multiplications etc. afterwards (outside) 
@@ -234,8 +233,18 @@ class sample_posterior:
 
             # apply filter to simulated time series
             if self.filter:
-                # filter: apply to each column
-                print("blub")
+                simulation_short_filtered = np.zeros(simulation_short.shape)
+                
+                # apply filter to each column of simulated data 
+                for i in range(simulation_short.shape[1]):
+                    filters = Filters(simulation_short[:,i], inflation=None, unemployment=None)
+                    components = filters.HP_filter(empirical = False) # both cyclical and trend component
+
+                    # save cyclical component of HP filter
+                    simulation_short_filtered[:,i] = components[0] 
+                    
+                # use filtered time series from now on forward
+                simulation_short = simulation_short_filtered
             
             # approximate the posterior probability of the given parameter combination
             densities = likelihood_appro.approximate_likelihood(simulation_short)
