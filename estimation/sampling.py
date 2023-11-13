@@ -195,16 +195,16 @@ class sample_posterior:
                 simulation_short = simulation_short_filtered
             
             # approximate the posterior probability of the given parameter combination
-            densities = likelihood_appro.approximate_likelihood(simulation_short)
+            likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
             
             # compute likelihood of the observed data for the given parameter combination
-            L = np.prod(densities)
+            L = np.prod(likelihoods)
             
             # replace 0 likelihood values with 0.0001 in order to avoid log(0) = -inf
-            # if any(densities == 0) == True:
-                #densities[np.where(densities == 0)[0]] = min(densities) 
+            # if any(likelihoods == 0) == True:
+                #densities[np.where(likelihoods == 0)[0]] = min(likelihoods) 
                        
-            ll = np.sum(np.log(densities)) 
+            ll = np.sum(np.log(likelihoods)) 
             
             # testing: for i=27, with 1/std(y_tilde): ll = -2446.8013911398457, without 1/std(y_tilde): ll = -1529.9878020603692  , 
             # testing: for i=49, with 1/std(y_tilde): ll = -inf , 
@@ -244,13 +244,13 @@ class sample_posterior:
                 simulation_short = simulation_short_filtered
             
             # approximate the posterior probability of the given parameter combination
-            densities = likelihood_appro.approximate_likelihood(simulation_short)
+            likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
             
             # DENSITIES ARE TOO SMALL !! => prod = 0.000.. , sum(log) = -large 
             
             # compute likelihood of the observed data for the given parameter combination
-            L = np.prod(densities)
-            ll = np.sum(np.log(densities))
+            L = np.prod(likelihoods)
+            ll = np.sum(np.log(likelihoods))
 
             priors = marginal_priors[i,:]
 
@@ -371,15 +371,16 @@ class sample_posterior:
         
         # setting -inf values to large number before converting 
         slicer_inf = np.isinf(log_posterior_non_NAN)
-        log_posterior_non_NAN[slicer_inf.any(axis=1)] = - 10000000
+        log_posterior_non_NAN[slicer_inf.any(axis=1)] = - 2000
         
         # scaling log posterior values btw. 0 and 10
         log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN, feature_range=(0, 10))
+        # log_posterior_scaled = log_posterior_non_NAN
                    
         for i in range(number_parameter):
                 
             # mode of posterior is final parameter estimate
-            max_post = Theta[np.argmax(log_posterior_scaled[:,i]),i]
+            max_post = Theta[np.argmax(log_posterior_non_NAN[:,i]),i]
             
             plt.clf()
             plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[:,i][0::10], color='b', linewidth=0.5, label='scaled log Posterior values')

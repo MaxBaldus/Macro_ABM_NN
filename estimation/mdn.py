@@ -188,19 +188,18 @@ class mdn:
             y_obs = (y_obs - y_obs_mean) / y_obs_sd
 
         # Create Data Structure to store the likelihood values for each observation
-        densities = np.zeros(len(y_obs))
+        likelihoods = np.zeros(len(y_obs))
 
         # compute likelihood of each empirical observation for the given parameter combination
         # since rolling window on 1 ts, loosing the last L observations => hence T_tilde - L = len(y_obs)
         for i in range(len(y_obs)):
 
             # 1) predicting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
-            #mu, pi, log_var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
+            mu, pi, log_var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            
-            #densities[i] = (self.gmm_density(y_obs[i], mu, pi, log_var))
+            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var))
             
             # scale by dividing by var ??
             # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, log_var) 
@@ -210,9 +209,9 @@ class mdn:
             # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * (scaling_factor)
             
             # SCALING
-            mu, pi, log_var = nn.predict([(X_obs[i,:].reshape(1, self.L) - X_means) / X_std, np.array([0])], verbose = False) # using - mean / sd
-            # densities[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var))
-            densities[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var)) 
+            # mu, pi, log_var = nn.predict([(X_obs[i,:].reshape(1, self.L) - X_means) / X_std, np.array([0])], verbose = False) # using - mean / sd
+            # likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var))
+            # likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var)) 
         # reset everything and close session 
         tf.keras.backend.clear_session() 
         np.random.seed()
@@ -221,7 +220,7 @@ class mdn:
         # scale values between 1 and 2
         # densities = preprocessing.minmax_scale(densities, feature_range=(1, 2))
         
-        return densities
+        return likelihoods
         
  
 # -------------------------------------- 

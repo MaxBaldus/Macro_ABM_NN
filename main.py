@@ -265,6 +265,8 @@ para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 # names of the plots 
 plot_name= 'Theta_ordered_5000_NO_filter'
 plot_name= 'Theta_ordered_5000_HP_filter'
+# plot_name= 'Theta_ordered_5000_HP_filter_no_noise_component_in_mdn'
+
 
 BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
@@ -273,11 +275,6 @@ BAM_posterior.posterior_plots_new(Theta=Theta, posterior=posterior, log_posterio
 
 print('--------------------------------------')
 print("Done")
-print("Done")
-
-# using un-ordered Theta sample 
-
-
 
 
 # Simulation hyperparameters:
@@ -295,3 +292,5 @@ print("Done")
 """
 B) Estimating the BAM model using real data on US GDP ??, using the same artificial data generated above. 
 """
+
+# using un-ordered Theta sample 
