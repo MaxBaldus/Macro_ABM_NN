@@ -228,14 +228,14 @@ print("2) Estimation block: Approximating Likelihood and evaluating the posterio
 start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+"""posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 
 # saving posterior and prior values 
 np.save('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered_FILTER', log_posterior)
 np.save('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered_FILTER', posterior)
 np.save('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered_FILTER', prior_probabilities)
 np.save('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered_FILTER', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered_FILTER', log_Likelihoods)
+np.save('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered_FILTER', log_Likelihoods)"""
 
 
 print("")
@@ -263,7 +263,7 @@ log_Likelihoods = np.load('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_or
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 
 # names of the plots 
-plot_name= 'Theta_ordered_5000_NO_filter'
+# plot_name= 'Theta_ordered_5000_NO_filter'
 plot_name= 'Theta_ordered_5000_HP_filter'
 # plot_name= 'Theta_ordered_5000_HP_filter_no_noise_component_in_mdn'
 
