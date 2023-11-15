@@ -205,7 +205,7 @@ def grid_search_parallel(Theta, model, path, i):
 # num_cores = (multiprocessing.cpu_count()) - 4 
 num_cores = 56 
 
-# uncomment for running the 5000 times 20MC simulations (per theta) in parallel and saves
+# uncomment for running the 5000 times 20MC simulations (per theta) in parallel and save
 """Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (Theta, BAM_model, path, i) for i in range(grid_size)
@@ -228,14 +228,14 @@ print("2) Estimation block: Approximating Likelihood and evaluating the posterio
 start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data via mdn's
-"""posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta)
 
 # saving posterior and prior values 
-np.save('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered_FILTER', log_posterior)
-np.save('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered_FILTER', posterior)
-np.save('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered_FILTER', prior_probabilities)
-np.save('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered_FILTER', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered_FILTER', log_Likelihoods)"""
+np.save('estimation/BAM/Theta_ordered/log_transform/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/Theta_ordered/log_transform/posterior_identification', posterior)
+np.save('estimation/BAM/Theta_ordered/log_transform/prior_identification', prior_probabilities)
+np.save('estimation/BAM/Theta_ordered/log_transform/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/Theta_ordered/log_transform/log_Likelihoods_identification', log_Likelihoods)
 
 
 print("")
@@ -245,19 +245,26 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 """
 plotting the posterior, log posterior and prior values (marginal), for each theta in the grid
 """
-# using ordered Theta sample (no filter applied)
+# load ordered Theta sample (no filter applied)
 """log_posterior = np.load('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered.npy')
 posterior = np.load('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered.npy')
 prior_probabilities = np.load('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered.npy')
 Likelihoods = np.load('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered.npy')
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered.npy')"""
 
-# using ordered Theta sample (FILTER applied)
-log_posterior = np.load('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered_FILTER.npy')
+# load ordered Theta sample (FILTER applied)
+"""log_posterior = np.load('estimation/BAM/Theta_ordered/log_posterior_identification_Theta_ordered_FILTER.npy')
 posterior = np.load('estimation/BAM/Theta_ordered/posterior_identification_Theta_ordered_FILTER.npy')
 prior_probabilities = np.load('estimation/BAM/Theta_ordered/prior_identification_Theta_ordered_FILTER.npy')
 Likelihoods = np.load('estimation/BAM/Theta_ordered/Likelihoods_Theta_ordered_FILTER.npy')
-log_Likelihoods = np.load('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered_FILTER.npy')
+log_Likelihoods = np.load('estimation/BAM/Theta_ordered/log_Likelihoods_Theta_ordered_FILTER.npy')"""
+
+# load ordered Theta sample (log transformations)
+log_posterior = np.load('estimation/BAM/Theta_ordered/log_transform/log_posterior_identification.npy')
+posterior = np.load('estimation/BAM/Theta_ordered/log_transform/posterior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/Theta_ordered/log_transform/prior_identification.npy')
+Likelihoods = np.load('estimation/BAM/Theta_ordered/log_transform/Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/Theta_ordered/log_transform/log_Likelihoods_identification.npy')
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']

@@ -178,9 +178,10 @@ class sample_posterior:
 
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
-            # simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],]
+            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],]
+            
             #simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],0:12]
-            simulation_short = np.log(simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],])
+            #simulation_short = np.log(simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],])
 
 
             # apply filter to simulated time series
@@ -197,6 +198,11 @@ class sample_posterior:
                     
                 # use filtered time series from now on forward
                 simulation_short = simulation_short_filtered
+            
+            # apply log transformation if no filter is used:
+            else:
+                simulation_log = np.log(simulation_short)
+                simulation_short = simulation_log
                 
             # test: benutze die gleichen Daten 
             #  simulation_short[:,i] = data_obs for i in range(simulations_hort.shape[1])    (20)
@@ -251,10 +257,13 @@ class sample_posterior:
                 # use filtered time series from now on forward
                 simulation_short = simulation_short_filtered
             
+            # apply log transformation if no filter is used:
+            else:
+                simulation_log = np.log(simulation_short)
+                simulation_short = simulation_log
+                
             # approximate the posterior probability of the given parameter combination
             likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
-            
-            # DENSITIES ARE TOO SMALL !! => prod = 0.000.. , sum(log) = -large 
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(likelihoods)
