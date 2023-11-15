@@ -144,7 +144,7 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 
 # initialize the estimation method: here without applying any filter to observed as simulated time series
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=True)
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
 
 """
 1) Simulation block: simulating and storing the TxMC matrix for each parameter combination

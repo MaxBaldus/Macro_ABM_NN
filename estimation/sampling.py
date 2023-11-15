@@ -140,7 +140,8 @@ class sample_posterior:
                 # use cyclical component of HP filter as observed data
                 data_obs = components[0]  # both cyclical and trend component
         else:
-            data_obs = self.data_obs
+            #data_obs = self.data_obs
+            data_obs = np.log(self.data_obs)
 
         # instantiate the likelihood approximation method
         likelihood_appro = mdn(data_obs, L = 3, K = 16, 
@@ -165,11 +166,11 @@ class sample_posterior:
         Approximate likelihood and evaluate posterior for each parameter combination (and corresponding TxMC matrix with simulated data)
         """
         # without parallised computing, mostly used for testing 
-        """# for i in tqdm(range(grid_size)):
+        # for i in tqdm(range(grid_size)):
         for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
-            i = 999
+            i = 1000
             
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
@@ -177,8 +178,11 @@ class sample_posterior:
 
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
-            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],:]
-            
+            # simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],]
+            #simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],0:12]
+            simulation_short = np.log(simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],])
+
+
             # apply filter to simulated time series
             if self.filter:
                 simulation_short_filtered = np.zeros(simulation_short.shape)
@@ -193,9 +197,13 @@ class sample_posterior:
                     
                 # use filtered time series from now on forward
                 simulation_short = simulation_short_filtered
+                
+            # test: benutze die gleichen Daten 
+            #  simulation_short[:,i] = data_obs for i in range(simulations_hort.shape[1])    (20)
             
             # approximate the posterior probability of the given parameter combination
             likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
+
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(likelihoods)
@@ -215,7 +223,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")"""
+            print("")
         
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):

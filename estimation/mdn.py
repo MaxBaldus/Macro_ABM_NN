@@ -128,6 +128,7 @@ class mdn:
 
         # first hidden layer using fully connected layers s.t. output = activation(dot(input, kernel) + bias)
         h = Dense(self.neurons, activation=self.act_fct)(X_reg)
+        # h = Dense(self.neurons, activation=self.act_fct)(X)
 
         # additional hidden fully connected layers in the network
         for i in range(1, self.layers):
@@ -141,16 +142,18 @@ class mdn:
         pi = Dense(units=self.K,activation='softmax', name='pi_layer')(h) # K mixtue coefficients: one node for each coefficientt
         
         # Variance:
-        log_var = Dense(units = self.K, activation=None)(h)
+        var_raw = Dense(units = self.K, activation=None)(h)
         # exponentiate sigma to make it s.t. variance is always >= 0: the transformation is treated as a new layer
-        sigma_sqr = Lambda(lambda x: tf.math.exp(x), output_shape=(self.K,), name="variance_layer")(log_var) # K variances (one for each gaussian component)
+        sigma_sqr = Lambda(lambda x: tf.math.exp(x), output_shape=(self.K,), name="variance_layer")(var_raw) # K variances (one for each gaussian component)
 
         # Instantiate model (the mdn) by using keras.input objects
-        nn = Model(inputs = [X,y], outputs = [mu,pi,log_var])
+        nn = Model(inputs = [X,y], outputs = [mu,pi,sigma_sqr])  # NOT var, constrainted input !! 
         #nn.summary()
 
         # add the loss fct (likelihood function) used to estimate the mdn (minimizing using a gradient descent/back propagation)
-        nn.add_loss(self.loss_fct(y_reg, pi, mu, sigma_sqr))    
+        nn.add_loss(self.loss_fct(y_reg, pi, mu, sigma_sqr))  
+        #nn.add_loss(self.loss_fct(y, pi, mu, sigma_sqr))    
+  
         # nn.add_loss(self._TEST(y_reg, pi, mu, sigma_sqr))   # LOSS NOCHMAL KONTROLLIEREN 
 
         # compile model by setting optimizer
@@ -176,7 +179,7 @@ class mdn:
         # y_obs = scaler.fit_transform(y_obs.reshape(-1,1))
         y_obs = y_scaler.transform(y_obs.reshape(-1,1))"""
         
-        # scaling empirical data 
+        """# scaling empirical data 
         X_obs_mean = X_obs.mean(axis = 0)
         X_obs_sd = X_obs.std(axis = 0)
         y_obs_mean = y_obs.mean(axis = 0)
@@ -185,7 +188,7 @@ class mdn:
         if 0 not in X_obs_sd:
             X_obs  = (X_obs - X_obs_mean) / X_obs_sd
         if y_obs_sd != 0:
-            y_obs = (y_obs - y_obs_mean) / y_obs_sd
+            y_obs = (y_obs - y_obs_mean) / y_obs_sd"""
 
         # Create Data Structure to store the likelihood values for each observation
         likelihoods = np.zeros(len(y_obs))
@@ -195,23 +198,23 @@ class mdn:
         for i in range(len(y_obs)):
 
             # 1) predicting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
-            mu, pi, log_var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
+            # mu, pi, log_var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var))
+            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var))
             
             # scale by dividing by var ??
             # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, log_var) 
             
             # scale the likelihood values by scaling_factor => L HUGE e^226
-            scaling_factor = 10 
+            # scaling_factor = 10 
             # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * (scaling_factor)
             
             # SCALING
-            # mu, pi, log_var = nn.predict([(X_obs[i,:].reshape(1, self.L) - X_means) / X_std, np.array([0])], verbose = False) # using - mean / sd
-            # likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var))
-            # likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, log_var)) 
+            mu, pi, var = nn.predict([(X_obs[i,:].reshape(1, self.L) - X_means) / X_std, np.array([0])], verbose = False) # using - mean / sd
+            likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var))
+            # likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) 
         # reset everything and close session 
         tf.keras.backend.clear_session() 
         np.random.seed()
@@ -219,8 +222,8 @@ class mdn:
         
         # scale values between 1 and 2
         # densities = preprocessing.minmax_scale(densities, feature_range=(1, 2))
-        
-        return likelihoods
+        scaling_factor = 10
+        return likelihoods 
         
  
 # -------------------------------------- 
@@ -262,7 +265,7 @@ class mdn:
         # negative (log) likelihood function (since want to max. likelihood, but minimising gradient descent algorithm in tensorflow)
         log_likelihood_fct = - tf.reduce_sum(tf.math.log(p_mix), axis = 0)
 
-        return  log_likelihood_fct
+        return  tf.reduce_mean(log_likelihood_fct)
 
         """# univariat gaussian likelihood of each y_reg (element-wise for each training observation)
         diff = tf.subtract(y, mu)**2 # subtracting the mean of each component from each observation (nx1 array - mu of each component): output is nxK matrix
