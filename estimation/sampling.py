@@ -140,8 +140,8 @@ class sample_posterior:
                 # use cyclical component of HP filter as observed data
                 data_obs = components[0]  # both cyclical and trend component
         else:
-            #data_obs = self.data_obs
-            data_obs = np.log(self.data_obs)
+            data_obs = self.data_obs
+            # data_obs = np.log(self.data_obs)
 
         # instantiate the likelihood approximation method
         likelihood_appro = mdn(data_obs, L = 3, K = 16, 
@@ -205,7 +205,8 @@ class sample_posterior:
                 simulation_short = simulation_log
                 
             # test: benutze die gleichen Daten 
-            #  simulation_short[:,i] = data_obs for i in range(simulations_hort.shape[1])    (20)
+            for i in range(20): 
+                simulation_short[:,i] = data_obs 
             
             # approximate the posterior probability of the given parameter combination
             likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
@@ -258,9 +259,9 @@ class sample_posterior:
                 simulation_short = simulation_short_filtered
             
             # apply log transformation if no filter is used:
-            else:
+            """else:
                 simulation_log = np.log(simulation_short)
-                simulation_short = simulation_log
+                simulation_short = simulation_log"""
                 
             # approximate the posterior probability of the given parameter combination
             likelihoods = likelihood_appro.approximate_likelihood(simulation_short)

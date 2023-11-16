@@ -144,7 +144,7 @@ class mdn:
         # Variance:
         var_raw = Dense(units = self.K, activation=None)(h)
         # exponentiate sigma to make it s.t. variance is always >= 0: the transformation is treated as a new layer
-        sigma_sqr = Lambda(lambda x: tf.math.exp(x), output_shape=(self.K,), name="variance_layer")(var_raw) # K variances (one for each gaussian component)
+        sigma_sqr = Lambda(lambda x: 0.5 * tf.math.exp(x), output_shape=(self.K,), name="variance_layer")(var_raw) # K variances (one for each gaussian component)
 
         # Instantiate model (the mdn) by using keras.input objects
         nn = Model(inputs = [X,y], outputs = [mu,pi,sigma_sqr])  # NOT var, constrainted input !! 
@@ -198,11 +198,11 @@ class mdn:
         for i in range(len(y_obs)):
 
             # 1) predicting the gauss parameter using the nn and the ordered observed data X (y is zero in this case)
-            # mu, pi, log_var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
+            # mu, pi, var = nn.predict([X_obs[i,:].reshape(1, self.L), np.array([0])], verbose = False) # using - mean / sd
 
             # 2) using the estimated mixture parameter and the y_obs following each window to finally compute the likelihood 
             # of each observed value, scaled by std of empirical data
-            # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var))
+            #likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, var))
             
             # scale by dividing by var ??
             # likelihoods[i] = (self.gmm_density(y_obs[i], mu, pi, log_var)) * 1/ y_train_std if y_train_std > 0 else self.gmm_density(y_obs[i], mu, pi, log_var) 
@@ -213,8 +213,8 @@ class mdn:
             
             # SCALING
             mu, pi, var = nn.predict([(X_obs[i,:].reshape(1, self.L) - X_means) / X_std, np.array([0])], verbose = False) # using - mean / sd
-            likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var))
-            # likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) 
+            #likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var))
+            likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) 
         # reset everything and close session 
         tf.keras.backend.clear_session() 
         np.random.seed()
@@ -256,9 +256,15 @@ class mdn:
         # using eager mode from tf2 
         # tf.executing_eagerly()
         
+        """# convert log variances to sd
+        s = np.exp(0.5 * log_var)
+        # variance
+        s_2 = s**2"""
+        
         # gaussian pdf
         p = (1/(tf.math.sqrt(2* np.pi *sigma_sqr))) * tf.math.exp( (-1/(2*sigma_sqr))*(tf.subtract(y, mu)**2) ) # probaility of one gaussian component
-
+        # p = (1/(tf.math.sqrt(2* np.pi) * s)) * tf.math.exp( (-1/(2*s_2))*(tf.subtract(y, mu)**2) ) # probaility of one gaussian component
+        
         # mixture density
         p_mix = tf.reduce_sum(tf.multiply(p,pi), axis = 1, keepdims=True)
         
@@ -284,14 +290,15 @@ class mdn:
 
         return out"""
     
-    def gmm_density(self, y, mu, pi, log_var):
+    def gmm_density(self, y, mu, pi, var):
         
-        # convert log variances to sd
-        s = np.exp(0.5 * log_var)
+        # apply transformation to ensure var > 0 
+        # s = np.exp(0.5 * log_var)
         
         # compute density of each component
         # individual_likelihoods = stats.norm.pdf(y[0], loc = mu, scale = sigma_sqrd) # using minmax scaler
-        individual_densities = stats.norm.pdf(y, loc = mu, scale = s) # using mean / std scaling
+        # individual_densities = stats.norm.pdf(y, loc = mu, scale = s) # using mean / std scaling
+        individual_densities = stats.norm.pdf(y, loc = mu, scale = var) # using mean / std scaling
 
         # weight the likelihood value from each normal component by its corresponding weight and sum
         mixture_likelihood = np.sum(pi * individual_densities)
