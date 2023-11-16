@@ -167,7 +167,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        for i in range(grid_size):
+        """for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
             i = 1000
@@ -229,7 +229,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")
+            print("")"""
         
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
