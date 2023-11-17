@@ -224,7 +224,13 @@ class mdn:
         # densities = preprocessing.minmax_scale(densities, feature_range=(1, 2))
         scaling_factor = 10
         return likelihoods 
+    
+    def kde_approximation(self, data_sim):
         
+        pdf = stats.gaussian_kde(data_sim.flatten(), 'silverman')
+        likelihoods = pdf.evaluate(self.data_obs)
+        
+        return likelihoods
  
 # -------------------------------------- 
     def order_data(data, L):
