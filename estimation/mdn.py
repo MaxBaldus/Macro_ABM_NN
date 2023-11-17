@@ -215,6 +215,7 @@ class mdn:
             mu, pi, var = nn.predict([(X_obs[i,:].reshape(1, self.L) - X_means) / X_std, np.array([0])], verbose = False) # using - mean / sd
             #likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) * (1/ y_std) if y_std > 0 else (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var))
             likelihoods[i] = (self.gmm_density((y_obs[i] - y_mean) / y_std , mu, pi, var)) 
+        
         # reset everything and close session 
         tf.keras.backend.clear_session() 
         np.random.seed()
@@ -225,6 +226,10 @@ class mdn:
         scaling_factor = 10
         return likelihoods 
     
+    
+    """
+    Approximate posterior using kernel density estimation (kde)
+    """
     def kde_approximation(self, data_sim):
         
         pdf = stats.gaussian_kde(data_sim.flatten(), 'silverman')

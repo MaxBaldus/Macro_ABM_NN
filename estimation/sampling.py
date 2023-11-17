@@ -341,8 +341,8 @@ class sample_posterior:
         
         return prior_probabilities
     
-    def posterior_plots_new(self, Theta, posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods,
-                        para_names, path, plot_name, bounds_BAM):
+    def posterior_plots_identification(self, Theta, posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods,
+                        para_names, path, plot_name, bounds_BAM, true_values):
 
         """
         Plot posterior and log posterior and prior probabilities
@@ -355,8 +355,8 @@ class sample_posterior:
         1) posterior 
         """
         # handle NANs
-        print("number of NANs in posterior: %s" %np.sum(np.isnan(posterior)))
-        posterior_no_NAN = np.nan_to_num(posterior)
+        """print("number of NANs in posterior: %s" %np.sum(np.isnan(posterior)))
+        posterior_no_NAN = np.nan_to_num(posterior)"""
         
         # scale posterior values 
         # posterior_scaled = preprocessing.minmax_scale(posterior_no_NAN, feature_range=(0, 10))
@@ -392,9 +392,18 @@ class sample_posterior:
         slicer_nan = np.isnan(log_posterior)
         log_posterior_non_NAN = log_posterior[~slicer_nan.any(axis=1)]
         
-        # setting -inf values to large number before converting 
+        # handle -inf values
+        print("number of -inf in log posterior: %s" %np.sum(np.isinf(log_posterior)))
+        
+        min_values = []
+        for i in range(number_parameter):
+            values = []
+            for x in range(len(log_posterior_non_NAN[:,i])):
+                if  np.isinf(log_posterior_non_NAN[x,i]) == False:
+                    values.append(log_posterior_non_NAN[x,i])
+            min_values.append(min(values))
         slicer_inf = np.isinf(log_posterior_non_NAN)
-        log_posterior_non_NAN[slicer_inf.any(axis=1)] = - 2000
+        log_posterior_non_NAN[slicer_inf.any(axis=1)] = min_values
         
         # scaling log posterior values btw. 0 and 10
         log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN, feature_range=(0, 10))
@@ -406,8 +415,10 @@ class sample_posterior:
             max_post = Theta[np.argmax(log_posterior_non_NAN[:,i]),i]
             
             plt.clf()
+            fig, ax = plt.subplots()
             plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[:,i][0::10], color='b', linewidth=0.5, label='scaled log Posterior values')
-            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'r', label = 'Prior density values')
+            # plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0:2000], log_posterior_scaled[:,i][0:2000], color='b', linewidth=0.5, label='scaled log Posterior values')
+            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'orange', label = 'Prior density values')
             
             # use kde
             #kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
@@ -426,11 +437,11 @@ class sample_posterior:
             plt.xlabel(para_names[i])
             plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
             
-            plt.axvline(x = max_post, c = 'k', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$')
+            plt.axvline(x = max_post,  color = 'red', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$')
+            plt.axvline(x = true_values[i], linestyle = 'dashed', alpha = 0.75, label = "true " + r'$\theta$', c = 'k')
+
             plt.legend(loc="lower right", fontsize = 8)
             plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
-            
-            
 
 
     def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,
