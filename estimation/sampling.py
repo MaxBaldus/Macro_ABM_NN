@@ -140,8 +140,8 @@ class sample_posterior:
                 # use cyclical component of HP filter as observed data
                 data_obs = components[0]  # both cyclical and trend component
         else:
-            #data_obs = self.data_obs
-            data_obs = np.log(self.data_obs)
+            data_obs = self.data_obs
+            #data_obs = np.log(self.data_obs)
 
         # instantiate the likelihood approximation method
         likelihood_appro = mdn(data_obs, L = 3, K = 16, 
@@ -167,7 +167,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        for i in range(grid_size):
+        """for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
             i = 1000
@@ -232,7 +232,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")
+            print("")"""
         
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
@@ -261,15 +261,15 @@ class sample_posterior:
                 simulation_short = simulation_short_filtered
             
             # apply log transformation if no filter is used:
-            else:
+            """else:
                 simulation_log = np.log(simulation_short)
-                simulation_short = simulation_log
+                simulation_short = simulation_log"""
                 
             # approximate the posterior probability of the given parameter combination
-            #likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
+            likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
             
             # kde
-            likelihoods = likelihood_appro.kde_approximation(simulation_short)
+            #likelihoods = likelihood_appro.kde_approximation(simulation_short)
             
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(likelihoods)
@@ -341,6 +341,7 @@ class sample_posterior:
         
         return prior_probabilities
     
+    
     def posterior_plots_identification(self, Theta, posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods,
                         para_names, path, plot_name, bounds_BAM, true_values):
 
@@ -388,14 +389,22 @@ class sample_posterior:
         2) log posterior 
         """
         # handle NANs
-        print("number of NANs in log posterior: %s" %np.sum(np.isnan(log_posterior)))
+        nans = np.sum(np.isnan(log_posterior))/bounds_BAM.shape[1]
+        print("number of NANs in log posterior: %s" %nans)
         slicer_nan = np.isnan(log_posterior)
         log_posterior_non_NAN = log_posterior[~slicer_nan.any(axis=1)]
+        Theta_non_NAN = Theta[~slicer_nan.any(axis=1)]
+        prior_non_NAN = marginal_priors[~slicer_nan.any(axis=1)]
         
         # handle -inf values
-        print("number of -inf in log posterior: %s" %np.sum(np.isinf(log_posterior)))
+        infs = np.sum(np.isinf(log_posterior))/bounds_BAM.shape[1]
+        print("number of -inf in log posterior: %s" %infs)
+        slicer_inf = np.isinf(log_posterior_non_NAN)
+        log_posterior_non_NAN_inf = log_posterior_non_NAN[~slicer_inf.any(axis=1)]
+        Theta_non_NAN_inf = Theta_non_NAN[~slicer_inf.any(axis=1)]
+        prior_non_NAN_inf = prior_non_NAN[~slicer_inf.any(axis=1)]
         
-        min_values = []
+        """min_values = []
         for i in range(number_parameter):
             values = []
             for x in range(len(log_posterior_non_NAN[:,i])):
@@ -403,22 +412,23 @@ class sample_posterior:
                     values.append(log_posterior_non_NAN[x,i])
             min_values.append(min(values))
         slicer_inf = np.isinf(log_posterior_non_NAN)
-        log_posterior_non_NAN[slicer_inf.any(axis=1)] = min_values
+        log_posterior_non_NAN[slicer_inf.any(axis=1)] = min_values"""
         
         # scaling log posterior values btw. 0 and 10
-        log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN, feature_range=(0, 10))
-        # log_posterior_scaled = log_posterior_non_NAN
+        log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
+        #log_posterior_scaled = log_posterior_non_NAN_inf
                    
         for i in range(number_parameter):
                 
             # mode of posterior is final parameter estimate
-            max_post = Theta[np.argmax(log_posterior_non_NAN[:,i]),i]
+            max_post = Theta_non_NAN_inf[np.argmax(log_posterior_non_NAN_inf[:,i]),i]
             
             plt.clf()
             fig, ax = plt.subplots()
-            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], log_posterior_scaled[:,i][0::10], color='b', linewidth=0.5, label='scaled log Posterior values')
+            plt.plot(Theta_non_NAN_inf[:,i], log_posterior_scaled[:,i], color='b', linewidth=0.5, label='scaled log Posterior values')
             # plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0:2000], log_posterior_scaled[:,i][0:2000], color='b', linewidth=0.5, label='scaled log Posterior values')
-            plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'orange', label = 'Prior density values')
+            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'orange', label = 'Prior density values')
+            plt.plot(Theta_non_NAN_inf[:,i], prior_non_NAN_inf[:,i], linewidth=0.5, color = 'orange', label = 'Prior density values')
             
             # use kde
             #kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
@@ -444,6 +454,8 @@ class sample_posterior:
             plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
 
 
+# --------------------------------------
+    # gathered old stuff
     def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,
                         para_names, path, plot_name):
 
