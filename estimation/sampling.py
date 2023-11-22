@@ -167,10 +167,10 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        """for i in range(grid_size):
+        for i in range(grid_size):
             
             # good simulations for testing:[27, 31, 45, 49]
-            i = 1000
+            i = 11
             
             # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
@@ -200,19 +200,19 @@ class sample_posterior:
                 simulation_short = simulation_short_filtered
             
             # apply log transformation if no filter is used:
-            else:
+            """else:
                 simulation_log = np.log(simulation_short)
-                simulation_short = simulation_log
+                simulation_short = simulation_log"""
                 
             # test: benutze die gleichen Daten 
             #for i in range(20): 
                 #simulation_short[:,i] = data_obs 
             
             # approximate the posterior probability of the given parameter combination
-            # likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
+            likelihoods = likelihood_appro.approximate_likelihood(simulation_short)
             
             # kde
-            likelihoods = likelihood_appro.kde_approximation(simulation_short)
+            # likelihoods = likelihood_appro.kde_approximation(simulation_short)
 
             # compute likelihood of the observed data for the given parameter combination
             L = np.prod(likelihoods)
@@ -232,7 +232,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")"""
+            print("")
         
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
