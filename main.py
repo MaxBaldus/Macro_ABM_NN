@@ -170,7 +170,7 @@ Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
 Theta = np.load('estimation/BAM/Theta_500.npy') # load test parameter combinations (with large bounds)
 Theta = np.load('estimation/BAM/Theta.npy') # load parameter grid with 5000 combinations """
 
-# define path where to store the simulated time series
+# define path where to store the simulated time series, which are then loaded in part 2)
 #path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
 #path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
 #path = 'data/simulations/toymodel_simulations/latin_hypercube' # toymodel data
@@ -229,7 +229,7 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, Theta=Theta, kde=True)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
 
 # saving posterior and prior values: mdn
 """np.save('estimation/BAM/Theta_ordered/final_run/log_posterior_identification', log_posterior)
@@ -239,11 +239,11 @@ np.save('estimation/BAM/Theta_ordered/final_run/Likelihoods_identification', Lik
 np.save('estimation/BAM/Theta_ordered/final_run/log_Likelihoods_identification', log_Likelihoods)"""
 
 # saving posterior and prior values: kde
-np.save('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/posterior_identification', posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/prior_identification', prior_probabilities)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification', log_Likelihoods)"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -303,12 +303,14 @@ plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/div_by_std/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/hp_filter/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/log_transform/'
 
+#test
+#plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/'
 
 BAM_posterior.posterior_plots_identification(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = plot_path, plot_name= plot_name,
-                                true_values = parameter, zoom=True)
+                                true_values = parameter, zoom=False)
 
 print('--------------------------------------')
 print("Done")
@@ -334,3 +336,5 @@ B) Estimating the BAM model using real data on US GDP ??, using the same artific
 """
 
 # using un-ordered Theta sample 
+
+# t_zero = bleibt !?

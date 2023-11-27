@@ -138,7 +138,7 @@ class sample_posterior:
     """
     2) Estimation block: compute the likelihood and the posterior probability of each parameter (combination) of the abm model by delli gatti.
     """
-    def approximate_posterior(self, grid_size, path, Theta, kde):
+    def approximate_posterior(self, grid_size, path, t_zero, kde):
             
         # apply filter to observed time series
         if self.filter:
@@ -175,7 +175,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        """for i in range(grid_size):
+        for i in range(grid_size):
             
             # choose a good simulation for testing
             i = 11
@@ -186,10 +186,13 @@ class sample_posterior:
 
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
-            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],]
+            # simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],]
             
             #simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],0:12]
             #simulation_short = np.log(simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],])
+            
+            # use values from t_0 onwards
+            simulation_short = simulation[simulation.shape[0] - t_zero : simulation.shape[0],:]
 
 
             # apply filter to simulated time series
@@ -242,7 +245,7 @@ class sample_posterior:
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
             print("")
-            """
+            
         
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
@@ -253,7 +256,11 @@ class sample_posterior:
 
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # only use last observations with length of the observed ts
-            simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0], :]
+            # simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0], :]
+            
+            # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
+            # use values from t_0 onwards
+            simulation_short = simulation[simulation.shape[0] - t_zero : simulation.shape[0],:]
 
             # apply filter to simulated time series
             if self.filter:
@@ -428,10 +435,12 @@ class sample_posterior:
         if zoom:
             # scaling log posterior values btw. 0 and 10
             log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
+            
         else:
             # scaling log posterior values btw. 0 and 10
             log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
-        #log_posterior_scaled = log_posterior_non_NAN_inf
+        
+        # log_posterior_scaled = log_posterior_non_NAN_inf
                    
         for i in range(number_parameter):
                 
@@ -446,7 +455,8 @@ class sample_posterior:
                 plt.plot(Theta_non_NAN_inf[0:2000,i], log_posterior_scaled[0:2000,i], color='b', linewidth=0.5, label='scaled log Posterior values')
                 # prior values
                 plt.plot(Theta_non_NAN_inf[0:2000,i], prior_non_NAN_inf[0:2000,i], linewidth=0.5, color = 'orange', label = 'Prior density values')
-            
+                # plt.plot(Theta_non_NAN_inf[0:2000,i], np.log(prior_non_NAN_inf[0:2000,i]), linewidth=0.5, color = 'orange', label = 'Prior density values')
+                
             else:
                 # log posterior values
                 plt.plot(Theta_non_NAN_inf[:,i], log_posterior_scaled[:,i], color='b', linewidth=0.5, label='scaled log Posterior values')
@@ -473,7 +483,7 @@ class sample_posterior:
             plt.xlabel(para_names[i])
             plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
             # parameter estimates
-            plt.axvline(x = max_post,  color = 'red', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$')
+            plt.axvline(x = max_post,  color = 'red', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$ =' + str(np.round(max_post, 4)))
             plt.axvline(x = true_values[i], linestyle = 'dashed', alpha = 0.75, label = "true " + r'$\theta$', c = 'k')
             
             # legend
