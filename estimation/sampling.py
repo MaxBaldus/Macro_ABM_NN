@@ -82,10 +82,10 @@ class sample_posterior:
             for i in range(number_para):
                 Theta[:,i] = np.sort(Theta[:,i]) 
         
-        """
+        
         # 1) Simulation block (outsourced to main.py)
         # simulation and storing the TxMC matrix for each parameter combination
-        for i in tqdm(range(grid_size)):
+        """for i in tqdm(range(grid_size)):
 
             # current parameter combination
             theta_current = theta[i,:]
@@ -175,7 +175,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        for i in range(grid_size):
+        """for i in range(grid_size):
             
             # choose a good simulation for testing
             i = 11
@@ -244,19 +244,15 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")
+            print("")"""
             
-        
+
         # using parallel computing
         def approximate_parallel(path, marginal_priors, i):
            
              # load the simulated data for the current parameter combination
             load_path = path + '_' + str(i) + '.npy'
             simulation = np.load(load_path)
-
-            # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
-            # only use last observations with length of the observed ts
-            # simulation_short = simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0], :]
             
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # use values from t_0 onwards
@@ -284,6 +280,7 @@ class sample_posterior:
                 
             # approximate the posterior probability of the given parameter combination
             if kde:
+                # using kernel density estimation
                 likelihoods = likelihood_appro.kde_approximation(simulation_short)
             else:
                 # using mdns
@@ -308,36 +305,6 @@ class sample_posterior:
             log_Likelihoods[i] = computations[i][1]
             posterior[i,:] = computations[i][2]
             log_posterior[i,:] = computations[i][3]
-
-        # parallel: 10 theta with 5 MC => 3.6551249821980796 minutes
-
-        # Problem: WITHOUT using log transformation
-        # - densities <= 1 , hence np.log(densities) < 0  => large negative number for ll
-        # - also np.log(marginal_priors) < 0 
-        # => hence large negative number for ll + np.log(marginal_priors) 
-
-        # using logs => probabilities > 1, hence not really probabilities: but easier to eye-ball distribution??
-        # solution?!: return - log posterior and scale values when plotting ?!
-        
-        # QUESTIONS:
-        # one ll value * each prior value for the marginal posterior ???????
-        # prior.prod for the joint posterior ??!!  JA ?!
-        # if having marcov chain => each theta candidat is vector (one value for each parameter in vector)
-        # => computing likelihood * prior.product() to evaluate candidate (JOINTLY for all candidates)
-        # -inf ??!! -> - inf to 0 .. : just discard when plotting ??!!
-        # likelihood value positive ??!!
-        # WHAT IS THE POSTERIOR PARAMETER ESTIMATOR NOW: 
-        # since having grid: use value with highest proba as estimator, i.e. mode (not mean of the parameter values, since no MC chain)
-        
-        # ISSUES
-        # Influence of prior rather small: array([-2.34817589, -2.12968255, -2.17047113, -2.629976  ]) vs ll = -750.96674469632
-
-        # huge posterior values (positive log values) when using 1/std in mdn 
-        # without 1/std => posterior values are 0 now 
-        # scale values down?!?!?!?!
-
-        # good simulations: 27, 31, 45, 49, 
-        # CHECK WHETHER log_posterior values large (large negative values?!)
 
         return posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods
 
@@ -369,9 +336,85 @@ class sample_posterior:
         
         # get number of parameter
         number_parameter = np.shape(Theta)[1]
+                
+        """
+        1) log posterior 
+        """
+        # handle NANs
+        nans = np.sum(np.isnan(log_posterior))/bounds_BAM.shape[1]
+        print("number of NANs in log posterior: %s" %nans)
+        slicer_nan = np.isnan(log_posterior)
+        log_posterior_non_NAN = log_posterior[~slicer_nan.any(axis=1)]
+        Theta_non_NAN = Theta[~slicer_nan.any(axis=1)]
+        prior_non_NAN = marginal_priors[~slicer_nan.any(axis=1)]
+        
+        # handle -inf values
+        infs = np.sum(np.isinf(log_posterior))/bounds_BAM.shape[1]
+        print("number of -inf in log posterior: %s" %infs)
+        slicer_inf = np.isinf(log_posterior_non_NAN)
+        log_posterior_non_NAN_inf = log_posterior_non_NAN[~slicer_inf.any(axis=1)]
+        Theta_non_NAN_inf = Theta_non_NAN[~slicer_inf.any(axis=1)]
+        prior_non_NAN_inf = prior_non_NAN[~slicer_inf.any(axis=1)]
+        
+        if zoom:
+            # scaling log posterior values btw. 0 and 10
+            log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
+            
+        else:
+            # scaling log posterior values btw. 0 and 10
+            log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
+        
+        # log_posterior_scaled = log_posterior_non_NAN_inf
+                   
+        for i in range(number_parameter):
+                
+            # mode of posterior is final parameter estimate
+            max_post = Theta_non_NAN_inf[np.argmax(log_posterior_non_NAN_inf[:,i]),i]
+            
+            plt.clf()
+            
+            # zoom into certain range when plotting, neglecting other values
+            if zoom:
+                # log posterior values
+                plt.plot(Theta_non_NAN_inf[0:2000,i], log_posterior_scaled[0:2000,i], color='b', linewidth=0.5, label='scaled log Posterior values')
+                # prior values
+                plt.plot(Theta_non_NAN_inf[0:2000,i], prior_non_NAN_inf[0:2000,i], linewidth=0.5, color = 'orange', label = 'Prior density values')
+                
+            else:
+                # log posterior values
+                plt.plot(Theta_non_NAN_inf[:,i], log_posterior_scaled[:,i], color='b', linewidth=0.5, label='scaled log Posterior values')
+                
+                # prior values
+                plt.plot(Theta_non_NAN_inf[:,i], prior_non_NAN_inf[:,i], linewidth=0.5, color = 'orange', label = 'Prior density values')
+                
+            plt.xlabel(para_names[i])
+            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
+            
+            # parameter estimates
+            plt.axvline(x = max_post,  color = 'red', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$ =' + str(np.round(max_post, 4)))
+            plt.axvline(x = true_values[i], linestyle = 'dashed', alpha = 0.75, label = "true " + r'$\theta$', c = 'k')
+            
+            # legend
+            plt.legend(loc="lower right", fontsize = 8)
+            if zoom:
+                plt.savefig(path + plot_name + 'ZOOM' +'_log_post_' + 'parameter_' + str(i) + '.png')
+            else:
+                plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
+
+
+# --------------------------------------
+    # gathered old plotting stuff
+    def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,
+                        para_names, path, plot_name):
+
+        """
+        Plot posterior and prior probabilities
+        """
+        
+        number_parameter = np.shape(Theta)[1]
         
         """
-        1) posterior 
+        2) posterior 
         """
         # handle NANs
         """print("number of NANs in posterior: %s" %np.sum(np.isnan(posterior)))
@@ -402,26 +445,12 @@ class sample_posterior:
             #plt.legend(['Posterior Density', 'Prior Density', r'$\hat \theta$'], fontsize = 8)
             
             plt.savefig(path + plot_name + 'parameter_' + str(i) + '.png')"""
-        
+
         """
-        2) log posterior 
+        1) plot log posteriors 
         """
-        # handle NANs
-        nans = np.sum(np.isnan(log_posterior))/bounds_BAM.shape[1]
-        print("number of NANs in log posterior: %s" %nans)
-        slicer_nan = np.isnan(log_posterior)
-        log_posterior_non_NAN = log_posterior[~slicer_nan.any(axis=1)]
-        Theta_non_NAN = Theta[~slicer_nan.any(axis=1)]
-        prior_non_NAN = marginal_priors[~slicer_nan.any(axis=1)]
         
-        # handle -inf values
-        infs = np.sum(np.isinf(log_posterior))/bounds_BAM.shape[1]
-        print("number of -inf in log posterior: %s" %infs)
-        slicer_inf = np.isinf(log_posterior_non_NAN)
-        log_posterior_non_NAN_inf = log_posterior_non_NAN[~slicer_inf.any(axis=1)]
-        Theta_non_NAN_inf = Theta_non_NAN[~slicer_inf.any(axis=1)]
-        prior_non_NAN_inf = prior_non_NAN[~slicer_inf.any(axis=1)]
-        
+        # order Theta values
         """min_values = []
         for i in range(number_parameter):
             values = []
@@ -431,85 +460,6 @@ class sample_posterior:
             min_values.append(min(values))
         slicer_inf = np.isinf(log_posterior_non_NAN)
         log_posterior_non_NAN[slicer_inf.any(axis=1)] = min_values"""
-        
-        if zoom:
-            # scaling log posterior values btw. 0 and 10
-            log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
-            
-        else:
-            # scaling log posterior values btw. 0 and 10
-            log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
-        
-        # log_posterior_scaled = log_posterior_non_NAN_inf
-                   
-        for i in range(number_parameter):
-                
-            # mode of posterior is final parameter estimate
-            max_post = Theta_non_NAN_inf[np.argmax(log_posterior_non_NAN_inf[:,i]),i]
-            
-            plt.clf()
-            
-            # zoom into certain range when plotting, neglecting other values
-            if zoom:
-                # log posterior values
-                plt.plot(Theta_non_NAN_inf[0:2000,i], log_posterior_scaled[0:2000,i], color='b', linewidth=0.5, label='scaled log Posterior values')
-                # prior values
-                plt.plot(Theta_non_NAN_inf[0:2000,i], prior_non_NAN_inf[0:2000,i], linewidth=0.5, color = 'orange', label = 'Prior density values')
-                # plt.plot(Theta_non_NAN_inf[0:2000,i], np.log(prior_non_NAN_inf[0:2000,i]), linewidth=0.5, color = 'orange', label = 'Prior density values')
-                
-            else:
-                # log posterior values
-                plt.plot(Theta_non_NAN_inf[:,i], log_posterior_scaled[:,i], color='b', linewidth=0.5, label='scaled log Posterior values')
-                # plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0:2000], log_posterior_scaled[:,i][0:2000], color='b', linewidth=0.5, label='scaled log Posterior values')
-                
-                # prior values
-                #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10], linewidth=0.5, color = 'orange', label = 'Prior density values')
-                plt.plot(Theta_non_NAN_inf[:,i], prior_non_NAN_inf[:,i], linewidth=0.5, color = 'orange', label = 'Prior density values')
-            
-            # use kde
-            #kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
-            #test = kde_object.pdf(Theta[:,i][~slicer_nan.any(axis=1)])
-            
-            # smooth scatterplot/posterior distribution 
-            #gfg = make_interp_spline(Theta[:,i][~slicer_nan.any(axis=1)][0::100], log_posterior_scaled[0::100])
-            #X_ = np.linspace(Theta[:,i][~slicer_nan.any(axis=1)].min(), Theta[:,i][~slicer_nan.any(axis=1)].max(), 50)
-            #log_post_smooth = gfg(Theta[:,i][~slicer_nan.any(axis=1)][0::10])
-            #log_post_smooth = gfg(X_)
-            
-            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)], test, color='red')
-            #plt.plot(X_, log_post_smooth, linewidth=0.5 ,color='red')
-            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10]) 
-                
-            plt.xlabel(para_names[i])
-            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
-            # parameter estimates
-            plt.axvline(x = max_post,  color = 'red', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$ =' + str(np.round(max_post, 4)))
-            plt.axvline(x = true_values[i], linestyle = 'dashed', alpha = 0.75, label = "true " + r'$\theta$', c = 'k')
-            
-            # legend
-            plt.legend(loc="lower right", fontsize = 8)
-            if zoom:
-                plt.savefig(path + plot_name + 'ZOOM' +'_log_post_' + 'parameter_' + str(i) + '.png')
-            else:
-                plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
-
-
-# --------------------------------------
-    # gathered old stuff
-    def posterior_plots(self, Theta, posterior, log_posterior, marginal_priors,
-                        para_names, path, plot_name):
-
-        """
-        Plot posterior and prior probabilities
-        """
-        
-        number_parameter = np.shape(Theta)[1]
-
-        """
-        1) plot log posteriors 
-        """
-        
-        # order Theta values
         
         
         # remove NAN's
@@ -561,6 +511,20 @@ class sample_posterior:
             # smooth scatterplot/posterior distribution 
             #gfg = make_interp_spline(df['theta'], df['log_post'], k=3)
             #log_post_smooth = gfg(df['theta'])
+            
+            # use kde
+            #kde_object = gaussian_kde(log_posterior_scaled.reshape(1,-1))
+            #test = kde_object.pdf(Theta[:,i][~slicer_nan.any(axis=1)])
+            
+            # smooth scatterplot/posterior distribution 
+            #gfg = make_interp_spline(Theta[:,i][~slicer_nan.any(axis=1)][0::100], log_posterior_scaled[0::100])
+            #X_ = np.linspace(Theta[:,i][~slicer_nan.any(axis=1)].min(), Theta[:,i][~slicer_nan.any(axis=1)].max(), 50)
+            #log_post_smooth = gfg(Theta[:,i][~slicer_nan.any(axis=1)][0::10])
+            #log_post_smooth = gfg(X_)
+            
+            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)], test, color='red')
+            #plt.plot(X_, log_post_smooth, linewidth=0.5 ,color='red')
+            #plt.plot(Theta[:,i][~slicer_nan.any(axis=1)][0::10], marginal_priors[:,i][~slicer_nan.any(axis=1)][0::10]) 
 
             plt.clf()
             # plt.plot(df['theta'], log_post_smooth)

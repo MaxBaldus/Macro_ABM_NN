@@ -229,14 +229,14 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False)
 
 # saving posterior and prior values: mdn
-"""np.save('estimation/BAM/Theta_ordered/final_run/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/Theta_ordered/final_run/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/posterior_identification', posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/prior_identification', prior_probabilities)
 np.save('estimation/BAM/Theta_ordered/final_run/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/final_run/log_Likelihoods_identification', log_Likelihoods)"""
+np.save('estimation/BAM/Theta_ordered/final_run/log_Likelihoods_identification', log_Likelihoods)
 
 # saving posterior and prior values: kde
 """np.save('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification', log_posterior)
@@ -287,6 +287,8 @@ posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/posterior_identi
 prior_probabilities = np.load('estimation/BAM/final_run/kde/log_transform/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/Likelihoods_identification.npy')
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification.npy')"""
+
+# LOAD TEST
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
