@@ -149,7 +149,7 @@ class sample_posterior:
                 data_obs = components[0]  # both cyclical and trend component
         else:
             data_obs = self.data_obs
-            # data_obs = np.log(self.data_obs)
+            # data_obs = np.log(self.data_obs) # use log transforms
 
         # instantiate the likelihood approximation method
         likelihood_appro = mdn(data_obs, L = 3, K = 16, 
