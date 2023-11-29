@@ -229,7 +229,7 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
+#posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
 
 # saving posterior and prior values: mdn
 """np.save('estimation/BAM/Theta_ordered/final_run/log_posterior_identification', log_posterior)
@@ -282,11 +282,11 @@ Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/log_transform/Like
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/log_transform/log_Likelihoods_identification.npy')"""
 
 # load approximations regarding ordered Theta sample: log transformation, kde
-"""log_posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification.npy')
+log_posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/posterior_identification.npy')
-prior_probabilities = np.load('estimation/BAM/final_run/kde/log_transform/prior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/Theta_ordered/final_run/kde/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/Likelihoods_identification.npy')
-log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification.npy')"""
+log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification.npy')
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
@@ -296,12 +296,14 @@ para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 plot_name= 'Theta_ordered_5000_raw_data_div_by_std'
 #plot_name= 'Theta_ordered_5000_HP_filter'
 #plot_name= 'Theta_ordered_5000_log_transform'
+plot_name= 'Theta_ordered_5000_KDE'
 
 # path to save the plots
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/NOT_div_by_std/'
 plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/div_by_std/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/hp_filter/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/log_transform/'
+plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/kde/'
 
 
 BAM_posterior.posterior_plots_identification(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
