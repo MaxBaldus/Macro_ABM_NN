@@ -175,7 +175,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        """for i in range(grid_size):
+        for i in range(grid_size):
             
             # choose a good simulation for testing
             i = 11
@@ -192,7 +192,7 @@ class sample_posterior:
             #simulation_short = np.log(simulation[simulation.shape[0]-len(self.data_obs) : simulation.shape[0],])
             
             # use values from t_0 onwards
-            simulation_short = simulation[simulation.shape[0] - t_zero : simulation.shape[0],:]
+            simulation_short = simulation[t_zero : simulation.shape[0],:]
 
 
             # apply filter to simulated time series
@@ -244,7 +244,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")"""
+            print("")
             
 
         # using parallel computing
@@ -256,7 +256,7 @@ class sample_posterior:
             
             # neglect the first simlated values for each mc column to ensure convergence of the major report variables 
             # use values from t_0 onwards
-            simulation_short = simulation[simulation.shape[0] - t_zero : simulation.shape[0],:]
+            simulation_short = simulation[t_zero : simulation.shape[0],:]
 
             # apply filter to simulated time series
             if self.filter:
