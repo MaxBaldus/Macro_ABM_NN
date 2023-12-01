@@ -125,9 +125,9 @@ First the estimation method is tested by using pseudo-empirical data with a-prio
 The first mc simulation with the parameter configuration from above is used as the 'observed' dataset. 
 """
 # number of MC simulations per parameter combination
-#MC = 20
+MC = 20
 #MC = 100
-MC = 50
+#MC = 50
 
 # pseudo empirical data
 #BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data when used parallizing before (need to transpse data frame)
@@ -137,14 +137,14 @@ BAM_simulations = np.load("data/simulations/BAM_pseudo_empirical.npy") # load pe
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]  
 
 # create new instance of the BAM model (without any plotting)
-#BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
-BAM_model = BAM_mc(T=1500, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
+#BAM_model = BAM_mc(T=1500, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
 # bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ])) # first test
-#bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
-bounds_BAM = np.transpose(np.array([ [0.05,0.2], [0.05,0.2], [0.05,0.2], [0.025,0.075] ]))
+bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
+#bounds_BAM = np.transpose(np.array([ [0.05,0.2], [0.05,0.2], [0.05,0.2], [0.025,0.075] ]))
 
 
 # initialize the estimation method: here without applying any filter to observed as simulated time series
@@ -155,9 +155,9 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 """
 
 # number of parameter combinations
-#grid_size = 5000
+grid_size = 5000
 #grid_size = 1500
-grid_size = 1000
+#grid_size = 1000
 
 # simulate the model MC times for each parameter combination and save each TxMC matrix
 print("")
@@ -288,12 +288,19 @@ prior_probabilities = np.load('estimation/BAM/Theta_ordered/final_run/log_transf
 Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/log_transform/Likelihoods_identification.npy')
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/log_transform/log_Likelihoods_identification.npy')"""
 
-# load approximations regarding ordered Theta sample: log transformation, kde
+# load approximations regarding ordered Theta sample: kde
 log_posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/posterior_identification.npy')
 prior_probabilities = np.load('estimation/BAM/Theta_ordered/final_run/kde/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/Likelihoods_identification.npy')
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification.npy')
+
+# load approximations regarding UNordered Theta sample: MDN
+log_posterior = np.load('estimation/BAM/final_run/log_posterior_identification.npy')
+posterior = np.load('estimation/BAM/final_run/posterior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/final_run/prior_identification.npy')
+Likelihoods = np.load('estimation/BAM/final_run/Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/final_run/log_Likelihoods_identification.npy')
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
@@ -303,24 +310,31 @@ para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 plot_name= 'Theta_ordered_5000_raw_data_div_by_std'
 #plot_name= 'Theta_ordered_5000_HP_filter'
 #plot_name= 'Theta_ordered_5000_log_transform'
-
-#plot_name= 'Theta_ordered_5000_KDE'
-plot_name= 'Theta_ordered_5000_KDE_log_transform'
+plot_name= 'Theta_ordered_5000_KDE'
+plot_name = 'Theta_NOT_ordered_5000_MDN'
 
 # path to save the plots
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/NOT_div_by_std/'
 plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/div_by_std/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/hp_filter/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/log_transform/'
-
 plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/kde/'
+plot_path = 'plots/posterior/BAM/NOT_ordered/'
 
-
+# plot posteriors for ordered Theta
 """BAM_posterior.posterior_plots_identification(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = plot_path, plot_name= plot_name,
                                 true_values = parameter, zoom=False)"""
+
+# plot posteriors for unordered Theta
+BAM_posterior.posterior_plots_unordered(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+                                Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
+                                marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
+                                path = plot_path, plot_name= plot_name,
+                                true_values = parameter)
+
 
 print('--------------------------------------')
 print("Done")
