@@ -236,7 +236,7 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
+#posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
 
 # choose folder to save posterior and prior values: mdn
 """np.save('estimation/BAM/final_run/log_posterior_identification', log_posterior)
@@ -246,11 +246,11 @@ np.save('estimation/BAM/final_run/Likelihoods_identification', Likelihoods)
 np.save('estimation/BAM/final_run/log_Likelihoods_identification', log_Likelihoods)"""
 
 # saving posterior and prior values: kde
-np.save('estimation/BAM/final_run/kde/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/final_run/kde/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/final_run/kde/posterior_identification', posterior)
 np.save('estimation/BAM/final_run/kde/prior_identification', prior_probabilities)
 np.save('estimation/BAM/final_run/kde/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/final_run/kde/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/final_run/kde/log_Likelihoods_identification', log_Likelihoods)"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -325,9 +325,6 @@ plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/kde/'
 print('--------------------------------------')
 print("Done")
 
-# USE KDE with log filter !! 
-# try ACF -> use different number of lags ?! 
-
 
 # Simulation hyperparameters:
 # Gatti 2020
@@ -353,20 +350,30 @@ BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=Fals
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 
 # load empirical data
+GDP_US = pd.read_csv("data/GDPC1.csv")
 
-# initialize the estimation method: here without applying any filter to observed as simulated time series
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=False)
+# initialize the estimation method: apply HP filter 
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=np.array(GDP_US)[:,1], filter=True)
 
 grid_size = 5000
 np.random.seed(123)
 Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=False)
 
+print("")
+print('--------------------------------------')
+print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
+start_time = time.time()
 path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False)
 
 # choose folder to save posterior and prior values: mdn
-np.save('estimation/BAM/final_run/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/final_run/posterior_identification', posterior)
-np.save('estimation/BAM/final_run/prior_identification', prior_probabilities)
-np.save('estimation/BAM/final_run/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/final_run/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/empirical/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/empirical/posterior_identification', posterior)
+np.save('estimation/BAM/empirical/prior_identification', prior_probabilities)
+np.save('estimation/BAM/empirical/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoods)
+
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
+print('--------------------------------------')
+print("Done")
