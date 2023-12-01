@@ -126,6 +126,8 @@ The first mc simulation with the parameter configuration from above is used as t
 """
 # number of MC simulations per parameter combination
 MC = 20
+#MC = 100
+#MC = 50
 
 # pseudo empirical data
 #BAM_simulations = np.transpose(np.load("data/simulations/BAM_10MC.npy")) # load pesudo random data when used parallizing before (need to transpse data frame)
@@ -135,14 +137,14 @@ BAM_simulations = np.load("data/simulations/BAM_pseudo_empirical.npy") # load pe
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]  
 
 # create new instance of the BAM model (without any plotting)
-BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
-                plots=False, csv=False) 
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
+#BAM_model = BAM_mc(T=1500, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
 # with one column for each free parameter and the first (second) row being the lower (upper) bound respectively
-# bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ]))
-# bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
-bounds_BAM = np.transpose(np.array([ [0.05,0.2], [0.05,0.2], [0.05,0.2], [0.025,0.075] ]))
+# bounds_BAM = np.transpose(np.array([ [0.07,0.13], [0.07,0.13], [0.07,0.13], [0.02,0.08] ])) # first test
+bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
+# bounds_BAM = np.transpose(np.array([ [0.05,0.2], [0.05,0.2], [0.05,0.2], [0.025,0.075] ]))
 
 
 # initialize the estimation method: here without applying any filter to observed as simulated time series
@@ -153,8 +155,9 @@ BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_ob
 """
 
 # number of parameter combinations
-#grid_size = 5000
-grid_size = 1500
+grid_size = 5000
+#grid_size = 1500
+#grid_size = 1000
 
 # simulate the model MC times for each parameter combination and save each TxMC matrix
 print("")
@@ -166,7 +169,7 @@ start_time = time.time()
 
 # generate grid with parameter values
 np.random.seed(123)
-Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
+Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=False)
 
 # save and load Theta combinations
 #np.save('estimation/BAM/Theta_ordered', Theta)
@@ -174,11 +177,11 @@ Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
 #Theta = np.load('estimation/BAM/Theta.npy') # load parameter grid with 5000 combinations """
 
 # define path where to store the simulated time series, which are then loaded in part 2)
-#path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
+path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
 #path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
 #path = 'data/simulations/toymodel_simulations/latin_hypercube' # toymodel data
 #path = 'data/simulations/BAM_simulations/Theta_ordered/Theta_ordered'
-path = 'data/simulations/BAM_simulations/100MC/Theta_ordered'
+#path = 'data/simulations/BAM_simulations/50MC/Theta_ordered'
 
 
 # parallize the grid search: using joblib
@@ -210,10 +213,10 @@ def grid_search_parallel(Theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 5000 times 20MC simulations (per theta) in parallel and save
-Parallel(n_jobs=num_cores, verbose=50)(
+"""Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
-        (Theta, BAM_model, path, i) for i in range(grid_size)
-        )
+        (Theta, BAM_model, path, i) for i in range(grid_size) 
+        )"""
 
 
 print("")
@@ -235,19 +238,19 @@ start_time = time.time()
 # by default, mdns are used. Set kde = True to use kde instead 
 posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
 
-# saving posterior and prior values: mdn
-"""np.save('estimation/BAM/Theta_ordered/final_run/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/Theta_ordered/final_run/posterior_identification', posterior)
-np.save('estimation/BAM/Theta_ordered/final_run/prior_identification', prior_probabilities)
-np.save('estimation/BAM/Theta_ordered/final_run/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/final_run/log_Likelihoods_identification', log_Likelihoods)"""
+# choose folder to save posterior and prior values: mdn
+"""np.save('estimation/BAM/final_run/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/final_run/posterior_identification', posterior)
+np.save('estimation/BAM/final_run/prior_identification', prior_probabilities)
+np.save('estimation/BAM/final_run/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/final_run/log_Likelihoods_identification', log_Likelihoods)"""
 
 # saving posterior and prior values: kde
-np.save('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/Theta_ordered/final_run/kde/posterior_identification', posterior)
-np.save('estimation/BAM/Theta_ordered/final_run/kde/prior_identification', prior_probabilities)
-np.save('estimation/BAM/Theta_ordered/final_run/kde/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/final_run/kde/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/final_run/kde/posterior_identification', posterior)
+np.save('estimation/BAM/final_run/kde/prior_identification', prior_probabilities)
+np.save('estimation/BAM/final_run/kde/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/final_run/kde/log_Likelihoods_identification', log_Likelihoods)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))

@@ -148,8 +148,8 @@ class sample_posterior:
                 # use cyclical component of HP filter as observed data
                 data_obs = components[0]  # both cyclical and trend component
         else:
-            #data_obs = self.data_obs
-            data_obs = np.log(self.data_obs) # use log transforms
+            data_obs = self.data_obs
+            #data_obs = np.log(self.data_obs) # use log transforms
 
         # instantiate the likelihood approximation method
         likelihood_appro = mdn(data_obs, L = 3, K = 16, 
@@ -175,7 +175,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        for i in range(grid_size):
+        """for i in range(grid_size):
             
             # choose a good simulation for testing
             i = 11
@@ -244,7 +244,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")
+            print("")"""
             
 
         # using parallel computing
@@ -274,9 +274,9 @@ class sample_posterior:
                 simulation_short = simulation_short_filtered
             
             # apply log transformation if no filter is used:
-            else:
+            """else:
                 simulation_log = np.log(simulation_short)
-                simulation_short = simulation_log
+                simulation_short = simulation_log"""
                 
             # approximate the posterior probability of the given parameter combination
             if kde:
