@@ -208,7 +208,8 @@ class sample_posterior:
                     simulation_short_filtered[:,i] = components[0] 
                     
                 # use filtered time series from now on forward
-                simulation_short = simulation_short_filtered
+                # simulation_short = simulation_short_filtered
+                simulation_short = simulation_short_filtered * 10
             
             # apply log transformation if no filter is used:
             else:
@@ -271,7 +272,8 @@ class sample_posterior:
                     simulation_short_filtered[:,i] = components[0] 
                     
                 # use filtered time series from now on forward
-                simulation_short = simulation_short_filtered
+                # simulation_short = simulation_short_filtered
+                simulation_short = simulation_short_filtered * 10
             
             # apply log transformation if no filter is used:
             """else:
