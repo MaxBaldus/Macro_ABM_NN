@@ -339,12 +339,11 @@ print("Done")
 
 
 """
-B) Estimating the BAM model using real data on US GDP ??, using the same artificial data generated above. 
+B) Estimating the BAM model using real data on US GDP, using the same artificial data generated above. 
 """
 
 # using un-ordered Theta sample 
 
-# t_zero = bleibt !?
 MC = 20
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
@@ -352,7 +351,7 @@ bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 # load empirical data
 GDP_US = pd.read_csv("data/GDPC1.csv")
 
-# initialize the estimation method: apply HP filter 
+# initialize the estimation method: apply HP filter onto to np array converted GDP
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=np.array(GDP_US)[:,1], filter=True)
 
 grid_size = 5000
@@ -367,13 +366,21 @@ path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta
 posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False)
 
 # choose folder to save posterior and prior values: mdn
-np.save('estimation/BAM/empirical/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/empirical/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/empirical/posterior_identification', posterior)
 np.save('estimation/BAM/empirical/prior_identification', prior_probabilities)
 np.save('estimation/BAM/empirical/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoods)"""
+
+np.save('estimation/BAM/empirical/kde/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/empirical/kde/posterior_identification', posterior)
+np.save('estimation/BAM/empirical/kde/prior_identification', prior_probabilities)
+np.save('estimation/BAM/empirical/kde/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/empirical/kde/log_Likelihoods_identification', log_Likelihoods)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 print('--------------------------------------')
 print("Done")
+
+print("#")
