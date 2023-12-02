@@ -169,7 +169,7 @@ start_time = time.time()
 
 # generate grid with parameter values
 np.random.seed(123)
-Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
+Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=False)
 
 # save and load Theta combinations
 #np.save('estimation/BAM/Theta_ordered', Theta)
@@ -177,10 +177,10 @@ Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
 #Theta = np.load('estimation/BAM/Theta.npy') # load parameter grid with 5000 combinations """
 
 # define path where to store the simulated time series, which are then loaded in part 2)
-#path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
+path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
 #path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
 #path = 'data/simulations/toymodel_simulations/latin_hypercube' # toymodel data
-path = 'data/simulations/BAM_simulations/Theta_ordered/Theta_ordered'
+#path = 'data/simulations/BAM_simulations/Theta_ordered/Theta_ordered'
 #path = 'data/simulations/BAM_simulations/50MC/Theta_NOT_ordered'
 
 
@@ -236,21 +236,21 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False)
 
 # choose folder to save posterior and prior values: mdn
-"""np.save('estimation/BAM/final_run/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/final_run/posterior_identification', posterior)
-np.save('estimation/BAM/final_run/prior_identification', prior_probabilities)
-np.save('estimation/BAM/final_run/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/final_run/log_Likelihoods_identification', log_Likelihoods)"""
+np.save('estimation/BAM/final_run/HP_filter/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/final_run/HP_filter/posterior_identification', posterior)
+np.save('estimation/BAM/final_run/HP_filter/prior_identification', prior_probabilities)
+np.save('estimation/BAM/final_run/HP_filter/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/final_run/HP_filter/log_Likelihoods_identification', log_Likelihoods)
 
 # saving posterior and prior values: kde
-np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/posterior_identification', posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/prior_identification', prior_probabilities)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_Likelihoods_identification', log_Likelihoods)"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -288,19 +288,26 @@ prior_probabilities = np.load('estimation/BAM/Theta_ordered/final_run/log_transf
 Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/log_transform/Likelihoods_identification.npy')
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/log_transform/log_Likelihoods_identification.npy')"""
 
-# load approximations regarding ordered Theta sample: kde
+# load approximations regarding ordered Theta sample: no filter: kde
 """log_posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/posterior_identification.npy')
 prior_probabilities = np.load('estimation/BAM/Theta_ordered/final_run/kde/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/Likelihoods_identification.npy')
 log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/log_Likelihoods_identification.npy')"""
 
+# load approximations regarding ordered Theta sample: no filter: kde
+log_posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_posterior_identification.npy')
+posterior = np.load('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/posterior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/prior_identification.npy')
+Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_Likelihoods_identification.npy')
+
 # load approximations regarding UNordered Theta sample: MDN
-log_posterior = np.load('estimation/BAM/final_run/log_posterior_identification.npy')
+"""log_posterior = np.load('estimation/BAM/final_run/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/final_run/posterior_identification.npy')
 prior_probabilities = np.load('estimation/BAM/final_run/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/final_run/Likelihoods_identification.npy')
-log_Likelihoods = np.load('estimation/BAM/final_run/log_Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/final_run/log_Likelihoods_identification.npy')"""
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
@@ -311,7 +318,8 @@ para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 #plot_name= 'Theta_ordered_5000_HP_filter'
 #plot_name= 'Theta_ordered_5000_log_transform'
 #plot_name= 'Theta_ordered_5000_KDE'
-plot_name = 'Theta_NOT_ordered_5000_MDN'
+plot_name = 'Theta_ordered_5000_KDE_HP_filter'
+#plot_name = 'Theta_NOT_ordered_5000_MDN'
 
 # path to save the plots
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/NOT_div_by_std/'
@@ -319,21 +327,22 @@ plot_name = 'Theta_NOT_ordered_5000_MDN'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/hp_filter/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/log_transform/'
 #plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/kde/'
-plot_path = 'plots/posterior/BAM/NOT_ordered/'
+plot_path = 'plots/posterior/BAM/Theta_ordered/final_run/kde/HP_filter/'
+#plot_path = 'plots/posterior/BAM/NOT_ordered/'
 
 # plot posteriors for ordered Theta
-"""BAM_posterior.posterior_plots_identification(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+BAM_posterior.posterior_plots_identification(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = plot_path, plot_name= plot_name,
-                                true_values = parameter, zoom=False)"""
+                                true_values = parameter, zoom=False)
 
 # plot posteriors for unordered Theta
-BAM_posterior.posterior_plots_unordered(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+"""BAM_posterior.posterior_plots_unordered(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = plot_path, plot_name= plot_name,
-                                true_values = parameter)
+                                true_values = parameter)"""
 
 
 print('--------------------------------------')
