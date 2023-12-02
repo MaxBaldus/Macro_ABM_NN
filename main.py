@@ -388,8 +388,6 @@ np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoo
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
-print('--------------------------------------')
-print("Done")
 
 # load approximations regarding UNordered Theta sample: MDN
 log_posterior = np.load('estimation/BAM/empirical/log_posterior_identification.npy')
