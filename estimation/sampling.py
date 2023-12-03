@@ -273,7 +273,7 @@ class sample_posterior:
                     
                 # use filtered time series from now on forward
                 # simulation_short = simulation_short_filtered
-                simulation_short = simulation_short_filtered * 10
+                simulation_short = simulation_short_filtered 
             
             # apply log transformation if no filter is used:
             """else:
