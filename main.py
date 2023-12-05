@@ -169,7 +169,7 @@ start_time = time.time()
 
 # generate grid with parameter values
 np.random.seed(123)
-Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
+Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=False)
 
 # save and load Theta combinations
 #np.save('estimation/BAM/Theta_ordered', Theta)
@@ -177,10 +177,10 @@ Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=True)
 #Theta = np.load('estimation/BAM/Theta.npy') # load parameter grid with 5000 combinations """
 
 # define path where to store the simulated time series, which are then loaded in part 2)
-#path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
+path = 'data/simulations/BAM_simulations/latin_hypercube' # no ordered Theta 
 #path = 'data/simulations/BAM_simulations/test/latin_hypercube' # test data
 #path = 'data/simulations/toymodel_simulations/latin_hypercube' # toymodel data
-path = 'data/simulations/BAM_simulations/Theta_ordered/Theta_ordered'
+#path = 'data/simulations/BAM_simulations/Theta_ordered/Theta_ordered'
 #path = 'data/simulations/BAM_simulations/50MC/Theta_NOT_ordered'
 
 
@@ -236,22 +236,22 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False)
 
 # choose folder to save posterior and prior values: mdn
-"""np.save('estimation/BAM/final_run/HP_filter/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/final_run/HP_filter/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/final_run/HP_filter/posterior_identification', posterior)
 np.save('estimation/BAM/final_run/HP_filter/prior_identification', prior_probabilities)
 np.save('estimation/BAM/final_run/HP_filter/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/final_run/HP_filter/log_Likelihoods_identification', log_Likelihoods)"""
+np.save('estimation/BAM/final_run/HP_filter/log_Likelihoods_identification', log_Likelihoods)
 
 # saving posterior and prior values: kde
-np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/posterior_identification', posterior)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/prior_identification', prior_probabilities)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/Likelihoods_identification', Likelihoods)
 np.save('estimation/BAM/Theta_ordered/final_run/kde/HP_filter/log_Likelihoods_identification', log_Likelihoods)
-
+"""
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # --- 271.5109751145045 minutes ---
