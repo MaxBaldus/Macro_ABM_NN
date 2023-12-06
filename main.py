@@ -399,14 +399,14 @@ print('--------------------------------------')
 print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 start_time = time.time()
 path = 'data/simulations/BAM_simulations/latin_hypercube' # not ordered Theta 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
+#posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
 
 # choose folder to save posterior and prior values: mdn
-np.save('estimation/BAM/empirical/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/empirical/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/empirical/posterior_identification', posterior)
 np.save('estimation/BAM/empirical/prior_identification', prior_probabilities)
 np.save('estimation/BAM/empirical/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoods)"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -428,11 +428,10 @@ plot_name = 'Theta_NOT_ordered_5000_MDN_empirical'
 plot_path = 'plots/posterior/BAM/empirical/'
 
 # plot posteriors for unordered Theta
-BAM_posterior.posterior_plots_unordered(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
-                                path = plot_path, plot_name= plot_name,
-                                true_values = parameter)
+                                path = plot_path, plot_name= plot_name)
                                 
                                 
 print('--------------------------------------')

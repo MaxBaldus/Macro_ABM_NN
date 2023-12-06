@@ -478,6 +478,72 @@ class sample_posterior:
             plt.legend(loc="lower right", fontsize = 8)
             
             plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
+    
+    def posterior_plots_empirical(self, Theta, posterior, log_posterior, marginal_priors, Likelihoods, log_Likelihoods,
+                        para_names, path, plot_name, bounds_BAM):
+
+        """
+        Plot posterior and log posterior and prior probabilities
+        """
+        
+        # get number of parameter
+        number_parameter = np.shape(Theta)[1]
+                
+        """
+        1) log posterior 
+        """
+        # handle NANs
+        nans = np.sum(np.isnan(log_posterior))/bounds_BAM.shape[1]
+        print("number of NANs in log posterior: %s" %nans)
+        slicer_nan = np.isnan(log_posterior)
+        log_posterior_non_NAN = log_posterior[~slicer_nan.any(axis=1)]
+        Theta_non_NAN = Theta[~slicer_nan.any(axis=1)]
+        prior_non_NAN = marginal_priors[~slicer_nan.any(axis=1)]
+        
+        # handle -inf values
+        infs = np.sum(np.isinf(log_posterior))/bounds_BAM.shape[1]
+        print("number of -inf in log posterior: %s" %infs)
+        slicer_inf = np.isinf(log_posterior_non_NAN)
+        log_posterior_non_NAN_inf = log_posterior_non_NAN[~slicer_inf.any(axis=1)]
+        Theta_non_NAN_inf = Theta_non_NAN[~slicer_inf.any(axis=1)]
+        prior_non_NAN_inf = prior_non_NAN[~slicer_inf.any(axis=1)]
+                  
+        # scaling log posterior values btw. 0 and 10
+        log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
+        
+        # log_posterior_scaled = log_posterior_non_NAN_inf
+                   
+        for i in range(number_parameter):
+            
+            # order sampled parameter values (ascending order) and corresponding probabilities
+            theta_ordered = np.sort(Theta_non_NAN_inf[:,i])
+            theta_index = Theta_non_NAN_inf[:,i].argsort()
+            log_posterior_array = log_posterior_scaled[:,i]
+            log_posterior_ordered = log_posterior_array[theta_index]
+            log_prior_array = prior_non_NAN_inf[:,i]
+            log_prior_ordered = log_prior_array[theta_index]
+                
+            # mode of posterior is final parameter estimate
+            max_post = Theta_non_NAN_inf[np.argmax(log_posterior_non_NAN_inf[:,i]),i]
+            
+            plt.clf()
+                            
+            # log posterior values
+            plt.plot(theta_ordered, log_posterior_ordered, color='b', linewidth=0.5, label='scaled log Posterior values')
+            
+            # prior values
+            plt.plot(theta_ordered, log_prior_ordered, linewidth=0.5, color = 'orange', label = 'Prior density values')
+                
+            plt.xlabel(para_names[i])
+            plt.ylabel(r'$log$' + ' ' + r'$p($' + para_names[i] + r'$|X)$')
+            
+            # parameter estimates
+            plt.axvline(x = max_post,  color = 'red', linestyle = 'dashed', alpha = 0.75, label = r'$\hat \theta$ =' + str(np.round(max_post, 4)))
+            
+            # legend
+            plt.legend(loc="lower right", fontsize = 8)
+            
+            plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
 
 
 # --------------------------------------
