@@ -399,14 +399,14 @@ print('--------------------------------------')
 print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 start_time = time.time()
 path = 'data/simulations/BAM_simulations/latin_hypercube' # not ordered Theta 
-#posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
 
 # choose folder to save posterior and prior values: mdn
-"""np.save('estimation/BAM/empirical/log_posterior_identification', log_posterior)
-np.save('estimation/BAM/empirical/posterior_identification', posterior)
-np.save('estimation/BAM/empirical/prior_identification', prior_probabilities)
-np.save('estimation/BAM/empirical/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/empirical/log_Likelihoods_identification', log_Likelihoods)"""
+np.save('estimation/BAM/empirical/Germany/log_posterior_identification', log_posterior)
+np.save('estimation/BAM/empirical/Germany/posterior_identification', posterior)
+np.save('estimation/BAM/empirical/Germany/prior_identification', prior_probabilities)
+np.save('estimation/BAM/empirical/Germany/Likelihoods_identification', Likelihoods)
+np.save('estimation/BAM/empirical/Germany/log_Likelihoods_identification', log_Likelihoods)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
