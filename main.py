@@ -312,11 +312,11 @@ Likelihoods = np.load('estimation/BAM/final_run/Likelihoods_identification.npy')
 log_Likelihoods = np.load('estimation/BAM/final_run/log_Likelihoods_identification.npy')"""
 
 # load approximations regarding UNordered Theta sample: MDN, HP FILTER
-log_posterior = np.load('estimation/BAM/final_run/HP_filter/log_posterior_identification.npy')
+"""log_posterior = np.load('estimation/BAM/final_run/HP_filter/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/final_run/HP_filter/posterior_identification.npy')
 prior_probabilities = np.load('estimation/BAM/final_run/HP_filter/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/final_run/HP_filter/Likelihoods_identification.npy')
-log_Likelihoods = np.load('estimation/BAM/final_run/HP_filter/log_Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/final_run/HP_filter/log_Likelihoods_identification.npy')"""
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
