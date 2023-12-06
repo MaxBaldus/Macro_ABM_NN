@@ -401,7 +401,7 @@ Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=False)
 
 print("")
 print('--------------------------------------')
-print("2) Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
+print("B) Empirical application Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 start_time = time.time()
 path = 'data/simulations/BAM_simulations/latin_hypercube' # not ordered Theta 
 posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
@@ -417,20 +417,23 @@ print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 
 # load approximations regarding UNordered Theta sample: MDN
-log_posterior = np.load('estimation/BAM/empirical/log_posterior_identification.npy')
-posterior = np.load('estimation/BAM/empirical/posterior_identification.npy')
-prior_probabilities = np.load('estimation/BAM/empirical/prior_identification.npy')
-Likelihoods = np.load('estimation/BAM/empirical/Likelihoods_identification.npy')
-log_Likelihoods = np.load('estimation/BAM/empirical/log_Likelihoods_identification.npy')
+log_posterior = np.load('estimation/BAM/empirical/Germany/log_posterior_identification.npy')
+posterior = np.load('estimation/BAM/empirical/Germany/posterior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/empirical/Germany/prior_identification.npy')
+Likelihoods = np.load('estimation/BAM/empirical/Germany/Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/empirical/Germany/log_Likelihoods_identification.npy')
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 
 # names of the plots 
-plot_name = 'Theta_NOT_ordered_5000_MDN_empirical'
+#plot_name = 'Theta_NOT_ordered_5000_MDN_empirical' # US GDP
+plot_name = 'Theta_NOT_ordered_5000_MDN_empirical_German_GDP'
+
 
 # path to save the plots
-plot_path = 'plots/posterior/BAM/empirical/'
+#plot_path = 'plots/posterior/BAM/empirical/'
+plot_path = 'plots/posterior/BAM/empirical/Germany/'
 
 # plot posteriors for unordered Theta
 BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 

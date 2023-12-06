@@ -175,7 +175,7 @@ class sample_posterior:
         """
         # without parallised computing, mostly used for testing 
         # for i in tqdm(range(grid_size)):
-        """for i in range(grid_size):
+        for i in range(grid_size):
             
             # choose a good simulation for testing
             i = 11
@@ -193,8 +193,9 @@ class sample_posterior:
             
             # use values from t_0 onwards
             if empirical:
-                # scale the simulated data by 100 for the empirical applicatin
-                simulation_short = simulation[t_zero : simulation.shape[0],:] * 100
+                # scale the simulated data for the empirical applicatin
+                #simulation_short = simulation[t_zero : simulation.shape[0],:] * 100 # scale by 100 for US GDP 
+                simulation_short = simulation[t_zero : simulation.shape[0],:] * 10000
             
             else:
                 simulation_short = simulation[t_zero : simulation.shape[0],:]
@@ -249,7 +250,7 @@ class sample_posterior:
             log_posterior[i,:] = ll + np.log(marginal_priors[i,:])
             
             # bei i = 999: L = 1.1623265223664991e-275 => * 275
-            print("")"""
+            print("")
             
 
         # using parallel computing
