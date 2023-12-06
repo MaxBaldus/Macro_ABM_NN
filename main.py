@@ -383,12 +383,17 @@ MC = 20
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 
-# load empirical data and convert np array  
+# load empirical data and convert np array : US GDP 
 GDP_US = pd.read_csv("data/GDPC1.csv")
 GDP_US_array = np.array(GDP_US)[:,1]
 
+# load empirical data and convert np array : German GDP 
+GDP_Germany = pd.read_csv("data/CLVMNACSCAB1GQDE.csv")
+GDP_Germany_array = np.array(GDP_Germany)[:,1]
+
 # initialize the estimation method: apply HP filter 
-BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=GDP_US_array, filter=True)
+#BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=GDP_US_array, filter=True)
+BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=GDP_Germany_array, filter=True)
 
 grid_size = 5000
 np.random.seed(123)
