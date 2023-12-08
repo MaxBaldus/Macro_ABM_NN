@@ -22,7 +22,7 @@ The inputs are the the simulation parameters and some integer parameter values c
 
 class BAM_mc:
 
-    def __init__(self, T:int, MC:int, plots:bool, csv:bool,
+    def __init__(self, T:int, MC:int, plots:bool, csv:bool, empirical:bool, path_empirical,
                  Nh:int, Nf:int, Nb:int):
                 
         """
@@ -36,6 +36,8 @@ class BAM_mc:
 
         self.plots = plots # plot parameter decides whether plots are produced
         self.csv = csv # decides whether csv file is written or not
+        self.empirical = empirical # plotting when using estimated parameter values
+        self.path_empirical = path_empirical # path to save empirical values
         
         """
         Parameters set by modeller / calibrated
@@ -1214,11 +1216,200 @@ class BAM_mc:
                 print("beta okun %s" %reg_okun.coef_)
                 print("Corr beveridge %s" %np.corrcoef(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc]))
                 print("beta beveridge %s" %reg_beveridge.coef_)
+            
+            if self.empirical:
+    
+                # Log output
+                plt.clf()
+                plt.plot(np.log(production[:,mc]))
+                plt.xlabel("Time")
+                plt.ylabel("Log output")
+                plt.savefig(self.path_empirical + "full/LogOutput_mc%s.png" %mc)
+
+                # inflation rate
+                plt.clf()
+                plt.plot(inflation[:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Inflation rate")
+                plt.savefig(self.path_empirical + "full/Inflation_mc%s.png" %mc)
+
+                # unemployment 
+                plt.clf()
+                plt.plot(unemp_rate[:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("unemployment rate")
+                plt.savefig(self.path_empirical + "full/unemployment_mc%s.png" %mc)
+                
+                # productivity/real wage
+                plt.clf()
+                plt.plot(product_to_real_wage[:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Productivity-real wage")
+                plt.savefig(self.path_empirical + "full/product_to_real_wage_mc%s.png" %mc)
+
+
+                # Philips curve
+                plt.clf()
+                plt.scatter(unemp_rate[:,mc], wage_inflation[:,mc])
+                plt.xlabel("Unemployment Rate")
+                plt.ylabel("Wage Inflation")
+                plt.savefig(self.path_empirical + 'full/philips_mc%s.png' %mc)
+
+                # Okuns law
+                plt.clf()
+                plt.scatter(unemp_growth_rate[:,mc], output_growth_rate[:,mc])
+                plt.xlabel("Unemployment growth rate")
+                plt.ylabel("Output growth rate")
+                plt.savefig(self.path_empirical + 'full/Okun_mc%s.png' %mc)
+
+                # Beveridge
+                plt.clf()
+                plt.scatter(unemp_rate[:,mc], vac_rate[:,mc])
+                plt.xlabel("Unemployment rate")
+                plt.ylabel("Vacancy rate")
+                plt.savefig(self.path_empirical + 'full/Beveridge_mc%s.png' %mc)
+
+                # bankrutpcy
+                plt.clf()
+                plt.plot(bankrupt_firms_total[:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("bankruptcies")
+                plt.savefig(self.path_empirical + "full/bankruptcies%s.png" %mc)
+
+
+                # mean HH Income
+                plt.clf()
+                plt.plot(aver_savings[:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("average HH Income")
+                plt.savefig(self.path_empirical + "full/HH_income_mc%s.png" %mc)
+                
+
+                """
+                Plot only using the last 500 iterations 
+                """
+                # Log output
+                plt.clf()
+                plt.plot(np.log(production[self.T -499:,mc]))
+                plt.xlabel("Time")
+                plt.ylabel("Log output")
+                plt.savefig(self.path_empirical + "cut/LogOutput_mc%s.png" %mc)
+
+                # inflation rate
+                plt.clf()
+                plt.plot(inflation[self.T -499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Inflation rate")
+                plt.savefig(self.path_empirical + "cut/Inflation_mc%s.png" %mc)
+
+                # unemployment 
+                plt.clf()
+                plt.plot(unemp_rate[self.T -499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("unemployment rate")
+                plt.savefig(self.path_empirical + "cut/unemployment_mc%s.png" %mc)
+                
+                # productivity/real wage
+                plt.clf()
+                plt.plot(product_to_real_wage[self.T -499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("Productivity-real wage")
+                plt.savefig(self.path_empirical + "cut/product_to_real_wage_mc%s.png" %mc)
+
+                # linear regression object for putting regression lines through following scatter plots
+                linear_regressor = LinearRegression() 
+                
+                # Philips curve
+                linear_regressor = LinearRegression() 
+                reg_phillip = linear_regressor.fit(unemp_rate[self.T -499:,mc].reshape(-1,1), wage_inflation[self.T -499:,mc].reshape(-1,1))
+                Y_pred = linear_regressor.predict(unemp_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
+                plt.clf()
+                plt.scatter(unemp_rate[self.T -499:,mc], wage_inflation[self.T -499:,mc])
+                plt.plot(unemp_rate[self.T -499:,mc],Y_pred, color='red')
+                plt.xlabel("Unemployment Rate")
+                plt.ylabel("Wage Inflation")
+                plt.savefig(self.path_empirical + 'cut/philips_mc%s.png' %mc)
+
+                # Okuns law
+                linear_regressor = LinearRegression() 
+                # drop inf values in case there are any
+                if np.isfinite(unemp_growth_rate[self.T -499:,mc]).any() == True:
+                    mask = np.isfinite(unemp_growth_rate[self.T -499:,mc])
+                    reg_okun = linear_regressor.fit(unemp_growth_rate[self.T -499:,mc][mask].reshape(-1,1), output_growth_rate[self.T -499:,mc][mask].reshape(-1,1))
+                    Y_pred = linear_regressor.predict(unemp_growth_rate[self.T -499:,mc][mask].reshape(-1,1))  # make predictions
+                    plt.clf()
+                    plt.scatter(unemp_growth_rate[self.T -499:,mc][mask], output_growth_rate[self.T -499:,mc][mask])
+                    plt.plot(unemp_growth_rate[self.T -499:,mc][mask],Y_pred, color='red')
+                    plt.xlabel("Unemployment growth rate")
+                    plt.ylabel("Output growth rate")
+                    plt.savefig(self.path_empirical + 'cut/Okun_mc%s.png' %mc)
+                else:
+                    reg_okun = linear_regressor.fit(unemp_growth_rate[self.T -499:,mc].reshape(-1,1), output_growth_rate[self.T -499:,mc].reshape(-1,1))
+                    Y_pred = linear_regressor.predict(unemp_growth_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
+                    plt.clf()
+                    plt.scatter(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc])
+                    plt.plot(unemp_growth_rate[self.T -499:,mc],Y_pred, color='red')
+                    plt.xlabel("Unemployment growth rate")
+                    plt.ylabel("Output growth rate")
+                    plt.savefig(self.path_empirical + 'cut/Okun_mc%s.png' %mc)
+
+                # Beveridge
+                linear_regressor = LinearRegression() 
+                reg_beveridge = linear_regressor.fit(unemp_rate[self.T -499:,mc].reshape(-1,1), vac_rate[self.T -499:,mc].reshape(-1,1))
+                Y_pred = linear_regressor.predict(unemp_rate[self.T -499:,mc].reshape(-1,1))  # make predictions
+                plt.clf()
+                plt.scatter(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc])
+                plt.plot(unemp_rate[self.T -499:,mc],Y_pred, color='red')
+                plt.xlabel("Unemployment rate")
+                plt.ylabel("Vacancy rate")
+                plt.savefig(self.path_empirical + 'cut/Beveridge_mc%s.png' %mc)
+
+                # bankrutpcy
+                plt.clf()
+                plt.plot(bankrupt_firms_total[self.T -499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("bankruptcies")
+                plt.savefig(self.path_empirical + "cut/bankruptcies%s.png" %mc)
+
+
+                # mean HH Income
+                plt.clf()
+                plt.plot(aver_savings[self.T -499:,mc])
+                plt.xlabel("Time")
+                plt.ylabel("average HH Income")
+                plt.savefig(self.path_empirical + "cut/HH_income_mc%s.png" %mc)
+                
+                """
+                DF test & averages
+                """
+                # Augmented Dickey-Fuller unit root test on gdp and inflation
+                fuller_gdp = adfuller(np.log(production[self.T -499:,mc]))
+                fuller_inflation = adfuller(inflation[self.T -499:,mc])
+                print(fuller_gdp)
+                print(fuller_inflation)
+                
+                print("Average production %s" %np.mean(np.log(production[self.T -499:,mc])))
+                print("Average unemployment %s" %np.mean(unemp_rate[self.T -499:,mc]))
+                print("Average inflation %s" %np.mean(inflation[self.T -499:,mc]))
+                
+                """
+                Correlation coefficients & betas
+                """
+                
+                print("Corr phill curve %s" %np.corrcoef(unemp_rate[self.T -499:,mc], wage_inflation[self.T -499:,mc]))
+                print("beta phillips %s" %reg_phillip.coef_)
+                # drop inf values in case there are any
+                if np.isfinite(unemp_growth_rate[self.T -499:,mc]).any() == True:
+                    print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc][mask], output_growth_rate[self.T -499:,mc][mask]))
+                else:
+                    print("Corr okun %s" %np.corrcoef(unemp_growth_rate[self.T -499:,mc], output_growth_rate[self.T -499:,mc]))
+                print("beta okun %s" %reg_okun.coef_)
+                print("Corr beveridge %s" %np.corrcoef(unemp_rate[self.T -499:,mc], vac_rate[self.T -499:,mc]))
+                print("beta beveridge %s" %reg_beveridge.coef_)    
                 
                 
                 
                 
-                # Correlation coefficients of scatter plots
                 
             
         return production

@@ -73,26 +73,25 @@ parameter = np.array([H_eta, H_rho, H_phi, h_xi])
 
 # simulating BAM model MC times without parallising 
 BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
-                plots=True, csv=False) 
+                plots=True, csv=False, empirical=False, path_empirical="") 
 print("")
 print('--------------------------------------')
 print("Simulating BAM model without parallising %s times" %MC)
 start_time = time.time()
 
-"""
-BAM_simulations =  BAM_model.simulation(theta=parameter)
+#BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
-np.save('data/simulations/BAM_pseudo_empirical', BAM_simulations) # save the MC simulations
+#np.save('data/simulations/BAM_pseudo_empirical', BAM_simulations) # save the MC simulations
 # approximately 2 minutes for one 1 run 
-"""
+
 
 # uncomment for running BAM model MC times in parallel
 """
 # simulate the base BAM model MC times using parallel computing
 BAM_model_parallel = BAM_parallel(T=1000, MC = 5, Nh=500, Nf=100, Nb=10,
-                plots=True, csv=False) 
+                plots=True, csv=False, empirical=False, path_empirical="") 
 
 num_cores = (multiprocessing.cpu_count()) 
 start_time = time.time()
@@ -137,7 +136,7 @@ BAM_simulations = np.load("data/simulations/BAM_pseudo_empirical.npy") # load pe
 BAM_obs = BAM_simulations[BAM_simulations.shape[0]-500:BAM_simulations.shape[0],0]  
 
 # create new instance of the BAM model (without any plotting)
-BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False, empirical=False, path_empirical="") 
 #BAM_model = BAM_mc(T=1500, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
 
 # define the upper and lower bound for each parameter value, packed into a 2x#free parameters dataframe (2d numpy array) 
@@ -162,6 +161,7 @@ grid_size = 5000
 # simulate the model MC times for each parameter combination and save each TxMC matrix
 print("")
 print('--------------------------------------')
+print('A)')
 print("1) Simulation Block: Simulate the model MC times for each parameter combination and store:")
 
 # save start time
@@ -380,7 +380,7 @@ B) Estimating the BAM model using real data on US GDP, using the same artificial
 # using un-ordered Theta sample 
 
 MC = 20
-BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False) 
+BAM_model = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10, plots=False, csv=False, empirical=False, path_empirical="") 
 bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 
 # load empirical data and convert np array : US GDP 
@@ -404,17 +404,18 @@ print('--------------------------------------')
 print("B) Empirical application Estimation block: Approximating Likelihood and evaluating the posterior for each parameter")
 start_time = time.time()
 path = 'data/simulations/BAM_simulations/latin_hypercube' # not ordered Theta 
-posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
+#posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = True)
 
 # choose folder to save posterior and prior values: mdn
-np.save('estimation/BAM/empirical/Germany/log_posterior_identification', log_posterior)
+"""np.save('estimation/BAM/empirical/Germany/log_posterior_identification', log_posterior)
 np.save('estimation/BAM/empirical/Germany/posterior_identification', posterior)
 np.save('estimation/BAM/empirical/Germany/prior_identification', prior_probabilities)
 np.save('estimation/BAM/empirical/Germany/Likelihoods_identification', Likelihoods)
-np.save('estimation/BAM/empirical/Germany/log_Likelihoods_identification', log_Likelihoods)
+np.save('estimation/BAM/empirical/Germany/log_Likelihoods_identification', log_Likelihoods)"""
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
+print("")
 
 # load approximations regarding UNordered Theta sample: MDN
 log_posterior = np.load('estimation/BAM/empirical/Germany/log_posterior_identification.npy')
@@ -435,13 +436,38 @@ plot_name = 'Theta_NOT_ordered_5000_MDN_empirical_German_GDP'
 #plot_path = 'plots/posterior/BAM/empirical/'
 plot_path = 'plots/posterior/BAM/empirical/Germany/'
 
-# plot posteriors for unordered Theta
-BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+# plot posteriors for unordered Theta and save respective parameter estimates
+"""us_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+                                Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
+                                marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
+                                path = plot_path, plot_name= plot_name)"""
+
+# plot posteriors for unordered Theta and save respective parameter estimates
+german_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = plot_path, plot_name= plot_name)
-                                
-                                
+                        
+
+# simulate the BAM model again, now using estimated parameter values
+MC = 5
+print("")
 print('--------------------------------------')
+print("Simulating estimated BAM model without parallising %s times" %MC)
+
+# path to save simulated time series using estimated parameters, for US and Germany 
+path_estimated_simulations = "plots/empirical/Germany/"
+
+# simulating BAM model MC times without parallising 
+BAM_model_estimated = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
+                plots=False, csv=False, empirical=True, path_empirical=path_estimated_simulations) 
+
+start_time = time.time()
+
+#BAM_simulations_US =  BAM_model.simulation(theta=us_estimates)
+BAM_simulations_Germany =  BAM_model_estimated.simulation(theta=german_estimates)
+
+print("")
+print("--- %s minutes ---" % ((time.time() - start_time)/60))
 print("Done")
 print("")

@@ -513,7 +513,8 @@ class sample_posterior:
         # scaling log posterior values btw. 0 and 10
         log_posterior_scaled = preprocessing.minmax_scale(log_posterior_non_NAN_inf, feature_range=(0, 10))
         
-        # log_posterior_scaled = log_posterior_non_NAN_inf
+        # array to save estimates
+        posterior_modes = np.zeros(4)
                    
         for i in range(number_parameter):
             
@@ -546,6 +547,10 @@ class sample_posterior:
             plt.legend(loc="lower right", fontsize = 8)
             
             plt.savefig(path + plot_name + '_log_post_' + 'parameter_' + str(i) + '.png')
+
+            posterior_modes[i] = max_post
+        
+        return posterior_modes
 
 
 # --------------------------------------
