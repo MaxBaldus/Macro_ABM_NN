@@ -215,7 +215,7 @@ class mdn:
         # negative (log) likelihood function (since want to max. likelihood, but minimising gradient descent algorithm in tensorflow)
         log_likelihood_fct = - tf.reduce_sum(tf.math.log(p_mix), axis = 0)
 
-        return  tf.reduce_mean(log_likelihood_fct)
+        return  log_likelihood_fct #tf.reduce_mean(log_likelihood_fct)
 
     
     def gmm_density(self, y, mu, pi, var):
