@@ -417,46 +417,54 @@ print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 print("")
 
-# load approximations regarding UNordered Theta sample: MDN
-log_posterior = np.load('estimation/BAM/empirical/Germany/log_posterior_identification.npy')
+# load approximations regarding UNordered Theta sample: MDN - Germany
+log_posterior = np.load('estimation/BAM/empirical/US/log_posterior_identification.npy')
+posterior = np.load('estimation/BAM/empirical/US/posterior_identification.npy')
+prior_probabilities = np.load('estimation/BAM/empirical/US/prior_identification.npy')
+Likelihoods = np.load('estimation/BAM/empirical/US/Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/empirical/US/log_Likelihoods_identification.npy')
+
+# load approximations regarding UNordered Theta sample: MDN - Germany
+"""log_posterior = np.load('estimation/BAM/empirical/Germany/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/empirical/Germany/posterior_identification.npy')
 prior_probabilities = np.load('estimation/BAM/empirical/Germany/prior_identification.npy')
 Likelihoods = np.load('estimation/BAM/empirical/Germany/Likelihoods_identification.npy')
-log_Likelihoods = np.load('estimation/BAM/empirical/Germany/log_Likelihoods_identification.npy')
+log_Likelihoods = np.load('estimation/BAM/empirical/Germany/log_Likelihoods_identification.npy')"""
 
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 
 # names of the plots 
-#plot_name = 'Theta_NOT_ordered_5000_MDN_empirical' # US GDP
-plot_name = 'Theta_NOT_ordered_5000_MDN_empirical_German_GDP'
+plot_name = 'Theta_NOT_ordered_5000_MDN_empirical' # US GDP
+#plot_name = 'Theta_NOT_ordered_5000_MDN_empirical_German_GDP'
 
 
 # path to save the plots
-#plot_path = 'plots/posterior/BAM/empirical/'
-plot_path = 'plots/posterior/BAM/empirical/Germany/'
+plot_path = 'plots/posterior/BAM/empirical/'
+#plot_path = 'plots/posterior/BAM/empirical/Germany/'
 
 # plot posteriors for unordered Theta and save respective parameter estimates
-"""us_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
-                                Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
-                                marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
-                                path = plot_path, plot_name= plot_name)"""
-
-# plot posteriors for unordered Theta and save respective parameter estimates
-german_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+us_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
                                 marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
                                 path = plot_path, plot_name= plot_name)
+
+# plot posteriors for unordered Theta and save respective parameter estimates
+"""german_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
+                                Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
+                                marginal_priors=prior_probabilities, para_names = para_names, bounds_BAM = bounds_BAM,
+                                path = plot_path, plot_name= plot_name)"""
                         
 
 # simulate the BAM model again, now using estimated parameter values
-MC = 5
+MC = 1
 print("")
 print('--------------------------------------')
 print("Simulating estimated BAM model without parallising %s times" %MC)
 
 # path to save simulated time series using estimated parameters, for US and Germany 
-path_estimated_simulations = "plots/empirical/Germany/"
+path_estimated_simulations = "plots/empirical/US/"
+#path_estimated_simulations = "plots/empirical/Germany/"
 
 # simulating BAM model MC times without parallising 
 BAM_model_estimated = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
@@ -464,8 +472,8 @@ BAM_model_estimated = BAM_mc(T=1000, MC = MC, Nh=500, Nf=100, Nb=10,
 
 start_time = time.time()
 
-#BAM_simulations_US =  BAM_model.simulation(theta=us_estimates)
-BAM_simulations_Germany =  BAM_model_estimated.simulation(theta=german_estimates)
+BAM_simulations_US =  BAM_model_estimated.simulation(theta=us_estimates)
+#BAM_simulations_Germany =  BAM_model_estimated.simulation(theta=german_estimates)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
