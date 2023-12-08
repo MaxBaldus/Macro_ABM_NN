@@ -457,7 +457,7 @@ us_estimates = BAM_posterior.posterior_plots_empirical(Theta=Theta, posterior=po
                         
 
 # simulate the BAM model again, now using estimated parameter values
-MC = 1
+MC = 5
 print("")
 print('--------------------------------------')
 print("Simulating estimated BAM model without parallising %s times" %MC)
