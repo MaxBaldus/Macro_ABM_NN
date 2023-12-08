@@ -417,7 +417,7 @@ print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
 print("")
 
-# load approximations regarding UNordered Theta sample: MDN - Germany
+# load approximations regarding UNordered Theta sample: MDN - US
 log_posterior = np.load('estimation/BAM/empirical/US/log_posterior_identification.npy')
 posterior = np.load('estimation/BAM/empirical/US/posterior_identification.npy')
 prior_probabilities = np.load('estimation/BAM/empirical/US/prior_identification.npy')

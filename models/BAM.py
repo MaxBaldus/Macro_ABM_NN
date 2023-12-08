@@ -1017,6 +1017,15 @@ class BAM_mc:
                         plt.hist(L)
                         plt.xlabel("Firm Size distribution by labor L")
                         plt.savefig("plots/cut/firm_size/size_disribution_mc%s_t=%s.png" %(mc,t))
+                
+                # firm size distribution of t = 500,600,700,800,900,T
+                if self.empirical:
+                    if t in [self.T-499,self.T-399,self.T-299,self.T-199,self.T-99,self.T-1]:
+                        
+                        plt.clf()
+                        plt.hist(L)
+                        plt.xlabel("Firm Size distribution by labor L")
+                        plt.savefig(self.path_empirical + "cut/firm_size/size_disribution_mc%s_t=%s.png" %(mc,t))
 
             """
             Plotting main aggregate report variables if number of MC replications small enough and simulation ran through:
