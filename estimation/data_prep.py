@@ -42,8 +42,6 @@ class Filters:
 
         
     
-    # filters for inflation and unemployment
-    
 
 
         

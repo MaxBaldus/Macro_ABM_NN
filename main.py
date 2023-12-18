@@ -37,7 +37,7 @@ Simulating a simple macro model with 5 Monte carlo replications.
 The plots are saved into plots/toymodel folder.
 """
 
-"""
+
 # instantiate the toymodel class
 toymodel = Toymodel(Time=1000, Ni=100, MC=5,  
                     plots=True, filters=False)
@@ -46,7 +46,7 @@ toymodel = Toymodel(Time=1000, Ni=100, MC=5,
 # toy_simulations = toymodel.simulation(gamma=2, pbar=0.01, delta=0.05, rbar=0.075) 
 parameter = np.array([2, 0.01, 0.05, 0.075])
 toy_simulations = toymodel.simulation(parameter)
-"""
+
 
 #################################################################################################
 # Simulating the BAM model(s) by Delli Gatti (2011)
@@ -167,7 +167,7 @@ print("1) Simulation Block: Simulate the model MC times for each parameter combi
 # save start time
 start_time = time.time()
 
-# generate grid with parameter values
+# generate grid with parameter values: set order Theta to true if you want to use ordered grid, otherwise not ordered
 np.random.seed(123)
 Theta = BAM_posterior.simulation_block(grid_size, path = '', order_Theta=False)
 
@@ -213,10 +213,10 @@ def grid_search_parallel(Theta, model, path, i):
 num_cores = 56 
 
 # uncomment for running the 5000 times 20MC simulations (per theta) in parallel and save
-"""Parallel(n_jobs=num_cores, verbose=50)(
+Parallel(n_jobs=num_cores, verbose=50)(
         delayed(grid_search_parallel)
         (Theta, BAM_model, path, i) for i in range(grid_size) 
-        )"""
+        )
 
 
 print("")
@@ -236,8 +236,7 @@ start_time = time.time()
 
 # Approximate the posterior distr. of each parameter using the simulated data and given empirical data 
 # by default, mdns are used. Set kde = True to use kde instead 
-
-#posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=True, empirical = False)
+posterior, log_posterior, prior_probabilities, Likelihoods, log_Likelihoods = BAM_posterior.approximate_posterior(grid_size, path = path, t_zero=500, kde=False, empirical = False)
 
 
 # choose folder to save posterior and prior values: mdn
@@ -260,7 +259,7 @@ print("--- %s minutes ---" % ((time.time() - start_time)/60))
 # --- 279.17994863589604 minutes ---
 
 """
-plotting the posterior, log posterior and prior values (marginal), for each theta in the grid
+loading to plot the posterior, log posterior and prior values (marginal), for each theta in the grid
 """
 # load approximations regarding ordered Theta sample: no filter applied, raw data, not div by std in mdn
 """log_posterior = np.load('estimation/BAM/Theta_ordered/final_run/NOT_div_by_std/log_posterior_identification.npy')
@@ -321,6 +320,9 @@ log_Likelihoods = np.load('estimation/BAM/final_run/HP_filter/log_Likelihoods_id
 # parameter names
 para_names = [r'$H_{\eta}$', r'$H_{\rho}$', r'$H_{\phi}$', r'$H_{\xi}$']
 
+"""
+choose the right plot name and path:
+"""
 # names of the plots 
 #plot_name= 'Theta_ordered_5000_raw_data_NOT_div_by_std'
 #plot_name= 'Theta_ordered_5000_raw_data_div_by_std'
@@ -341,7 +343,9 @@ plot_name = 'Theta_NOT_ordered_5000_MDN_HP_filter'
 #plot_path = 'plots/posterior/BAM/NOT_ordered/'
 plot_path = 'plots/posterior/BAM/NOT_ordered/HP_filter/'
 
-
+"""
+uncomment to plot posteriors, either using ordered grid or unordered grid:
+"""
 # plot posteriors for ordered Theta
 """BAM_posterior.posterior_plots_identification(Theta=Theta, posterior=posterior, log_posterior=log_posterior, 
                                 Likelihoods = Likelihoods, log_Likelihoods = log_Likelihoods,
@@ -359,18 +363,6 @@ plot_path = 'plots/posterior/BAM/NOT_ordered/HP_filter/'
 
 print('--------------------------------------')
 print("Done")
-
-
-# Simulation hyperparameters:
-# Gatti 2020
-# 5000 combinations
-# MC = 20 
-# T = 3000, discarding the first 2500
-
-# aleen
-# MC = 100 
-
-
 
 
 """
