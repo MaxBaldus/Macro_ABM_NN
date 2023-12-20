@@ -79,7 +79,7 @@ print('--------------------------------------')
 print("Simulating BAM model without parallising %s times" %MC)
 start_time = time.time()
 
-#BAM_simulations =  BAM_model.simulation(theta=parameter)
+BAM_simulations =  BAM_model.simulation(theta=parameter)
 
 print("")
 print("--- %s minutes ---" % ((time.time() - start_time)/60))
@@ -146,7 +146,7 @@ bounds_BAM = np.transpose(np.array([ [0,0.5], [0,0.5], [0,0.5], [0,0.25] ]))
 #bounds_BAM = np.transpose(np.array([ [0.05,0.2], [0.05,0.2], [0.05,0.2], [0.025,0.075] ]))
 
 
-# initialize the estimation method: here without applying any filter to observed as simulated time series
+# initialize the estimation method: set filter to True for HP filter, False for raw data 
 BAM_posterior = sample_posterior(model = BAM_model, bounds = bounds_BAM, data_obs=BAM_obs, filter=True)
 
 """
