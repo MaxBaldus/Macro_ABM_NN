@@ -1,5 +1,5 @@
-Simulating macroeconomic agent based model by Delli Gatti et al. (2011), called BAM, and toy macro abm by Caiani et al. (2016). 
-Furthermore, the BAM model ist estimated via mixture densitiy networks (MDN) and latin hypercube sampling is used as a grid search of parameter space, combining approaches by Platt (2022) and Delli Gatti & Grazzini (2020).
+Implementing and simulating the base macroeconomic agent based model by Delli Gatti et al. (2011), referred as BAM model, as well as the toy macro abm by Caiani et al. (2016). 
+The BAM model ist estimated using US and German GDP and combining the approaches by Platt (2022) and Delli Gatti & Grazzini (2020): Bayesian estimation is exploited and the likelihood function is approximated via mixture densitiy networks (MDN). Latin hypercube sampling is used to set up the grid search of the parameter space.
 
 ________________________________________
 
